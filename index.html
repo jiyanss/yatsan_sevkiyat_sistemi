@@ -86,6 +86,7 @@
   .check span { margin: 0 !important; }
   .check input { width: auto !important; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .hint { font-size: 11px; color: #6b7280; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 6px; padding: 6px 10px; margin-bottom: 12px; }
 
   @media (max-width: 800px) {
     .summary { grid-template-columns: repeat(2, 1fr); }
@@ -142,6 +143,7 @@
 <div id="modal" class="modal-bg hidden">
   <div class="modal">
     <h2>Yeni sevkiyat kaydı</h2>
+    <p class="hint">M3 otomatik hesaplanır: KOMPLE TIR = AD×90 · 40 HC = AD×70 · 20 DC = AD×35 · PARSIYEL TIR = M3 + PRS M3</p>
     <div class="form-grid">
       <label class="col-2"><span>Müşteri</span><input id="f-musteri" list="musteri-list" /></label>
       <label><span>BLM</span><select id="f-blm"></select></label>
@@ -154,7 +156,7 @@
       <label><span>Durum</span><select id="f-durum"></select></label>
       <label><span>Aracı geldi mi</span><select id="f-araciGeldi"></select></label>
       <label><span>PRS M3</span><input id="f-prsM3" type="number" /></label>
-      <label><span>M3</span><input id="f-m3" type="number" /></label>
+      <label><span>M3 (otomatik)</span><input id="f-m3" type="number" readonly style="background:#f9fafb" /></label>
       <label class="col-2"><span>Açıklama</span><input id="f-aciklama" /></label>
       <label class="col-2 check"><input id="f-oncelikli" type="checkbox" /><span>Öncelikli (satırı sarı vurgula)</span></label>
     </div>
@@ -166,9 +168,8 @@
 </div>
 
 <script>
-/* ================= Firebase bağlantısı — DEĞİŞTİR! ================= */
-/* Firebase Console → Realtime Database → Data sekmesindeki adres */
-const FIREBASE_DB_URL = "https://sevkiyat-app-default-rtdb.europe-west1.firebasedatabase.app".replace(/\/+$/, "");
+/* ================= Firebase bağlantısı ================= */
+const FIREBASE_DB_URL = "https://BURAYA-PROJE-ADIn-default-rtdb.europe-west1.firebasedatabase.app".replace(/\/+$/, "");
 const NODE = "sevkiyat";
 
 /* ================= Sabitler ================= */
@@ -176,9 +177,10 @@ const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağus
 const GUNLER = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
 const DURUMLAR = ["Yükleme Bekliyor", "Yükleniyor", "Yükleme Tamamlandı"];
 const BLMS = ["EXPORT-1","EXPORT-2","EXPORT-3"];
-const TIPLER = ["KOMPLETIR","PARSIYEL TIR","40 HC","20 HC"];
+const TIPLER = ["KOMPLE TIR","PARSIYEL TIR","40 HC","20 DC"];
 const GELDI = ["", "GELDİ", "HAYIR"];
-const M3_VARSAYILAN = { "KOMPLETIR": 90, "PARSIYEL TIR": 90, "40 HC": 140, "20 HC": 70 };
+/* M3 çarpanları: M3 = AD × çarpan (PARSIYEL TIR hariç) */
+const M3_CARPAN = { "KOMPLE TIR": 90, "40 HC": 70, "20 DC": 35 };
 
 /* ================= Yardımcılar ================= */
 function esc(s) {
@@ -218,18 +220,71 @@ function durumIcon(d) {
 }
 function emptyRecord() {
   return {
-    musteri: "", blm: "EXPORT-1", kategori: "PLANLI", sevkiyatTipi: "KOMPLETIR",
+    musteri: "", blm: "EXPORT-1", kategori: "PLANLI", sevkiyatTipi: "KOMPLE TIR",
     ad: 1, planlananTarih: todayISO(), reelPlan: todayISO(), gerceklesenTarih: "",
     durum: "Yükleme Bekliyor", aciklama: "", araciGeldi: "", prsM3: "", m3: 90, oncelikli: false
   };
 }
-/* Kaydı veritabanına yazmaya uygun hale getir */
+
+/* ============ M3 OTOMATİK HESAPLAMA ============ */
+function hesaplaM3(tip, ad, prsM3, mevcutM3) {
+  if (tip === "PARSIYEL TIR") {
+    /* PARSIYEL TIR: mevcut M3 + PRS M3 toplanır */
+    return (Number(mevcutM3) || 0) + (Number(prsM3) || 0);
+  }
+  const carpan = M3_CARPAN[tip];
+  if (carpan === undefined) return null; /* bilinmeyen tip → dokunma */
+  return (Number(ad) || 0) * carpan;
+}
+
+/* ================= Firebase REST ================= */
+async function check(res, label) {
+  if (res.ok) return res.json();
+  let msg = label + " (HTTP " + res.status + ")";
+  try { const j = await res.json(); if (j.error) msg += ": " + j.error; } catch {}
+  throw new Error(msg);
+}
+async function apiList() {
+  if (FIREBASE_DB_URL.includes("BURAYA")) {
+    throw new Error("Firebase adresi ayarlanmamış — kodun en üstündeki FIREBASE_DB_URL değerini kendi adresinle değiştir.");
+  }
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`);
+  const data = await check(res, "Veriler yüklenemedi");
+  if (!data) return [];
+  return Object.entries(data)
+    .map(([key, val]) => ({ id: key, ...(val || {}) }))
+    .sort((a, b) => b.id.localeCompare(a.id));
+}
+async function apiInsert(rec) {
+  const body = toDb(rec);
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await check(res, "Kayıt eklenemedi");
+  return { id: data.name, ...body };
+}
+async function apiUpdate(id, rec) {
+  const body = toDb(rec);
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  await check(res, "Kayıt güncellenemedi");
+  return { id, ...body };
+}
+async function apiDelete(id) {
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, { method: "DELETE" });
+  await check(res, "Kayıt silinemedi");
+}
 function toDb(r) {
   return {
     musteri: (r.musteri || "").trim(),
     blm: r.blm || "EXPORT-1",
     kategori: r.kategori || "PLANLI",
-    sevkiyatTipi: r.sevkiyatTipi || "KOMPLETIR",
+    sevkiyatTipi: r.sevkiyatTipi || "KOMPLE TIR",
     ad: Number(r.ad) || 1,
     planlananTarih: r.planlananTarih || "",
     reelPlan: r.reelPlan || "",
@@ -241,52 +296,6 @@ function toDb(r) {
     m3: (r.m3 === "" || r.m3 == null) ? null : Number(r.m3),
     oncelikli: !!r.oncelikli
   };
-}
-
-/* ================= API çağrıları (Firebase REST) ================= */
-async function check(res, label) {
-  if (res.ok) return res.json();
-  let msg = label + " (HTTP " + res.status + ")";
-  try { const j = await res.json(); if (j.error) msg += ": " + j.error; } catch {}
-  throw new Error(msg);
-}
-
-async function apiList() {
-  if (FIREBASE_DB_URL.includes("BURAYA")) {
-    throw new Error("Firebase adresi ayarlanmamış — kodun en üstündeki FIREBASE_DB_URL değerini kendi adresinle değiştir.");
-  }
-  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`);
-  const data = await check(res, "Veriler yüklenemedi");
-  if (!data) return [];
-  return Object.entries(data)
-    .map(([key, val]) => ({ id: key, ...(val || {}) }))
-    .sort((a, b) => b.id.localeCompare(a.id)); // en yeni önce
-}
-
-async function apiInsert(rec) {
-  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(toDb(rec))
-  });
-  const data = await check(res, "Kayıt eklenemedi");
-  return { id: data.name, ...toDb(rec) }; // Firebase push anahtarını döndürür
-}
-
-async function apiUpdate(id, rec) {
-  const body = toDb(rec);
-  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  await check(res, "Kayıt güncellenemedi");
-  return { id, ...body };
-}
-
-async function apiDelete(id) {
-  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, { method: "DELETE" });
-  await check(res, "Kayıt silinemedi");
 }
 
 /* ================= State ================= */
@@ -378,9 +387,9 @@ function renderSummary(list) {
     `<div><p class="dist-label">Toplam</p><p class="dist-val strong">${s.total}</p></div>`;
 }
 
-function fInput(data, scope, field, type, cls, datalist) {
+function fInput(data, scope, field, type, cls, datalist, extra) {
   return `<input type="${type}" class="cell-input ${cls || ""}" data-scope="${scope}" data-field="${field}"
-    value="${esc(String(data[field] ?? ""))}" ${datalist ? 'list="musteri-list"' : ""} />`;
+    value="${esc(String(data[field] ?? ""))}" ${datalist ? 'list="musteri-list"' : ""} ${extra || ""} />`;
 }
 function fSelect(data, scope, field, options) {
   return `<select class="cell-input" data-scope="${scope}" data-field="${field}">
@@ -507,17 +516,37 @@ document.getElementById("tbody").addEventListener("click", e => {
   }
 });
 
+/* Hücre inputları → state (render yok, focus korunur) */
 function onFieldInput(e) {
   const el = e.target;
   const field = el.dataset.field;
   if (!field) return;
   const scope = el.dataset.scope;
   const val = el.value;
+  const data = scope === "inline" ? inlineData : editData;
   if (scope === "inline" && inlineData) inlineData[field] = val;
   else if (scope === "edit" && editData) editData[field] = val;
+
   if (field === "durum") {
     const cell = el.closest("tr")?.querySelector(".st-cell");
     if (cell) cell.innerHTML = durumIcon(val);
+  }
+
+  /* --- M3 otomatik hesaplama (satır içi & düzenleme) --- */
+  if (field === "sevkiyatTipi" || field === "ad" || field === "prsM3") {
+    const tr = el.closest("tr");
+    const tip = field === "sevkiyatTipi" ? val : data?.sevkiyatTipi;
+    const m3In = tr?.querySelector('input[data-field="m3"]');
+    if (!tip || !m3In || !tr) return;
+    /* PARSIYEL TIR'da AD değişimi hesabı etkilemez */
+    if (field === "ad" && tip === "PARSIYEL TIR") return;
+    const adIn  = tr.querySelector('input[data-field="ad"]');
+    const prsIn = tr.querySelector('input[data-field="prsM3"]');
+    const yeni = hesaplaM3(tip, adIn?.value, prsIn?.value, m3In.value);
+    if (yeni !== null) {
+      m3In.value = yeni;
+      if (data) data.m3 = yeni;
+    }
   }
 }
 document.getElementById("tbody").addEventListener("input", onFieldInput);
@@ -576,6 +605,25 @@ function openModal() {
 function closeModal() { document.getElementById("modal").classList.add("hidden"); }
 function getVal(id) { return document.getElementById(id).value; }
 
+/* Modal: tip değişince M3'ü hesapla */
+document.getElementById("f-sevkiyatTipi").addEventListener("change", e => {
+  const yeni = hesaplaM3(e.target.value, getVal("f-ad"), getVal("f-prsM3"), getVal("f-m3"));
+  if (yeni !== null) document.getElementById("f-m3").value = yeni;
+});
+/* Modal: AD değişince M3'ü yeniden hesapla (PARSIYEL hariç) */
+document.getElementById("f-ad").addEventListener("input", e => {
+  const tip = getVal("f-sevkiyatTipi");
+  if (tip === "PARSIYEL TIR") return;
+  const yeni = hesaplaM3(tip, e.target.value, null, null);
+  if (yeni !== null) document.getElementById("f-m3").value = yeni;
+});
+/* Modal: PRS M3 değişince PARSIYEL TIR ise M3'ü güncelle */
+document.getElementById("f-prsM3").addEventListener("input", e => {
+  if (getVal("f-sevkiyatTipi") !== "PARSIYEL TIR") return;
+  const yeni = hesaplaM3("PARSIYEL TIR", null, e.target.value, 0);
+  if (yeni !== null) document.getElementById("f-m3").value = yeni;
+});
+
 document.getElementById("btnShowForm").addEventListener("click", openModal);
 document.getElementById("btnCancelForm").addEventListener("click", closeModal);
 document.getElementById("btnSaveForm").addEventListener("click", async () => {
@@ -603,10 +651,6 @@ document.getElementById("btnSaveForm").addEventListener("click", async () => {
     render();
     closeModal();
   } catch (e) { setSaveError(e.message); }
-});
-document.getElementById("f-sevkiyatTipi").addEventListener("change", e => {
-  const def = M3_VARSAYILAN[e.target.value];
-  if (def !== undefined) document.getElementById("f-m3").value = def;
 });
 document.getElementById("modal").addEventListener("click", e => {
   if (e.target === e.currentTarget) closeModal();
