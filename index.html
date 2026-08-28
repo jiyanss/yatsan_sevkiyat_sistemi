@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sevkiyat Planlama — İhracat</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -22,8 +23,10 @@
   .btn:hover { background: #f3f4f6; }
   .btn.dark { background: #111827; color: #fff; border-color: #111827; }
   .btn.dark:hover { background: #1f2937; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
 
   .error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
+  .hint { font-size: 11px; color: #6b7280; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 6px; padding: 6px 10px; margin: 0 0 12px; }
 
   .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
   .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
@@ -69,6 +72,7 @@
   .icon-btn:hover { filter: brightness(0.7); }
 
   .cell-input { font-size: 12px; padding: 3px 4px; border: 1px solid #d1d5db; border-radius: 4px; }
+  .cell-input[readonly] { background: #f3f4f6; color: #6b7280; }
   .w-musteri  { width: 110px; }
   .w-kategori { width: 80px; }
   .w-num      { width: 60px; }
@@ -77,6 +81,7 @@
 
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
   .modal { background: #fff; border-radius: 8px; padding: 20px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+  .modal.wide { max-width: 760px; }
   .modal h2 { font-size: 16px; margin: 0 0 12px; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .form-grid label span { display: block; font-size: 12px; color: #6b7280; margin-bottom: 3px; }
@@ -86,7 +91,19 @@
   .check span { margin: 0 !important; }
   .check input { width: auto !important; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-  .hint { font-size: 11px; color: #6b7280; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 6px; padding: 6px 10px; margin-bottom: 12px; }
+
+  /* Raporlar */
+  .rpt { margin-bottom: 16px; }
+  .rpt h3 { font-size: 13px; margin: 0 0 6px; }
+  .rpt table { font-size: 12px; }
+  .rpt thead tr { background: #f3f4f6; color: #374151; }
+  .rpt th { padding: 6px 8px; }
+  .rpt td { padding: 5px 8px; }
+  .rpt tfoot tr { background: #f9fafb; font-weight: 600; }
+
+  /* Excel içe aktarma */
+  .prev-head { background: #f3f4f6 !important; color: #111827 !important; }
+  .success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-top: 12px; }
 
   @media (max-width: 800px) {
     .summary { grid-template-columns: repeat(2, 1fr); }
@@ -106,6 +123,8 @@
     <input id="search" placeholder="🔍 Müşteri ara" style="min-width:150px" />
     <select id="weekFilter"><option value="all">Tüm haftalar</option></select>
     <button class="btn" id="btnToggleSummary">Özeti gizle</button>
+    <button class="btn" id="btnReports">📊 Raporlar</button>
+    <button class="btn" id="btnImportOpen">📥 Excel Yükle</button>
     <button class="btn" id="btnReload">↻ Yenile</button>
     <button class="btn" id="btnShowForm">+ Form ile ekle</button>
     <button class="btn dark" id="btnInlineAdd">+ Yeni kayıt</button>
@@ -140,10 +159,11 @@
 
 <datalist id="musteri-list"></datalist>
 
+<!-- Form ile ekleme modalı -->
 <div id="modal" class="modal-bg hidden">
   <div class="modal">
     <h2>Yeni sevkiyat kaydı</h2>
-    <p class="hint">M3 otomatik hesaplanır: KOMPLE TIR = AD×90 · 40 HC = AD×70 · 20 DC = AD×35 · PARSIYEL TIR = M3 + PRS M3</p>
+    <p class="hint">M3 otomatik: KOMPLE TIR = AD×90 · 40 HC = AD×70 · 20 DC = AD×35 · PARSIYEL TIR = PRS M3</p>
     <div class="form-grid">
       <label class="col-2"><span>Müşteri</span><input id="f-musteri" list="musteri-list" /></label>
       <label><span>BLM</span><select id="f-blm"></select></label>
@@ -156,7 +176,7 @@
       <label><span>Durum</span><select id="f-durum"></select></label>
       <label><span>Aracı geldi mi</span><select id="f-araciGeldi"></select></label>
       <label><span>PRS M3</span><input id="f-prsM3" type="number" /></label>
-      <label><span>M3 (otomatik)</span><input id="f-m3" type="number" readonly style="background:#f9fafb" /></label>
+      <label><span>M3 (otomatik)</span><input id="f-m3" type="number" readonly style="background:#f3f4f6" /></label>
       <label class="col-2"><span>Açıklama</span><input id="f-aciklama" /></label>
       <label class="col-2 check"><input id="f-oncelikli" type="checkbox" /><span>Öncelikli (satırı sarı vurgula)</span></label>
     </div>
@@ -164,6 +184,40 @@
       <button class="btn" id="btnCancelForm">Vazgeç</button>
       <button class="btn dark" id="btnSaveForm">Kaydet</button>
     </div>
+  </div>
+</div>
+
+<!-- Raporlar modalı -->
+<div id="reportModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>📊 Raporlar</h2>
+    <p class="hint">Raporlar aktif filtrelenmiş verilere göre hesaplanır (arama + hafta filtresi).</p>
+    <div id="reportContent"></div>
+    <div class="modal-actions">
+      <button class="btn" id="btnCloseReport">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- Excel içe aktarma modalı -->
+<div id="importModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>📥 Excel'den Veri Yükle</h2>
+    <p class="hint">.xlsx / .xls / .csv yükleyin. İlk satır başlık olmalı. Kolonlar otomatik eşleştirilir, gerekirse aşağıdan düzeltebilirsiniz. Müşteri kolonu zorunludur; M3 boş bırakılırsa tipe göre otomatik hesaplanır.</p>
+    <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
+    <div id="importMapping" class="hidden">
+      <h3 style="font-size:13px;margin:14px 0 6px;">Kolon eşleştirme</h3>
+      <div class="form-grid" id="mapGrid"></div>
+      <h3 style="font-size:13px;margin:14px 0 6px;">Önizleme (ilk 5 satır)</h3>
+      <div class="table-wrap">
+        <table id="previewTable"></table>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="btnCancelImport">Vazgeç</button>
+        <button class="btn dark" id="btnDoImport">Seçili satırları yükle</button>
+      </div>
+    </div>
+    <div id="importResult" class="success hidden"></div>
   </div>
 </div>
 
@@ -179,7 +233,7 @@ const DURUMLAR = ["Yükleme Bekliyor", "Yükleniyor", "Yükleme Tamamlandı"];
 const BLMS = ["EXPORT-1","EXPORT-2","EXPORT-3"];
 const TIPLER = ["KOMPLE TIR","PARSIYEL TIR","40 HC","20 DC"];
 const GELDI = ["", "GELDİ", "HAYIR"];
-/* M3 çarpanları: M3 = AD × çarpan (PARSIYEL TIR hariç) */
+/* M3 = AD × çarpan (PARSIYEL TIR hariç) */
 const M3_CARPAN = { "KOMPLE TIR": 90, "40 HC": 70, "20 DC": 35 };
 
 /* ================= Yardımcılar ================= */
@@ -188,6 +242,8 @@ function esc(s) {
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 function numOrDash(v) { return (v !== null && v !== undefined && v !== "") ? v : "-"; }
+function pad2(n) { return String(n).padStart(2, "0"); }
+function fmtN(n) { return (Math.round(n * 100) / 100).toLocaleString("tr-TR"); }
 function getISOWeek(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -206,7 +262,7 @@ function formatDate(iso) {
 }
 function todayISO() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
 function durumClass(d) {
   if (d === "Yükleme Tamamlandı") return "done";
@@ -227,13 +283,11 @@ function emptyRecord() {
 }
 
 /* ============ M3 OTOMATİK HESAPLAMA ============ */
-function hesaplaM3(tip, ad, prsM3, mevcutM3) {
-  if (tip === "PARSIYEL TIR") {
-    /* PARSIYEL TIR: mevcut M3 + PRS M3 toplanır */
-    return (Number(mevcutM3) || 0) + (Number(prsM3) || 0);
-  }
+/* PARSIYEL TIR sıfırdan başlar: M3 = sadece PRS M3 */
+function hesaplaM3(tip, ad, prsM3) {
+  if (tip === "PARSIYEL TIR") return Number(prsM3) || 0;
   const carpan = M3_CARPAN[tip];
-  if (carpan === undefined) return null; /* bilinmeyen tip → dokunma */
+  if (carpan === undefined) return null;
   return (Number(ad) || 0) * carpan;
 }
 
@@ -241,13 +295,28 @@ function hesaplaM3(tip, ad, prsM3, mevcutM3) {
 async function check(res, label) {
   if (res.ok) return res.json();
   let msg = label + " (HTTP " + res.status + ")";
-  try { const j = await res.json(); if (j.error) msg += ": " + j.error; } catch {}
+  try { const j = await res.json(); if (j.error) msg += ": " + j.error; } catch (e) {}
   throw new Error(msg);
 }
+function toDb(r) {
+  return {
+    musteri: (r.musteri || "").trim(),
+    blm: r.blm || "EXPORT-1",
+    kategori: r.kategori || "PLANLI",
+    sevkiyatTipi: r.sevkiyatTipi || "KOMPLE TIR",
+    ad: Number(r.ad) || 1,
+    planlananTarih: r.planlananTarih || "",
+    reelPlan: r.reelPlan || "",
+    gerceklesenTarih: r.gerceklesenTarih || "",
+    durum: r.durum || "Yükleme Bekliyor",
+    aciklama: r.aciklama || "",
+    araciGeldi: r.araciGeldi || "",
+    prsM3: (r.prsM3 === "" || r.prsM3 == null) ? null : Number(r.prsM3),
+    m3: (r.m3 === "" || r.m3 == null) ? null : Number(r.m3),
+    oncelikli: !!r.oncelikli
+  };
+}
 async function apiList() {
-  if (FIREBASE_DB_URL.includes("BURAYA")) {
-    throw new Error("Firebase adresi ayarlanmamış — kodun en üstündeki FIREBASE_DB_URL değerini kendi adresinle değiştir.");
-  }
   const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`);
   const data = await check(res, "Veriler yüklenemedi");
   if (!data) return [];
@@ -279,23 +348,19 @@ async function apiDelete(id) {
   const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, { method: "DELETE" });
   await check(res, "Kayıt silinemedi");
 }
-function toDb(r) {
-  return {
-    musteri: (r.musteri || "").trim(),
-    blm: r.blm || "EXPORT-1",
-    kategori: r.kategori || "PLANLI",
-    sevkiyatTipi: r.sevkiyatTipi || "KOMPLE TIR",
-    ad: Number(r.ad) || 1,
-    planlananTarih: r.planlananTarih || "",
-    reelPlan: r.reelPlan || "",
-    gerceklesenTarih: r.gerceklesenTarih || "",
-    durum: r.durum || "Yükleme Bekliyor",
-    aciklama: r.aciklama || "",
-    araciGeldi: r.araciGeldi || "",
-    prsM3: (r.prsM3 === "" || r.prsM3 == null) ? null : Number(r.prsM3),
-    m3: (r.m3 === "" || r.m3 == null) ? null : Number(r.m3),
-    oncelikli: !!r.oncelikli
-  };
+/* Toplu içe aktarma: tek istekle çok satır */
+async function apiBulkInsert(recs) {
+  const body = {};
+  const stamp = Date.now().toString(36);
+  recs.forEach((rec, i) => {
+    body["imp-" + stamp + "-" + String(i).padStart(4, "0")] = toDb(rec);
+  });
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  await check(res, "Toplu yükleme başarısız");
 }
 
 /* ================= State ================= */
@@ -413,7 +478,7 @@ function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
     <td>${fSelect(d, scope, "araciGeldi", GELDI)}</td>
     <td class="center st-cell">${durumIcon(d.durum)}</td>
     <td>${fInput(d, scope, "prsM3", "number", "w-num")}</td>
-    <td>${fInput(d, scope, "m3", "number", "w-num")}</td>
+    <td>${fInput(d, scope, "m3", "number", "w-num", false, 'readonly tabindex="-1"')}</td>
     <td class="nowrap">
       <button class="icon-btn ok" data-action="${saveAction}" title="Kaydet">✔</button>
       <button class="icon-btn mute" data-action="${cancelAction}" title="İptal">✖</button>
@@ -532,21 +597,18 @@ function onFieldInput(e) {
     if (cell) cell.innerHTML = durumIcon(val);
   }
 
-  /* --- M3 otomatik hesaplama (satır içi & düzenleme) --- */
+  /* M3 otomatik hesaplama */
   if (field === "sevkiyatTipi" || field === "ad" || field === "prsM3") {
     const tr = el.closest("tr");
-    const tip = field === "sevkiyatTipi" ? val : data?.sevkiyatTipi;
     const m3In = tr?.querySelector('input[data-field="m3"]');
-    if (!tip || !m3In || !tr) return;
-    /* PARSIYEL TIR'da AD değişimi hesabı etkilemez */
-    if (field === "ad" && tip === "PARSIYEL TIR") return;
-    const adIn  = tr.querySelector('input[data-field="ad"]');
-    const prsIn = tr.querySelector('input[data-field="prsM3"]');
-    const yeni = hesaplaM3(tip, adIn?.value, prsIn?.value, m3In.value);
-    if (yeni !== null) {
-      m3In.value = yeni;
-      if (data) data.m3 = yeni;
-    }
+    if (!tr || !m3In) return;
+    const tip = field === "sevkiyatTipi" ? val : data?.sevkiyatTipi;
+    if (!tip) return;
+    if (field === "ad" && tip === "PARSIYEL TIR") return; /* PARSIYEL'de AD etkilemez */
+    const adVal  = tr.querySelector('input[data-field="ad"]')?.value;
+    const prsVal = tr.querySelector('input[data-field="prsM3"]')?.value;
+    const yeni = hesaplaM3(tip, adVal, prsVal);
+    if (yeni !== null) { m3In.value = yeni; if (data) data.m3 = yeni; }
   }
 }
 document.getElementById("tbody").addEventListener("input", onFieldInput);
@@ -605,22 +667,19 @@ function openModal() {
 function closeModal() { document.getElementById("modal").classList.add("hidden"); }
 function getVal(id) { return document.getElementById(id).value; }
 
-/* Modal: tip değişince M3'ü hesapla */
 document.getElementById("f-sevkiyatTipi").addEventListener("change", e => {
-  const yeni = hesaplaM3(e.target.value, getVal("f-ad"), getVal("f-prsM3"), getVal("f-m3"));
+  const yeni = hesaplaM3(e.target.value, getVal("f-ad"), getVal("f-prsM3"));
   if (yeni !== null) document.getElementById("f-m3").value = yeni;
 });
-/* Modal: AD değişince M3'ü yeniden hesapla (PARSIYEL hariç) */
 document.getElementById("f-ad").addEventListener("input", e => {
   const tip = getVal("f-sevkiyatTipi");
   if (tip === "PARSIYEL TIR") return;
-  const yeni = hesaplaM3(tip, e.target.value, null, null);
+  const yeni = hesaplaM3(tip, e.target.value, getVal("f-prsM3"));
   if (yeni !== null) document.getElementById("f-m3").value = yeni;
 });
-/* Modal: PRS M3 değişince PARSIYEL TIR ise M3'ü güncelle */
 document.getElementById("f-prsM3").addEventListener("input", e => {
   if (getVal("f-sevkiyatTipi") !== "PARSIYEL TIR") return;
-  const yeni = hesaplaM3("PARSIYEL TIR", null, e.target.value, 0);
+  const yeni = hesaplaM3("PARSIYEL TIR", null, e.target.value);
   if (yeni !== null) document.getElementById("f-m3").value = yeni;
 });
 
@@ -656,9 +715,240 @@ document.getElementById("modal").addEventListener("click", e => {
   if (e.target === e.currentTarget) closeModal();
 });
 
-/* Otomatik yenileme (30 sn) — düzenleme yapılmıyorken */
+/* ================= RAPORLAR ================= */
+function groupStats(list, keyFn) {
+  const m = new Map();
+  list.forEach(r => {
+    const k = keyFn(r) || "-";
+    if (!m.has(k)) m.set(k, { kayit: 0, ad: 0, m3: 0, tamam: 0 });
+    const g = m.get(k);
+    g.kayit++; g.ad += Number(r.ad) || 0; g.m3 += Number(r.m3) || 0;
+    if (r.durum === "Yükleme Tamamlandı") g.tamam++;
+  });
+  return m;
+}
+function statsTable(map, title, colLabel) {
+  let rowsHtml = "";
+  let tK = 0, tA = 0, tM = 0, tT = 0;
+  [...map.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), "tr")).forEach(([k, g]) => {
+    tK += g.kayit; tA += g.ad; tM += g.m3; tT += g.tamam;
+    const ver = g.kayit ? (g.tamam / g.kayit * 100).toFixed(1) : "0.0";
+    rowsHtml += `<tr><td class="strong">${esc(k)}</td><td class="center">${g.kayit}</td><td class="center">${g.ad}</td><td class="center">${fmtN(g.m3)}</td><td class="center">${g.tamam}</td><td class="center">%${ver}</td></tr>`;
+  });
+  const ver = tK ? (tT / tK * 100).toFixed(1) : "0.0";
+  return `<div class="rpt"><h3>${esc(title)}</h3><div class="table-wrap"><table>
+    <thead><tr><th>${esc(colLabel)}</th><th>Kayıt</th><th>AD</th><th>Toplam M3</th><th>Tamamlanan</th><th>Verimlilik</th></tr></thead>
+    <tbody>${rowsHtml || `<tr><td colspan="6" class="empty">Veri yok</td></tr>`}</tbody>
+    <tfoot><tr><td>TOPLAM</td><td class="center">${tK}</td><td class="center">${tA}</td><td class="center">${fmtN(tM)}</td><td class="center">${tT}</td><td class="center">%${ver}</td></tr></tfoot>
+  </table></div></div>`;
+}
+function buildReports() {
+  const list = filtered();
+  const c = document.getElementById("reportContent");
+  if (!list.length) { c.innerHTML = `<p class="hint">Filtrelere uyan kayıt yok.</p>`; return; }
+  c.innerHTML =
+    statsTable(groupStats(list, r => r.musteri), "Müşteri bazlı", "Müşteri") +
+    statsTable(groupStats(list, r => r.sevkiyatTipi), "Sevkiyat tipi bazlı", "Tip") +
+    statsTable(groupStats(list, r => r.blm), "BLM bazlı", "BLM") +
+    statsTable(groupStats(list, r => "Hafta " + r.hafta), "Hafta bazlı", "Hafta") +
+    statsTable(groupStats(list, r => r.durum), "Durum bazlı", "Durum");
+}
+document.getElementById("btnReports").addEventListener("click", () => {
+  buildReports();
+  document.getElementById("reportModal").classList.remove("hidden");
+});
+document.getElementById("btnCloseReport").addEventListener("click", () => {
+  document.getElementById("reportModal").classList.add("hidden");
+});
+document.getElementById("reportModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+});
+
+/* ================= EXCEL İÇE AKTARMA ================= */
+const APP_FIELDS = [
+  { key: "musteri",         label: "Müşteri *",        kw: ["musteri", "firma", "customer"] },
+  { key: "blm",             label: "BLM",              kw: ["blm"] },
+  { key: "kategori",        label: "Kategori",         kw: ["kategori"] },
+  { key: "sevkiyatTipi",    label: "Sevkiyat Tipi",    kw: ["sevkiyat tipi", "sevkiyattipi", "tip"] },
+  { key: "ad",              label: "AD (Adet)",        kw: ["adet"] },
+  { key: "planlananTarih",  label: "Planlanan Tarih",  kw: ["planlanan"] },
+  { key: "reelPlan",        label: "Reel Plan",        kw: ["reel"] },
+  { key: "gerceklesenTarih",label: "Gerçekleşen Tarih",kw: ["gerceklesen"] },
+  { key: "durum",           label: "Durum",            kw: ["durum", "status"] },
+  { key: "aciklama",        label: "Açıklama",         kw: ["aciklama", "not"] },
+  { key: "araciGeldi",      label: "Aracı Geldi",      kw: ["araci"] },
+  { key: "prsM3",           label: "PRS M3",           kw: ["prs"] },
+  { key: "m3",              label: "M3",               kw: ["m3"] },
+  { key: "oncelikli",       label: "Öncelikli",        kw: ["oncelik"] },
+];
+let importRows = [];
+let importHeaders = [];
+let fieldMap = {};
+
+function normTxt(s) {
+  return String(s ?? "").toLowerCase()
+    .replace(/ı/g, "i").replace(/İ/g, "i").replace(/ş/g, "s").replace(/ğ/g, "g")
+    .replace(/ü/g, "u").replace(/ö/g, "o").replace(/ç/g, "c").replace(/³/g, "3")
+    .replace(/\s+/g, " ").trim();
+}
+function autoMap() {
+  fieldMap = {};
+  const used = new Set();
+  const heads = importHeaders.map(h => ({ raw: h, n: normTxt(h) }));
+  APP_FIELDS.forEach(f => {
+    let hit = heads.find(h => !used.has(h.raw) &&
+      f.kw.some(k => h.n === k || (k.length > 2 && h.n.includes(k))));
+    if (f.key === "ad") hit = hit || heads.find(h => !used.has(h.raw) && h.n === "ad");
+    fieldMap[f.key] = hit ? hit.raw : "";
+    if (hit) used.add(hit.raw);
+  });
+}
+function parseExcelDate(v) {
+  if (v == null || v === "") return "";
+  if (v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${pad2(v.getMonth()+1)}-${pad2(v.getDate())}`;
+  if (typeof v === "number" && isFinite(v)) {
+    const dc = (window.XLSX && XLSX.SSF) ? XLSX.SSF.parse_date_code(v) : null;
+    return dc ? `${dc.y}-${pad2(dc.m)}-${pad2(dc.d)}` : "";
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2})[.\/\-](\d{1,2})[.\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+  return "";
+}
+function normalizeTip(v) {
+  let t = String(v ?? "").trim().toUpperCase().replace(/İ/g, "I").replace(/\s+/g, " ");
+  if (!t) return "";
+  if (TIPLER.includes(t)) return t;
+  const c = t.replace(/\s+/g, "");
+  if (c === "KOMPLETIR" || c === "KOMPLETIR") return "KOMPLE TIR";
+  if (c === "PARSIYELTIR") return "PARSIYEL TIR";
+  if (c === "40HC") return "40 HC";
+  if (c === "20DC" || c === "20HC") return "20 DC";
+  return t;
+}
+function mapRowToRec(row) {
+  const rec = emptyRecord();
+  const g = k => { const h = fieldMap[k]; return h ? row[h] : ""; };
+  rec.musteri = String(g("musteri") ?? "").trim();
+  rec.blm = String(g("blm") || "EXPORT-1").trim() || "EXPORT-1";
+  rec.kategori = String(g("kategori") || "PLANLI").trim() || "PLANLI";
+  const tip = normalizeTip(g("sevkiyatTipi"));
+  if (tip) rec.sevkiyatTipi = tip;
+  rec.ad = Number(g("ad")) || 1;
+  rec.planlananTarih = parseExcelDate(g("planlananTarih"));
+  rec.reelPlan = parseExcelDate(g("reelPlan"));
+  rec.gerceklesenTarih = parseExcelDate(g("gerceklesenTarih"));
+  const dv = String(g("durum")).trim();
+  if (dv) {
+    const found = DURUMLAR.find(x => normTxt(x) === normTxt(dv));
+    rec.durum = found || dv;
+  }
+  rec.aciklama = String(g("aciklama") || "");
+  const ag = String(g("araciGeldi")).trim();
+  const agN = normTxt(ag);
+  if (agN.includes("gel")) rec.araciGeldi = "GELDİ";
+  else if (agN.includes("hay") || agN.includes("yok")) rec.araciGeldi = "HAYIR";
+  else rec.araciGeldi = ag.toUpperCase();
+  rec.prsM3 = g("prsM3") === "" ? "" : (Number(g("prsM3")) || 0);
+  const m3raw = g("m3");
+  rec.m3 = (m3raw === "" || m3raw == null)
+    ? (hesaplaM3(rec.sevkiyatTipi, rec.ad, rec.prsM3) ?? "")
+    : (Number(m3raw) || 0);
+  const on = g("oncelikli");
+  rec.oncelikli = on === true || /^(1|true|evet|x|var|yes)/i.test(String(on).trim());
+  return rec;
+}
+function buildMapping() {
+  const grid = document.getElementById("mapGrid");
+  grid.innerHTML = APP_FIELDS.map(f => `
+    <label><span>${esc(f.label)}</span>
+      <select data-map="${f.key}">
+        <option value="">(boş)</option>
+        ${importHeaders.map(h => `<option value="${esc(h)}" ${fieldMap[f.key] === h ? "selected" : ""}>${esc(h)}</option>`).join("")}
+      </select>
+    </label>`).join("");
+  document.getElementById("importMapping").classList.remove("hidden");
+  renderPreview();
+}
+function renderPreview() {
+  const t = document.getElementById("previewTable");
+  const recs = importRows.slice(0, 5).map(mapRowToRec);
+  t.innerHTML = `<thead><tr class="prev-head"><th>Müşteri</th><th>Tip</th><th>AD</th><th>Planlanan</th><th>Durum</th><th>PRS M3</th><th>M3</th></tr></thead><tbody>` +
+    (recs.length
+      ? recs.map(r => `<tr><td>${esc(r.musteri)}</td><td>${esc(r.sevkiyatTipi)}</td><td class="center">${esc(r.ad)}</td><td class="center">${formatDate(r.planlananTarih)}</td><td>${esc(r.durum)}</td><td class="center">${esc(r.prsM3 === "" ? "-" : r.prsM3)}</td><td class="center">${esc(r.m3)}</td></tr>`).join("")
+      : `<tr><td colspan="7" class="empty">Satır yok</td></tr>`) +
+    `</tbody>`;
+}
+document.getElementById("mapGrid").addEventListener("change", e => {
+  const sel = e.target.closest("select[data-map]");
+  if (!sel) return;
+  fieldMap[sel.dataset.map] = sel.value;
+  renderPreview();
+});
+document.getElementById("importFile").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array", cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    importRows = XLSX.utils.sheet_to_json(ws, { defval: "", raw: true });
+    importHeaders = Object.keys(importRows[0] || {});
+    if (!importRows.length) { alert("Dosyada veri satırı bulunamadı."); return; }
+    autoMap();
+    buildMapping();
+  } catch (err) {
+    alert("Dosya okunamadı: " + err.message);
+  }
+});
+document.getElementById("btnDoImport").addEventListener("click", async () => {
+  const recs = [];
+  let skipped = 0;
+  importRows.forEach(row => {
+    const rec = mapRowToRec(row);
+    if (rec.musteri) recs.push(rec); else skipped++;
+  });
+  if (!recs.length) { alert("Yüklenecek geçerli satır yok (Müşteri kolonu zorunlu)."); return; }
+  if (!confirm(`${recs.length} kayıt veritabanına eklenecek. Onaylıyor musun?`)) return;
+  const btn = document.getElementById("btnDoImport");
+  btn.disabled = true; btn.textContent = "Yükleniyor…";
+  try {
+    await apiBulkInsert(recs);
+    const res = document.getElementById("importResult");
+    res.textContent = `✅ ${recs.length} kayıt yüklendi` + (skipped ? `, ${skipped} satır atlandı (Müşteri boş).` : ".");
+    res.classList.remove("hidden");
+    await load(false);
+  } catch (e) {
+    setSaveError(e.message);
+    alert("Yükleme hatası: " + e.message);
+  }
+  btn.disabled = false; btn.textContent = "Seçili satırları yükle";
+});
+function closeImportModal() {
+  document.getElementById("importModal").classList.add("hidden");
+  document.getElementById("importMapping").classList.add("hidden");
+  document.getElementById("importResult").classList.add("hidden");
+  document.getElementById("importFile").value = "";
+  importRows = []; importHeaders = []; fieldMap = {};
+}
+document.getElementById("btnImportOpen").addEventListener("click", () => {
+  if (typeof XLSX === "undefined") {
+    alert("Excel kütüphanesi (CDN) yüklenemedi — internet bağlantısını kontrol et.");
+    return;
+  }
+  document.getElementById("importModal").classList.remove("hidden");
+});
+document.getElementById("btnCancelImport").addEventListener("click", closeImportModal);
+document.getElementById("importModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeImportModal();
+});
+
+/* Otomatik yenileme (30 sn) — düzenleme/içe aktarma yokken */
 setInterval(() => {
   if (document.hidden || addingInline || editingId) return;
+  if (!document.getElementById("importModal").classList.contains("hidden")) return;
   load(false);
 }, 30000);
 
