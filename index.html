@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8 />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sevkiyat Planlama — İhracat</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -18,6 +19,8 @@
   h1 { font-size: 20px; margin: 0; }
   .subtitle { font-size: 12px; color: #6b7280; margin: 4px 0 0; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .admin-box { display: flex; gap: 6px; align-items: center; padding-left: 8px; border-left: 1px solid #e5e7eb; }
+  .admin-badge { font-size: 12px; font-weight: 600; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; border-radius: 6px; padding: 5px 8px; white-space: nowrap; }
   input, select { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; font-size: 13px; background: #fff; color: #111827; }
   .btn { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 12px; font-size: 13px; background: #fff; cursor: pointer; }
   .btn:hover { background: #f3f4f6; }
@@ -28,7 +31,7 @@
   .error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
   .hint { font-size: 11px; color: #6b7280; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 6px; padding: 6px 10px; margin: 0 0 12px; }
 
-  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
   .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
   .card .label { font-size: 12px; color: #6b7280; margin: 0 0 4px; }
   .card .value { font-size: 24px; font-weight: 600; margin: 0; }
@@ -37,9 +40,8 @@
   .card.wide { grid-column: 1 / -1; }
   .distribution { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; text-align: center; }
   .dist-label { font-size: 11px; color: #6b7280; margin: 0 0 2px; }
-  .dist-val { font-size: 15px; margin: 0; font-weight: 500; }
+  .dist-val { font-size: 17px; margin: 0; font-weight: 600; }
   .dist-val.strong { font-weight: 700; }
-  .dist-mini { font-size: 10px; color: #9ca3af; margin: 1px 0 0; }
 
   .table-wrap { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -81,8 +83,9 @@
   .w-aciklama { width: 110px; }
 
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal-bg.login-bg { z-index: 60; }
   .modal { background: #fff; border-radius: 8px; padding: 20px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
-  .modal.wide { max-width: 760px; }
+  .modal.wide { max-width: 900px; }
   .modal h2 { font-size: 16px; margin: 0 0 12px; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .form-grid label span { display: block; font-size: 12px; color: #6b7280; margin-bottom: 3px; }
@@ -93,21 +96,26 @@
   .check input { width: auto !important; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 
+  /* Raporlar */
   .rpt { margin-bottom: 16px; }
   .rpt h3 { font-size: 13px; margin: 0 0 6px; }
-  .rpt table { font-size: 12px; }
   .rpt thead tr { background: #f3f4f6; color: #374151; }
-  .rpt th { padding: 6px 8px; }
-  .rpt td { padding: 5px 8px; }
   .rpt tfoot tr { background: #f9fafb; font-weight: 600; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .chart-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+  .chart-box.wide { grid-column: 1 / -1; }
+  .chart-box h3 { font-size: 13px; margin: 0 0 8px; }
+  .chart-holder { position: relative; height: 220px; }
+  .chart-holder.tall { height: 320px; }
 
   .prev-head { background: #f3f4f6 !important; color: #111827 !important; }
   .success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-top: 12px; }
 
-  @media (max-width: 800px) {
+  @media (max-width: 900px) {
     .summary { grid-template-columns: repeat(2, 1fr); }
     .form-grid { grid-template-columns: 1fr; }
     .col-2 { grid-column: span 1; }
+    .chart-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -127,20 +135,20 @@
     <button class="btn" id="btnReload">↻ Yenile</button>
     <button class="btn" id="btnShowForm">+ Form ile ekle</button>
     <button class="btn dark" id="btnInlineAdd">+ Yeni kayıt</button>
+    <div class="admin-box" id="adminBox"></div>
   </div>
 </header>
 
 <div id="saveError" class="error hidden"></div>
 
 <section id="summary">
-  <div class="card"><p class="label">Toplam kayıt</p><p class="value" id="sum-toplam">0</p></div>
-  <div class="card"><p class="label">Toplam AD</p><p class="value" id="sum-ad">0</p></div>
+  <div class="card"><p class="label">Toplam yükleme adedi</p><p class="value" id="sum-toplam">0</p></div>
+  <div class="card"><p class="label">Tamamlanan yükleme adedi</p><p class="value green" id="sum-tamamlanan">0</p></div>
+  <div class="card"><p class="label">Kalan yükleme adedi</p><p class="value amber" id="sum-kalan">0</p></div>
   <div class="card"><p class="label">Toplam M3</p><p class="value" id="sum-m3">0</p></div>
-  <div class="card"><p class="label">Tamamlanan</p><p class="value green" id="sum-tamamlanan">0</p></div>
-  <div class="card"><p class="label">Bekleyen / Yükleniyor</p><p class="value amber" id="sum-bekleyen">0</p></div>
-  <div class="card"><p class="label">Verimlilik</p><p class="value" id="sum-verimlilik">0%</p></div>
+  <div class="card"><p class="label">Tamamlanma oranı</p><p class="value" id="sum-verimlilik">0%</p></div>
   <div class="card wide">
-    <p class="label">Gün bazlı dağılım (planlanan tarih) — büyük sayı adet, altında kayıt sayısı</p>
+    <p class="label">Gün bazlı yükleme adedi (planlanan tarih)</p>
     <div class="distribution" id="dist"></div>
   </div>
 </section>
@@ -191,8 +199,8 @@
 <!-- Raporlar modalı -->
 <div id="reportModal" class="modal-bg hidden">
   <div class="modal wide">
-    <h2>📊 Raporlar</h2>
-    <p class="hint">Raporlar aktif filtrelenmiş verilere göre hesaplanır (arama + hafta filtresi).</p>
+    <h2>📊 Raporlar ve Grafikler</h2>
+    <p class="hint">Tüm değerler yükleme adedi (AD) bazlıdır. Aktif filtreler (arama + hafta) raporları da etkiler.</p>
     <div id="reportContent"></div>
     <div class="modal-actions">
       <button class="btn" id="btnCloseReport">Kapat</button>
@@ -204,7 +212,7 @@
 <div id="importModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>📥 Excel'den Veri Yükle</h2>
-    <p class="hint">.xlsx / .xls / .csv yükleyin. İlk satır başlık olmalı. Kolonlar otomatik eşleştirilir, gerekirse aşağıdan düzeltebilirsiniz. Müşteri kolonu zorunludur; M3 boş bırakılırsa tipe göre otomatik hesaplanır.</p>
+    <p class="hint">.xlsx / .xls / .csv yükleyin. İlk satır başlık olmalı. Müşteri kolonu zorunludur; M3 boş bırakılırsa tipe göre otomatik hesaplanır.</p>
     <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
     <div id="importMapping" class="hidden">
       <h3 style="font-size:13px;margin:14px 0 6px;">Kolon eşleştirme</h3>
@@ -222,10 +230,96 @@
   </div>
 </div>
 
+<!-- Admin giriş modalı -->
+<div id="loginModal" class="modal-bg login-bg hidden">
+  <div class="modal" style="max-width:360px">
+    <h2>🔐 Admin Girişi</h2>
+    <p class="hint" id="loginHint">Ekleme, düzenleme ve silme işlemleri için giriş gerekli. Oturum 15 dakika sonra otomatik kapanır.</p>
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <label><span>Kullanıcı adı</span><input id="l-user" autocomplete="username" /></label>
+      <label><span>Şifre</span><input id="l-pass" type="password" autocomplete="current-password" /></label>
+    </div>
+    <div id="loginError" class="error hidden" style="margin-top:10px;margin-bottom:0"></div>
+    <div class="modal-actions">
+      <button class="btn" id="btnLoginCancel">Vazgeç</button>
+      <button class="btn dark" id="btnLogin">Giriş yap</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ================= Firebase bağlantısı ================= */
 const FIREBASE_DB_URL = "https://sevkiyat-app-default-rtdb.europe-west1.firebasedatabase.app".replace(/\/+$/, "");
 const NODE = "sevkiyat";
+
+/* ================= Admin oturumu ================= */
+const ADMIN_USER = "Admin";
+const ADMIN_PASS = "Yatsan";
+const SESSION_MS = 15 * 60 * 1000; /* 15 dakika */
+const SESS_KEY = "sevkiyat_admin_exp";
+let pendingAction = null;
+
+function isAdmin() {
+  return Number(sessionStorage.getItem(SESS_KEY) || 0) > Date.now();
+}
+function remainingMs() {
+  return Math.max(0, Number(sessionStorage.getItem(SESS_KEY) || 0) - Date.now());
+}
+function startSession() {
+  sessionStorage.setItem(SESS_KEY, String(Date.now() + SESSION_MS));
+  updateAdminUI();
+}
+function endSession() {
+  sessionStorage.removeItem(SESS_KEY);
+  updateAdminUI();
+}
+function fmtRemain(ms) {
+  const s = Math.ceil(ms / 1000);
+  return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+function updateAdminUI() {
+  const box = document.getElementById("adminBox");
+  if (isAdmin()) {
+    box.innerHTML = `<span class="admin-badge">👤 Admin · <span id="adminTimer">${fmtRemain(remainingMs())}</span></span>
+      <button class="btn" id="btnLogout">Çıkış</button>`;
+    document.getElementById("btnLogout").addEventListener("click", endSession);
+  } else {
+    box.innerHTML = `<button class="btn" id="btnLoginOpen">🔐 Admin girişi</button>`;
+    document.getElementById("btnLoginOpen").addEventListener("click", () => { pendingAction = null; openLogin(""); });
+  }
+}
+let lastAdminState = null;
+setInterval(() => {
+  const cur = isAdmin();
+  if (cur !== lastAdminState) { updateAdminUI(); lastAdminState = cur; }
+  const t = document.getElementById("adminTimer");
+  if (t) t.textContent = fmtRemain(remainingMs());
+}, 1000);
+
+/* İşlem kapısı: admin değilse önce login, sonra işlem devam eder */
+function gate(type, param) {
+  if (isAdmin()) { runAction({ type, param }); return; }
+  pendingAction = { type, param };
+  openLogin("Bu işlem için admin girişi gerekiyor.");
+}
+function runAction({ type, param }) {
+  switch (type) {
+    case "inline-add":  doInlineAdd(); break;
+    case "form-add":    openModal(); break;
+    case "import":      openImport(); break;
+    case "save-inline": saveInline(); break;
+    case "save-edit":   saveEdit(); break;
+    case "do-import":   doImport(); break;
+    case "edit": {
+      const row = rows.find(r => r.id === param);
+      if (row) { editingId = param; editData = { ...row }; render(); }
+      break;
+    }
+    case "delete":
+      if (confirm("Bu kayıt veritabanından silinsin mi?")) deleteRow(param);
+      break;
+  }
+}
 
 /* ================= Sabitler ================= */
 const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
@@ -235,11 +329,7 @@ const BLMS = ["EXPORT-1","EXPORT-2","EXPORT-3"];
 const TIPLER = ["KOMPLE TIR","PARSIYEL TIR","40 HC","20 DC"];
 const GELDI = ["", "GELDİ", "HAYIR"];
 const M3_CARPAN = { "KOMPLE TIR": 90, "40 HC": 70, "20 DC": 35 };
-
-/* ============ SIRALAMA AYARLARI ============ */
-/* true: en yeni tarih en üstte · false: en eski tarih en üstte */
-const SORT_DESC = true;
-/* Durum sırası (tarihler eşitse): 1) Yükleniyor 2) Bekliyor 3) Tamamlandı */
+const SORT_DESC = true; /* true: en yeni tarih üstte */
 const DURUM_SIRA = { "Yükleniyor": 0, "Yükleme Bekliyor": 1, "Yükleme Tamamlandı": 2 };
 
 /* ================= Yardımcılar ================= */
@@ -250,6 +340,7 @@ function esc(s) {
 function numOrDash(v) { return (v !== null && v !== undefined && v !== "") ? v : "-"; }
 function pad2(n) { return String(n).padStart(2, "0"); }
 function fmtN(n) { return (Math.round(n * 100) / 100).toLocaleString("tr-TR"); }
+function adet(r) { return Number(r.ad) || 0; }
 function getISOWeek(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -287,8 +378,6 @@ function emptyRecord() {
     durum: "Yükleme Bekliyor", aciklama: "", araciGeldi: "", prsM3: "", m3: 90, oncelikli: false
   };
 }
-
-/* ============ M3 OTOMATİK HESAPLAMA ============ */
 function hesaplaM3(tip, ad, prsM3) {
   if (tip === "PARSIYEL TIR") return Number(prsM3) || 0;
   const carpan = M3_CARPAN[tip];
@@ -298,7 +387,6 @@ function hesaplaM3(tip, ad, prsM3) {
 
 /* ============ TABLO SIRALAMA ============ */
 function tarihCmp(a, b) {
-  /* boş tarihler en sona gider */
   if (!a && !b) return 0;
   if (!a) return 1;
   if (!b) return -1;
@@ -349,15 +437,12 @@ async function apiList() {
   const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`);
   const data = await check(res, "Veriler yüklenemedi");
   if (!data) return [];
-  return Object.entries(data)
-    .map(([key, val]) => ({ id: key, ...(val || {}) }));
+  return Object.entries(data).map(([key, val]) => ({ id: key, ...(val || {}) }));
 }
 async function apiInsert(rec) {
   const body = toDb(rec);
   const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
   const data = await check(res, "Kayıt eklenemedi");
   return { id: data.name, ...body };
@@ -365,9 +450,7 @@ async function apiInsert(rec) {
 async function apiUpdate(id, rec) {
   const body = toDb(rec);
   const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
   await check(res, "Kayıt güncellenemedi");
   return { id, ...body };
@@ -379,13 +462,9 @@ async function apiDelete(id) {
 async function apiBulkInsert(recs) {
   const body = {};
   const stamp = Date.now().toString(36);
-  recs.forEach((rec, i) => {
-    body["imp-" + stamp + "-" + String(i).padStart(4, "0")] = toDb(rec);
-  });
+  recs.forEach((rec, i) => { body["imp-" + stamp + "-" + String(i).padStart(4, "0")] = toDb(rec); });
   const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
   await check(res, "Toplu yükleme başarısız");
 }
@@ -435,26 +514,24 @@ function filtered() {
   });
   return sortList(result);
 }
+/* Özet: HER ŞEY yükleme adedi (AD) bazlı — kayıt sayısı yok */
 function computeSummary(list) {
-  const toplam = list.length;
-  const tamamlanan = list.filter(r => r.durum === "Yükleme Tamamlandı").length;
-  const toplamAd = list.reduce((s, r) => s + (Number(r.ad) || 0), 0);
-  const toplamM3 = list.reduce((s, r) => s + (Number(r.m3) || 0), 0);
-  const verimlilik = toplam ? (tamamlanan / toplam) * 100 : 0;
+  const toplamAd   = list.reduce((s, r) => s + adet(r), 0);
+  const tamamAd    = list.filter(r => r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + adet(r), 0);
+  const kalanAd    = toplamAd - tamamAd;
+  const yukleniyorAd = list.filter(r => r.durum === "Yükleniyor").reduce((s, r) => s + adet(r), 0);
+  const toplamM3   = list.reduce((s, r) => s + (Number(r.m3) || 0), 0);
+  const oran       = toplamAd ? (tamamAd / toplamAd) * 100 : 0;
   /* JS: Pazar=0 … Cumartesi=6 → dizide Pazartesi=0 … Pazar=6 */
   const gunIdx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
-  const adDag = GUNLER.map(() => 0);
-  const kayitDag = GUNLER.map(() => 0);
+  const gunAd = GUNLER.map(() => 0);
   list.forEach(r => {
     const dt = parseLocalDate(r.planlananTarih);
     if (!dt) return;
     const idx = gunIdx[dt.getDay()];
-    if (idx === undefined) return;
-    adDag[idx] += Number(r.ad) || 0;
-    kayitDag[idx] += 1;
+    if (idx !== undefined) gunAd[idx] += adet(r);
   });
-  return { toplam, tamamlanan, bekleyen: toplam - tamamlanan, verimlilik,
-           toplamAd, toplamM3, adDag, kayitDag };
+  return { toplamAd, tamamAd, kalanAd, yukleniyorAd, toplamM3, oran, gunAd };
 }
 
 /* ================= Render ================= */
@@ -477,19 +554,15 @@ function renderWeekFilter() {
 }
 function renderSummary(list) {
   const s = computeSummary(list);
-  document.getElementById("sum-toplam").textContent = s.toplam;
-  document.getElementById("sum-ad").textContent = fmtN(s.toplamAd);
+  document.getElementById("sum-toplam").textContent = fmtN(s.toplamAd);
+  document.getElementById("sum-tamamlanan").textContent = fmtN(s.tamamAd);
+  document.getElementById("sum-kalan").textContent = fmtN(s.kalanAd);
   document.getElementById("sum-m3").textContent = fmtN(s.toplamM3);
-  document.getElementById("sum-tamamlanan").textContent = s.tamamlanan;
-  document.getElementById("sum-bekleyen").textContent = s.bekleyen;
-  document.getElementById("sum-verimlilik").textContent = s.verimlilik.toFixed(1) + "%";
+  document.getElementById("sum-verimlilik").textContent = s.oran.toFixed(1) + "%";
   document.getElementById("dist").innerHTML =
-    GUNLER.map((g, i) =>
-      `<div><p class="dist-label">${g}</p><p class="dist-val">${s.adDag[i]}</p><p class="dist-mini">${s.kayitDag[i]} kayıt</p></div>`
-    ).join("") +
-    `<div><p class="dist-label">Toplam</p><p class="dist-val strong">${s.toplamAd}</p><p class="dist-mini">${s.toplam} kayıt</p></div>`;
+    GUNLER.map((g, i) => `<div><p class="dist-label">${g}</p><p class="dist-val">${s.gunAd[i]}</p></div>`).join("") +
+    `<div><p class="dist-label">Toplam</p><p class="dist-val strong">${fmtN(s.toplamAd)}</p></div>`;
 }
-
 function fInput(data, scope, field, type, cls, datalist, extra) {
   return `<input type="${type}" class="cell-input ${cls || ""}" data-scope="${scope}" data-field="${field}"
     value="${esc(String(data[field] ?? ""))}" ${datalist ? 'list="musteri-list"' : ""} ${extra || ""} />`;
@@ -569,6 +642,11 @@ function renderTable(list) {
 }
 
 /* ================= İşlemler ================= */
+function doInlineAdd() {
+  inlineData = emptyRecord();
+  addingInline = true;
+  render();
+}
 async function saveInline() {
   if (!(inlineData.musteri || "").trim()) { alert("Müşteri adı zorunlu."); return; }
   try {
@@ -604,21 +682,14 @@ document.getElementById("tbody").addEventListener("click", e => {
   if (!btn) return;
   const { action, id } = btn.dataset;
   switch (action) {
-    case "save-inline":   saveInline(); break;
+    case "save-inline":   gate("save-inline"); break;
     case "cancel-inline": addingInline = false; inlineData = null; render(); break;
-    case "save-edit":     saveEdit(); break;
+    case "save-edit":     gate("save-edit"); break;
     case "cancel-edit":   editingId = null; editData = null; render(); break;
-    case "edit": {
-      const row = rows.find(r => r.id === id);
-      if (row) { editingId = id; editData = { ...row }; render(); }
-      break;
-    }
-    case "delete":
-      if (confirm("Bu kayıt veritabanından silinsin mi?")) deleteRow(id);
-      break;
+    case "edit":          gate("edit", id); break;
+    case "delete":        gate("delete", id); break;
   }
 });
-
 function onFieldInput(e) {
   const el = e.target;
   const field = el.dataset.field;
@@ -633,7 +704,6 @@ function onFieldInput(e) {
     const cell = el.closest("tr")?.querySelector(".st-cell");
     if (cell) cell.innerHTML = durumIcon(val);
   }
-
   if (field === "sevkiyatTipi" || field === "ad" || field === "prsM3") {
     const tr = el.closest("tr");
     const m3In = tr?.querySelector('input[data-field="m3"]');
@@ -649,12 +719,11 @@ function onFieldInput(e) {
 }
 document.getElementById("tbody").addEventListener("input", onFieldInput);
 document.getElementById("tbody").addEventListener("change", onFieldInput);
-
 document.getElementById("tbody").addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
   const scope = e.target.dataset.scope;
-  if (scope === "inline") saveInline();
-  else if (scope === "edit") saveEdit();
+  if (scope === "inline") gate("save-inline");
+  else if (scope === "edit") gate("save-edit");
 });
 
 document.getElementById("search").addEventListener("input", render);
@@ -665,11 +734,9 @@ document.getElementById("btnToggleSummary").addEventListener("click", () => {
   s.classList.toggle("hidden");
   document.getElementById("btnToggleSummary").textContent = s.classList.contains("hidden") ? "Özet" : "Özeti gizle";
 });
-document.getElementById("btnInlineAdd").addEventListener("click", () => {
-  inlineData = emptyRecord();
-  addingInline = true;
-  render();
-});
+document.getElementById("btnInlineAdd").addEventListener("click", () => gate("inline-add"));
+document.getElementById("btnShowForm").addEventListener("click", () => gate("form-add"));
+document.getElementById("btnImportOpen").addEventListener("click", () => gate("import"));
 
 /* ================= Modal form ================= */
 function fillSelect(id, options) {
@@ -718,10 +785,9 @@ document.getElementById("f-prsM3").addEventListener("input", e => {
   const yeni = hesaplaM3("PARSIYEL TIR", null, e.target.value);
   if (yeni !== null) document.getElementById("f-m3").value = yeni;
 });
-
-document.getElementById("btnShowForm").addEventListener("click", openModal);
 document.getElementById("btnCancelForm").addEventListener("click", closeModal);
 document.getElementById("btnSaveForm").addEventListener("click", async () => {
+  if (!isAdmin()) { pendingAction = { type: "form-add-save" }; openLogin("Oturum süresi dolmuş, tekrar giriş yapın."); return; }
   const musteri = getVal("f-musteri").trim();
   if (!musteri) { alert("Müşteri adı zorunlu."); return; }
   const rec = emptyRecord();
@@ -752,52 +818,141 @@ document.getElementById("modal").addEventListener("click", e => {
 });
 
 /* ================= RAPORLAR ================= */
+let chartInstances = [];
+function destroyCharts() {
+  chartInstances.forEach(c => { try { c.destroy(); } catch (e) {} });
+  chartInstances = [];
+}
+/* Grup bazında: yükleme adedi, tamamlanan adet, M3 */
 function groupStats(list, keyFn) {
   const m = new Map();
   list.forEach(r => {
     const k = keyFn(r) || "-";
-    if (!m.has(k)) m.set(k, { kayit: 0, ad: 0, m3: 0, tamam: 0 });
+    if (!m.has(k)) m.set(k, { ad: 0, tamam: 0, yuk: 0, bek: 0, m3: 0 });
     const g = m.get(k);
-    g.kayit++; g.ad += Number(r.ad) || 0; g.m3 += Number(r.m3) || 0;
-    if (r.durum === "Yükleme Tamamlandı") g.tamam++;
+    const a = adet(r);
+    g.ad += a; g.m3 += Number(r.m3) || 0;
+    if (r.durum === "Yükleme Tamamlandı") g.tamam += a;
+    else if (r.durum === "Yükleniyor") g.yuk += a;
+    else g.bek += a;
   });
   return m;
 }
 function statsTable(map, title, colLabel) {
   let rowsHtml = "";
-  let tK = 0, tA = 0, tM = 0, tT = 0;
-  [...map.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), "tr")).forEach(([k, g]) => {
-    tK += g.kayit; tA += g.ad; tM += g.m3; tT += g.tamam;
-    const ver = g.kayit ? (g.tamam / g.kayit * 100).toFixed(1) : "0.0";
-    rowsHtml += `<tr><td class="strong">${esc(k)}</td><td class="center">${g.kayit}</td><td class="center">${g.ad}</td><td class="center">${fmtN(g.m3)}</td><td class="center">${g.tamam}</td><td class="center">%${ver}</td></tr>`;
+  let tA = 0, tT = 0, tM = 0;
+  [...map.entries()].sort((a, b) => b[1].ad - a[1].ad).forEach(([k, g]) => {
+    tA += g.ad; tT += g.tamam; tM += g.m3;
+    const oran = g.ad ? (g.tamam / g.ad * 100).toFixed(1) : "0.0";
+    rowsHtml += `<tr><td class="strong">${esc(k)}</td><td class="center">${fmtN(g.ad)}</td><td class="center">${fmtN(g.tamam)}</td><td class="center">${fmtN(g.ad - g.tamam)}</td><td class="center">${fmtN(g.m3)}</td><td class="center">%${oran}</td></tr>`;
   });
-  const ver = tK ? (tT / tK * 100).toFixed(1) : "0.0";
+  const oran = tA ? (tT / tA * 100).toFixed(1) : "0.0";
   return `<div class="rpt"><h3>${esc(title)}</h3><div class="table-wrap"><table>
-    <thead><tr><th>${esc(colLabel)}</th><th>Kayıt</th><th>AD</th><th>Toplam M3</th><th>Tamamlanan</th><th>Verimlilik</th></tr></thead>
+    <thead><tr><th>${esc(colLabel)}</th><th>Yükleme (adet)</th><th>Tamamlanan</th><th>Kalan</th><th>Toplam M3</th><th>Tamamlanma</th></tr></thead>
     <tbody>${rowsHtml || `<tr><td colspan="6" class="empty">Veri yok</td></tr>`}</tbody>
-    <tfoot><tr><td>TOPLAM</td><td class="center">${tK}</td><td class="center">${tA}</td><td class="center">${fmtN(tM)}</td><td class="center">${tT}</td><td class="center">%${ver}</td></tr></tfoot>
+    <tfoot><tr><td>TOPLAM</td><td class="center">${fmtN(tA)}</td><td class="center">${fmtN(tT)}</td><td class="center">${fmtN(tA - tT)}</td><td class="center">${fmtN(tM)}</td><td class="center">%${oran}</td></tr></tfoot>
   </table></div></div>`;
 }
+function makeCharts(list) {
+  if (typeof Chart === "undefined") return;
+  Chart.defaults.font.size = 11;
+  const s = computeSummary(list);
+
+  /* 1) Durum dağılımı (donut) */
+  chartInstances.push(new Chart(document.getElementById("chDurum"), {
+    type: "doughnut",
+    data: {
+      labels: ["Tamamlanan", "Yükleniyor", "Bekliyor"],
+      datasets: [{ data: [s.tamamAd, s.yukleniyorAd, s.kalanAd - s.yukleniyorAd],
+        backgroundColor: ["#16a34a", "#d97706", "#dc2626"], borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } } }
+  }));
+
+  /* 2) Gün bazlı planlanan adet */
+  chartInstances.push(new Chart(document.getElementById("chGun"), {
+    type: "bar",
+    data: { labels: GUNLER, datasets: [{ label: "Yükleme adedi", data: s.gunAd, backgroundColor: "#4f46e5", borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  }));
+
+  /* 3) Sevkiyat tipi bazlı */
+  const tipMap = groupStats(list, r => r.sevkiyatTipi);
+  chartInstances.push(new Chart(document.getElementById("chTip"), {
+    type: "bar",
+    data: { labels: [...tipMap.keys()],
+      datasets: [{ label: "Yükleme adedi", data: [...tipMap.values()].map(g => g.ad), backgroundColor: "#0891b2", borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  }));
+
+  /* 4) BLM bazlı */
+  const blmMap = groupStats(list, r => r.blm);
+  chartInstances.push(new Chart(document.getElementById("chBlm"), {
+    type: "bar",
+    data: { labels: [...blmMap.keys()],
+      datasets: [{ label: "Yükleme adedi", data: [...blmMap.values()].map(g => g.ad), backgroundColor: "#7c3aed", borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  }));
+
+  /* 5) Müşteri bazlı stacked (tamamlanan/yükleniyor/bekliyor) — AD'ye göre azalan */
+  const musMap = [...groupStats(list, r => r.musteri).entries()].sort((a, b) => b[1].ad - a[1].ad);
+  chartInstances.push(new Chart(document.getElementById("chMusteri"), {
+    type: "bar",
+    data: {
+      labels: musMap.map(([k]) => k),
+      datasets: [
+        { label: "Tamamlanan", data: musMap.map(([, g]) => g.tamam), backgroundColor: "#16a34a", stack: "s" },
+        { label: "Yükleniyor", data: musMap.map(([, g]) => g.yuk),   backgroundColor: "#d97706", stack: "s" },
+        { label: "Bekliyor",   data: musMap.map(([, g]) => g.bek),   backgroundColor: "#dc2626", stack: "s" }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: "y",
+      plugins: { legend: { position: "bottom" } },
+      scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: true } } }
+  }));
+}
 function buildReports() {
+  destroyCharts();
   const list = filtered();
   const c = document.getElementById("reportContent");
   if (!list.length) { c.innerHTML = `<p class="hint">Filtrelere uyan kayıt yok.</p>`; return; }
-  c.innerHTML =
+
+  const chartBlock = (typeof Chart === "undefined")
+    ? `<p class="hint">⚠️ Grafik kütüphanesi (CDN) yüklenemedi — tablolara bakın.</p>`
+    : `<div class="chart-grid">
+        <div class="chart-box"><h3>Durum dağılımı (adet)</h3><div class="chart-holder"><canvas id="chDurum"></canvas></div></div>
+        <div class="chart-box"><h3>Gün bazlı planlanan adet</h3><div class="chart-holder"><canvas id="chGun"></canvas></div></div>
+        <div class="chart-box"><h3>Sevkiyat tipi bazlı adet</h3><div class="chart-holder"><canvas id="chTip"></canvas></div></div>
+        <div class="chart-box"><h3>BLM bazlı adet</h3><div class="chart-holder"><canvas id="chBlm"></canvas></div></div>
+        <div class="chart-box wide"><h3>Müşteri bazlı yükleme adedi</h3><div class="chart-holder tall"><canvas id="chMusteri"></canvas></div></div>
+      </div>`;
+
+  c.innerHTML = chartBlock +
     statsTable(groupStats(list, r => r.musteri), "Müşteri bazlı", "Müşteri") +
     statsTable(groupStats(list, r => r.sevkiyatTipi), "Sevkiyat tipi bazlı", "Tip") +
     statsTable(groupStats(list, r => r.blm), "BLM bazlı", "BLM") +
     statsTable(groupStats(list, r => "Hafta " + r.hafta), "Hafta bazlı", "Hafta") +
     statsTable(groupStats(list, r => r.durum), "Durum bazlı", "Durum");
+
+  if (typeof Chart !== "undefined") makeCharts(list);
 }
 document.getElementById("btnReports").addEventListener("click", () => {
-  buildReports();
   document.getElementById("reportModal").classList.remove("hidden");
+  buildReports();
 });
 document.getElementById("btnCloseReport").addEventListener("click", () => {
+  destroyCharts();
   document.getElementById("reportModal").classList.add("hidden");
 });
 document.getElementById("reportModal").addEventListener("click", e => {
-  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+  if (e.target === e.currentTarget) { destroyCharts(); e.currentTarget.classList.add("hidden"); }
 });
 
 /* ================= EXCEL İÇE AKTARMA ================= */
@@ -939,7 +1094,7 @@ document.getElementById("importFile").addEventListener("change", async e => {
     alert("Dosya okunamadı: " + err.message);
   }
 });
-document.getElementById("btnDoImport").addEventListener("click", async () => {
+async function doImport() {
   const recs = [];
   let skipped = 0;
   importRows.forEach(row => {
@@ -961,7 +1116,18 @@ document.getElementById("btnDoImport").addEventListener("click", async () => {
     alert("Yükleme hatası: " + e.message);
   }
   btn.disabled = false; btn.textContent = "Seçili satırları yükle";
+}
+document.getElementById("btnDoImport").addEventListener("click", () => {
+  if (!isAdmin()) { pendingAction = { type: "do-import" }; openLogin("Oturum süresi dolmuş, tekrar giriş yapın."); return; }
+  doImport();
 });
+function openImport() {
+  if (typeof XLSX === "undefined") {
+    alert("Excel kütüphanesi (CDN) yüklenemedi — internet bağlantısını kontrol et.");
+    return;
+  }
+  document.getElementById("importModal").classList.remove("hidden");
+}
 function closeImportModal() {
   document.getElementById("importModal").classList.add("hidden");
   document.getElementById("importMapping").classList.add("hidden");
@@ -969,16 +1135,51 @@ function closeImportModal() {
   document.getElementById("importFile").value = "";
   importRows = []; importHeaders = []; fieldMap = {};
 }
-document.getElementById("btnImportOpen").addEventListener("click", () => {
-  if (typeof XLSX === "undefined") {
-    alert("Excel kütüphanesi (CDN) yüklenemedi — internet bağlantısını kontrol et.");
-    return;
-  }
-  document.getElementById("importModal").classList.remove("hidden");
-});
 document.getElementById("btnCancelImport").addEventListener("click", closeImportModal);
 document.getElementById("importModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) closeImportModal();
+});
+
+/* ================= LOGIN ================= */
+function openLogin(hintMsg) {
+  const hint = document.getElementById("loginHint");
+  hint.textContent = hintMsg || "Ekleme, düzenleme ve silme işlemleri için giriş gerekli. Oturum 15 dakika sonra otomatik kapanır.";
+  document.getElementById("loginError").classList.add("hidden");
+  document.getElementById("loginModal").classList.remove("hidden");
+  document.getElementById("l-user").focus();
+}
+function closeLogin() {
+  document.getElementById("loginModal").classList.add("hidden");
+  document.getElementById("l-pass").value = "";
+  pendingAction = null;
+}
+function setLoginError(msg) {
+  const el = document.getElementById("loginError");
+  el.textContent = msg;
+  el.classList.toggle("hidden", !msg);
+}
+function tryLogin() {
+  const u = document.getElementById("l-user").value.trim();
+  const p = document.getElementById("l-pass").value;
+  if (u.toLowerCase() === ADMIN_USER.toLowerCase() && p === ADMIN_PASS) {
+    startSession();
+    document.getElementById("loginModal").classList.add("hidden");
+    document.getElementById("l-pass").value = "";
+    const pa = pendingAction; pendingAction = null;
+    if (pa) runAction(pa);
+  } else {
+    setLoginError("Kullanıcı adı veya şifre hatalı.");
+  }
+}
+document.getElementById("btnLogin").addEventListener("click", tryLogin);
+document.getElementById("btnLoginCancel").addEventListener("click", closeLogin);
+document.getElementById("loginModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeLogin();
+});
+["l-user", "l-pass"].forEach(id => {
+  document.getElementById(id).addEventListener("keydown", e => {
+    if (e.key === "Enter") tryLogin();
+  });
 });
 
 /* Otomatik yenileme (30 sn) — düzenleme/içe aktarma yokken */
@@ -989,6 +1190,8 @@ setInterval(() => {
 }, 30000);
 
 /* ================= Başlat ================= */
+updateAdminUI();
+lastAdminState = isAdmin();
 load(true);
 </script>
 </body>
