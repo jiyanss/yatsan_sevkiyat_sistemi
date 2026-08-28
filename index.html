@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sevkiyat Planlama — İhracat</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f9fafb; color: #111827; font-size: 14px;
+  }
+  .hidden { display: none !important; }
+
+  /* ---------- Üst bar ---------- */
+  header { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0; display: flex; align-items: center; gap: 8px; }
+  .subtitle { font-size: 12px; color: #6b7280; margin: 4px 0 0; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  input, select { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; font-size: 13px; background: #fff; color: #111827; }
+  .btn { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 12px; font-size: 13px; background: #fff; cursor: pointer; }
+  .btn:hover { background: #f3f4f6; }
+  .btn.dark { background: #111827; color: #fff; border-color: #111827; }
+  .btn.dark:hover { background: #1f2937; }
+
+  .error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
+
+  /* ---------- Özet kartlar ---------- */
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+  .card .label { font-size: 12px; color: #6b7280; margin: 0 0 4px; }
+  .card .value { font-size: 24px; font-weight: 600; margin: 0; }
+  .value.green { color: #16a34a; }
+  .value.amber { color: #d97706; }
+  .card.wide { grid-column: 1 / -1; }
+  .distribution { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; text-align: center; }
+  .dist-label { font-size: 11px; color: #6b7280; margin: 0 0 2px; }
+  .dist-val { font-size: 15px; margin: 0; font-weight: 500; }
+  .dist-val.strong { font-weight: 700; }
+
+  /* ---------- Tablo ---------- */
+  .table-wrap { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead tr { background: #111827; color: #fff; }
+  th { padding: 8px; text-align: left; font-weight: 500; white-space: nowrap; }
+  td { padding: 6px 8px; border-top: 1px solid #f3f4f6; white-space: nowrap; vertical-align: middle; }
+  tr.row:hover { background: #f9fafb; }
+  tr.priority { background: #fefce8; }
+  tr.editing { background: #fefce8; }
+  tr.inline-row { background: #eff6ff; }
+  td.strong { font-weight: 600; }
+  td.center { text-align: center; }
+  td.muted { color: #9ca3af; }
+  td.empty { text-align: center; padding: 32px 8px; color: #9ca3af; }
+  td.truncate { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+  .nowrap { white-space: nowrap; }
+
+  .badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .badge.done    { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .badge.loading { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+  .badge.waiting { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+  .st-ok   { color: #16a34a; font-weight: 700; }
+  .st-wait { color: #dc2626; font-weight: 700; font-size: 11px; }
+  .st-load { color: #d97706; display: inline-block; animation: spin 1.5s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .icon-btn { background: none; border: none; cursor: pointer; padding: 2px 5px; font-size: 14px; line-height: 1; }
+  .icon-btn.ok   { color: #16a34a; }
+  .icon-btn.mute { color: #9ca3af; }
+  .icon-btn.del  { color: #f87171; }
+  .icon-btn:hover { filter: brightness(0.7); }
+
+  /* ---------- Hücre inputları ---------- */
+  .cell-input { font-size: 12px; padding: 3px 4px; border: 1px solid #d1d5db; border-radius: 4px; }
+  .w-musteri  { width: 110px; }
+  .w-kategori { width: 80px; }
+  .w-num      { width: 60px; }
+  .w-date     { width: 132px; }
+  .w-aciklama { width: 110px; }
+
+  /* ---------- Modal ---------- */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal { background: #fff; border-radius: 8px; padding: 20px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 16px; margin: 0 0 12px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid label span { display: block; font-size: 12px; color: #6b7280; margin-bottom: 3px; }
+  .form-grid input, .form-grid select { width: 100%; }
+  .col-2 { grid-column: span 2; }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .check span { margin: 0 !important; }
+  .check input { width: auto !important; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+  @media (max-width: 800px) {
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .form-grid { grid-template-columns: 1fr; }
+    .col-2 { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📋 Sevkiyat Planlama — İhracat</h1>
+    <p class="subtitle">Veriler bu tarayıcıda (localStorage) saklanır.</p>
+  </div>
+  <div class="toolbar">
+    <input id="search" placeholder="🔍 Müşteri ara" style="min-width:150px" />
+    <select id="weekFilter"><option value="all">Tüm haftalar</option></select>
+    <button class="btn" id="btnToggleSummary">Özeti gizle</button>
+    <button class="btn" id="btnReload">↻ Yenile</button>
+    <button class="btn" id="btnShowForm">+ Form ile ekle</button>
+    <button class="btn dark" id="btnInlineAdd">+ Yeni kayıt</button>
+  </div>
+</header>
+
+<div id="saveError" class="error hidden"></div>
+
+<section id="summary">
+  <div class="card"><p class="label">Toplam kayıt</p><p class="value" id="sum-toplam">0</p></div>
+  <div class="card"><p class="label">Tamamlanan</p><p class="value green" id="sum-tamamlanan">0</p></div>
+  <div class="card"><p class="label">Bekleyen / Yükleniyor</p><p class="value amber" id="sum-bekleyen">0</p></div>
+  <div class="card"><p class="label">Verimlilik</p><p class="value" id="sum-verimlilik">0%</p></div>
+  <div class="card wide">
+    <p class="label">Gün bazlı adet dağılımı (planlanan tarih)</p>
+    <div class="distribution" id="dist"></div>
+  </div>
+</section>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Müşteri</th><th>BLM</th><th>Kategori</th><th>Sevkiyat Tipi</th><th>AD</th>
+        <th>Planlanan Tarih</th><th>Hafta</th><th>Ay</th><th>Reel Plan</th><th>Gerçekleşen Tarih</th>
+        <th>Durum</th><th>Açıklama</th><th>Aracı Geldi mi</th><th>Status</th><th>PRS M3</th><th>M3</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<datalist id="musteri-list"></datalist>
+
+<!-- Form ile ekleme modalı -->
+<div id="modal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>Yeni sevkiyat kaydı</h2>
+    <div class="form-grid">
+      <label class="col-2"><span>Müşteri</span><input id="f-musteri" list="musteri-list" /></label>
+      <label><span>BLM</span><select id="f-blm"></select></label>
+      <label><span>Kategori</span><input id="f-kategori" /></label>
+      <label><span>Sevkiyat tipi</span><select id="f-sevkiyatTipi"></select></label>
+      <label><span>AD</span><input id="f-ad" type="number" /></label>
+      <label><span>Planlanan tarih</span><input id="f-planlananTarih" type="date" /></label>
+      <label><span>Reel plan tarihi</span><input id="f-reelPlan" type="date" /></label>
+      <label><span>Gerçekleşen tarih</span><input id="f-gerceklesenTarih" type="date" /></label>
+      <label><span>Durum</span><select id="f-durum"></select></label>
+      <label><span>Aracı geldi mi</span><select id="f-araciGeldi"></select></label>
+      <label><span>PRS M3</span><input id="f-prsM3" type="number" /></label>
+      <label><span>M3</span><input id="f-m3" type="number" /></label>
+      <label class="col-2"><span>Açıklama</span><input id="f-aciklama" /></label>
+      <label class="col-2 check"><input id="f-oncelikli" type="checkbox" /><span>Öncelikli (satırı sarı vurgula)</span></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="btnCancelForm">Vazgeç</button>
+      <button class="btn dark" id="btnSaveForm">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= Sabitler ================= */
+const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+const GUNLER = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+const DURUMLAR = ["Yükleme Bekliyor", "Yükleniyor", "Yükleme Tamamlandı"];
+const BLMS = ["EXPORT-1","EXPORT-2","EXPORT-3"];
+const TIPLER = ["KOMPLETIR","PARSIYEL TIR","40 HC","20 HC"];
+const GELDI = ["", "GELDİ", "HAYIR"];
+const M3_VARSAYILAN = { "KOMPLETIR": 90, "PARSIYEL TIR": 90, "40 HC": 140, "20 HC": 70 };
+const STORAGE_KEY = "sevkiyat-records";
+
+/* ================= Yardımcılar ================= */
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function getISOWeek(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+}
+function parseLocalDate(iso) {
+  if (!iso) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function formatDate(iso) {
+  if (!iso) return "-";
+  const [y, m, d] = iso.split("-");
+  return `${d}.${m}.${y}`;
+}
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function durumClass(d) {
+  if (d === "Yükleme Tamamlandı") return "done";
+  if (d === "Yükleniyor") return "loading";
+  return "waiting";
+}
+function durumIcon(d) {
+  if (d === "Yükleme Tamamlandı") return '<span class="st-ok">✔</span>';
+  if (d === "Yükleniyor") return '<span class="st-load">⟳</span>';
+  return '<span class="st-wait">?</span>';
+}
+function genId() {
+  return "r-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+}
+function emptyRecord() {
+  return {
+    id: "", musteri: "", blm: "EXPORT-1", kategori: "PLANLI", sevkiyatTipi: "KOMPLETIR",
+    ad: 1, planlananTarih: todayISO(), reelPlan: todayISO(), gerceklesenTarih: "",
+    durum: "Yükleme Bekliyor", aciklama: "", araciGeldi: "", prsM3: "", m3: 90, oncelikli: false
+  };
+}
+
+/* ================= State ================= */
+let rows = [];
+let editingId = null;
+let editData = null;
+let addingInline = false;
+let inlineData = null;
+let weekFilter = "all";
+
+/* ================= Veri yükle / kaydet ================= */
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    rows = raw ? JSON.parse(raw) : [];
+    setSaveError("");
+  } catch (e) {
+    rows = [];
+    setSaveError("Veri okunamadı.");
+  }
+  render();
+}
+function persist(next) {
+  rows = next;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+    setSaveError("");
+  } catch (e) {
+    setSaveError("Kaydedilemedi, tekrar deneyin.");
+  }
+  render();
+}
+function setSaveError(msg) {
+  const el = document.getElementById("saveError");
+  el.textContent = msg;
+  el.classList.toggle("hidden", !msg);
+}
+
+/* ================= Filtre & özet ================= */
+function enriched(list) {
+  return list.map(r => {
+    const dt = parseLocalDate(r.planlananTarih);
+    return { ...r, hafta: dt ? getISOWeek(dt) : "-", ay: dt ? AYLAR[dt.getMonth()] : "-" };
+  });
+}
+function filtered() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  return enriched(rows).filter(r => {
+    if (weekFilter !== "all" && String(r.hafta) !== String(weekFilter)) return false;
+    if (q && !(r.musteri || "").toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function computeSummary(list) {
+  const toplam = list.length;
+  const tamamlanan = list.filter(r => r.durum === "Yükleme Tamamlandı").length;
+  const verimlilik = toplam ? (tamamlanan / toplam) * 100 : 0;
+  const dagilim = GUNLER.map(() => 0);
+  const map = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5 };
+  list.forEach(r => {
+    const dt = parseLocalDate(r.planlananTarih);
+    if (!dt) return;
+    const dow = dt.getDay();
+    if (dow in map) dagilim[map[dow]] += Number(r.ad) || 0;
+  });
+  return { toplam, tamamlanan, bekleyen: toplam - tamamlanan, verimlilik, dagilim,
+           total: dagilim.reduce((a, b) => a + b, 0) };
+}
+
+/* ================= Render ================= */
+function render() {
+  renderDatalist();
+  renderWeekFilter();
+  const list = filtered();
+  renderSummary(list);
+  renderTable(list);
+}
+function renderDatalist() {
+  const cust = [...new Set(rows.map(r => r.musteri).filter(Boolean))];
+  document.getElementById("musteri-list").innerHTML = cust.map(c => `<option value="${esc(c)}">`).join("");
+}
+function renderWeekFilter() {
+  const weeks = [...new Set(enriched(rows).map(r => r.hafta).filter(w => w !== "-"))].sort((a, b) => a - b);
+  document.getElementById("weekFilter").innerHTML =
+    `<option value="all">Tüm haftalar</option>` +
+    weeks.map(w => `<option value="${w}" ${String(w) === String(weekFilter) ? "selected" : ""}>Hafta ${w}</option>`).join("");
+}
+function renderSummary(list) {
+  const s = computeSummary(list);
+  document.getElementById("sum-toplam").textContent = s.toplam;
+  document.getElementById("sum-tamamlanan").textContent = s.tamamlanan;
+  document.getElementById("sum-bekleyen").textContent = s.bekleyen;
+  document.getElementById("sum-verimlilik").textContent = s.verimlilik.toFixed(1) + "%";
+  document.getElementById("dist").innerHTML =
+    GUNLER.map((g, i) => `<div><p class="dist-label">${g}</p><p class="dist-val">${s.dagilim[i]}</p></div>`).join("") +
+    `<div><p class="dist-label">Toplam</p><p class="dist-val strong">${s.total}</p></div>`;
+}
+
+function fInput(data, scope, field, type, cls, datalist) {
+  return `<input type="${type}" class="cell-input ${cls || ""}" data-scope="${scope}" data-field="${field}"
+    value="${esc(String(data[field] ?? ""))}" ${datalist ? 'list="musteri-list"' : ""} />`;
+}
+function fSelect(data, scope, field, options) {
+  return `<select class="cell-input" data-scope="${scope}" data-field="${field}">
+    ${options.map(o => `<option value="${esc(o)}" ${String(data[field]) === o ? "selected" : ""}>${o === "" ? "-" : esc(o)}</option>`).join("")}
+  </select>`;
+}
+function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
+  return `<tr class="${rowClass}">
+    <td>${fInput(d, scope, "musteri", "text", "w-musteri", true)}</td>
+    <td>${fSelect(d, scope, "blm", BLMS)}</td>
+    <td>${fInput(d, scope, "kategori", "text", "w-kategori")}</td>
+    <td>${fSelect(d, scope, "sevkiyatTipi", TIPLER)}</td>
+    <td>${fInput(d, scope, "ad", "number", "w-num")}</td>
+    <td>${fInput(d, scope, "planlananTarih", "date", "w-date")}</td>
+    <td class="muted center">auto</td>
+    <td class="muted">auto</td>
+    <td>${fInput(d, scope, "reelPlan", "date", "w-date")}</td>
+    <td>${fInput(d, scope, "gerceklesenTarih", "date", "w-date")}</td>
+    <td>${fSelect(d, scope, "durum", DURUMLAR)}</td>
+    <td>${fInput(d, scope, "aciklama", "text", "w-aciklama")}</td>
+    <td>${fSelect(d, scope, "araciGeldi", GELDI)}</td>
+    <td class="center st-cell">${durumIcon(d.durum)}</td>
+    <td>${fInput(d, scope, "prsM3", "number", "w-num")}</td>
+    <td>${fInput(d, scope, "m3", "number", "w-num")}</td>
+    <td class="nowrap">
+      <button class="icon-btn ok" data-action="${saveAction}" title="Kaydet">✔</button>
+      <button class="icon-btn mute" data-action="${cancelAction}" title="İptal">✖</button>
+    </td>
+  </tr>`;
+}
+function rowHtml(r) {
+  const dt = parseLocalDate(r.planlananTarih);
+  return `<tr class="row ${r.oncelikli ? "priority" : ""}">
+    <td class="strong">${esc(r.musteri)}</td>
+    <td>${esc(r.blm)}</td>
+    <td>${esc(r.kategori)}</td>
+    <td>${esc(r.sevkiyatTipi)}</td>
+    <td class="center">${esc(r.ad)}</td>
+    <td>${formatDate(r.planlananTarih)}</td>
+    <td class="center">${dt ? getISOWeek(dt) : "-"}</td>
+    <td>${dt ? AYLAR[dt.getMonth()] : "-"}</td>
+    <td>${formatDate(r.reelPlan)}</td>
+    <td>${formatDate(r.gerceklesenTarih)}</td>
+    <td><span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></td>
+    <td class="truncate" title="${esc(r.aciklama)}">${esc(r.aciklama) || "-"}</td>
+    <td>${esc(r.araciGeldi) || "-"}</td>
+    <td class="center">${durumIcon(r.durum)}</td>
+    <td class="center">${esc(r.prsM3) || "-"}</td>
+    <td class="center">${esc(r.m3) || "-"}</td>
+    <td class="nowrap">
+      <button class="icon-btn" data-action="edit" data-id="${r.id}" title="Düzenle">✏️</button>
+      <button class="icon-btn del" data-action="delete" data-id="${r.id}" title="Sil">🗑️</button>
+    </td>
+  </tr>`;
+}
+function renderTable(list) {
+  const tbody = document.getElementById("tbody");
+  let html = "";
+  if (addingInline) html += formRowHtml(inlineData, "inline", "inline-row", "save-inline", "cancel-inline");
+  if (list.length === 0 && !addingInline) {
+    html += `<tr><td colspan="17" class="empty">Kayıt yok. "Yeni kayıt" ile başlayın.</td></tr>`;
+  }
+  list.forEach(r => {
+    html += (editingId === r.id && editData)
+      ? formRowHtml(editData, "edit", "editing", "save-edit", "cancel-edit")
+      : rowHtml(r);
+  });
+  tbody.innerHTML = html;
+  if (addingInline) {
+    const first = tbody.querySelector('input[data-field="musteri"]');
+    if (first) first.focus();
+  }
+}
+
+/* ================= İşlemler ================= */
+function saveInline() {
+  if (!(inlineData.musteri || "").trim()) { alert("Müşteri adı zorunlu."); return; }
+  const rec = { ...inlineData, id: genId(), musteri: inlineData.musteri.trim() };
+  addingInline = false; inlineData = null;
+  persist([rec, ...rows]);
+}
+function saveEdit() {
+  if (!(editData.musteri || "").trim()) { alert("Müşteri adı zorunlu."); return; }
+  const next = rows.map(r => r.id === editingId ? { ...editData, musteri: editData.musteri.trim() } : r);
+  editingId = null; editData = null;
+  persist(next);
+}
+
+/* ================= Olaylar ================= */
+document.getElementById("tbody").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const { action, id } = btn.dataset;
+  switch (action) {
+    case "save-inline":   saveInline(); break;
+    case "cancel-inline": addingInline = false; inlineData = null; render(); break;
+    case "save-edit":     saveEdit(); break;
+    case "cancel-edit":   editingId = null; editData = null; render(); break;
+    case "edit": {
+      const row = rows.find(r => r.id === id);
+      if (row) { editingId = id; editData = { ...row }; render(); }
+      break;
+    }
+    case "delete":
+      if (confirm("Bu kayıt silinsin mi?")) persist(rows.filter(r => r.id !== id));
+      break;
+  }
+});
+
+// Hücre inputları → state (render ETMİYORUZ, böylece focus kaybolmaz)
+function onFieldInput(e) {
+  const el = e.target;
+  const field = el.dataset.field;
+  if (!field) return;
+  const scope = el.dataset.scope;
+  const val = el.value;
+  if (scope === "inline" && inlineData) inlineData[field] = val;
+  else if (scope === "edit" && editData) editData[field] = val;
+  if (field === "durum") { // status ikonunu canlı güncelle
+    const cell = el.closest("tr")?.querySelector(".st-cell");
+    if (cell) cell.innerHTML = durumIcon(val);
+  }
+}
+document.getElementById("tbody").addEventListener("input", onFieldInput);
+document.getElementById("tbody").addEventListener("change", onFieldInput);
+
+// Enter ile kaydet
+document.getElementById("tbody").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const scope = e.target.dataset.scope;
+  if (scope === "inline") saveInline();
+  else if (scope === "edit") saveEdit();
+});
+
+// Üst bar kontrolleri
+document.getElementById("search").addEventListener("input", render);
+document.getElementById("weekFilter").addEventListener("change", e => { weekFilter = e.target.value; render(); });
+document.getElementById("btnReload").addEventListener("click", load);
+document.getElementById("btnToggleSummary").addEventListener("click", () => {
+  const s = document.getElementById("summary");
+  s.classList.toggle("hidden");
+  document.getElementById("btnToggleSummary").textContent = s.classList.contains("hidden") ? "Özet" : "Özeti gizle";
+});
+document.getElementById("btnInlineAdd").addEventListener("click", () => {
+  inlineData = emptyRecord();
+  addingInline = true;
+  render();
+});
+
+/* ================= Modal form ================= */
+function fillSelect(id, options) {
+  document.getElementById(id).innerHTML =
+    options.map(o => `<option value="${esc(o)}">${o === "" ? "-" : esc(o)}</option>`).join("");
+}
+fillSelect("f-blm", BLMS);
+fillSelect("f-sevkiyatTipi", TIPLER);
+fillSelect("f-durum", DURUMLAR);
+fillSelect("f-araciGeldi", GELDI);
+
+function openModal() {
+  const rec = emptyRecord();
+  document.getElementById("f-musteri").value = "";
+  document.getElementById("f-blm").value = rec.blm;
+  document.getElementById("f-kategori").value = rec.kategori;
+  document.getElementById("f-sevkiyatTipi").value = rec.sevkiyatTipi;
+  document.getElementById("f-ad").value = rec.ad;
+  document.getElementById("f-planlananTarih").value = rec.planlananTarih;
+  document.getElementById("f-reelPlan").value = rec.reelPlan;
+  document.getElementById("f-gerceklesenTarih").value = "";
+  document.getElementById("f-durum").value = rec.durum;
+  document.getElementById("f-araciGeldi").value = "";
+  document.getElementById("f-prsM3").value = "";
+  document.getElementById("f-m3").value = rec.m3;
+  document.getElementById("f-aciklama").value = "";
+  document.getElementById("f-oncelikli").checked = false;
+  document.getElementById("modal").classList.remove("hidden");
+  document.getElementById("f-musteri").focus();
+}
+function closeModal() { document.getElementById("modal").classList.add("hidden"); }
+function getVal(id) { return document.getElementById(id).value; }
+
+document.getElementById("btnShowForm").addEventListener("click", openModal);
+document.getElementById("btnCancelForm").addEventListener("click", closeModal);
+document.getElementById("btnSaveForm").addEventListener("click", () => {
+  const musteri = getVal("f-musteri").trim();
+  if (!musteri) { alert("Müşteri adı zorunlu."); return; }
+  const rec = emptyRecord();
+  rec.id = genId();
+  rec.musteri = musteri;
+  rec.blm = getVal("f-blm");
+  rec.kategori = getVal("f-kategori");
+  rec.sevkiyatTipi = getVal("f-sevkiyatTipi");
+  rec.ad = getVal("f-ad");
+  rec.planlananTarih = getVal("f-planlananTarih");
+  rec.reelPlan = getVal("f-reelPlan");
+  rec.gerceklesenTarih = getVal("f-gerceklesenTarih");
+  rec.durum = getVal("f-durum");
+  rec.araciGeldi = getVal("f-araciGeldi");
+  rec.prsM3 = getVal("f-prsM3");
+  rec.m3 = getVal("f-m3");
+  rec.aciklama = getVal("f-aciklama");
+  rec.oncelikli = document.getElementById("f-oncelikli").checked;
+  persist([rec, ...rows]);
+  closeModal();
+});
+// Sevkiyat tipi değişince M3 varsayılanını güncelle
+document.getElementById("f-sevkiyatTipi").addEventListener("change", e => {
+  const def = M3_VARSAYILAN[e.target.value];
+  if (def !== undefined) document.getElementById("f-m3").value = def;
+});
+// Modal dışına tıklayınca kapat
+document.getElementById("modal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// Aynı tarayıcıda açık diğer sekmelerle anlık senkron (bonus)
+window.addEventListener("storage", e => {
+  if (e.key !== STORAGE_KEY) return;
+  try { rows = JSON.parse(e.newValue) || []; } catch { return; }
+  if (editingId) {
+    const fresh = rows.find(r => r.id === editingId);
+    if (fresh) editData = { ...fresh };
+  }
+  render();
+});
+
+/* ================= Başlat ================= */
+load();
+</script>
+</body>
+</html>
