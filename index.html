@@ -13,9 +13,8 @@
   }
   .hidden { display: none !important; }
 
-  /* ---------- Üst bar ---------- */
   header { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  h1 { font-size: 20px; margin: 0; display: flex; align-items: center; gap: 8px; }
+  h1 { font-size: 20px; margin: 0; }
   .subtitle { font-size: 12px; color: #6b7280; margin: 4px 0 0; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   input, select { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; font-size: 13px; background: #fff; color: #111827; }
@@ -26,7 +25,6 @@
 
   .error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
 
-  /* ---------- Özet kartlar ---------- */
   .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
   .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
   .card .label { font-size: 12px; color: #6b7280; margin: 0 0 4px; }
@@ -39,15 +37,13 @@
   .dist-val { font-size: 15px; margin: 0; font-weight: 500; }
   .dist-val.strong { font-weight: 700; }
 
-  /* ---------- Tablo ---------- */
   .table-wrap { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   thead tr { background: #111827; color: #fff; }
   th { padding: 8px; text-align: left; font-weight: 500; white-space: nowrap; }
   td { padding: 6px 8px; border-top: 1px solid #f3f4f6; white-space: nowrap; vertical-align: middle; }
   tr.row:hover { background: #f9fafb; }
-  tr.priority { background: #fefce8; }
-  tr.editing { background: #fefce8; }
+  tr.priority, tr.editing { background: #fefce8; }
   tr.inline-row { background: #eff6ff; }
   td.strong { font-weight: 600; }
   td.center { text-align: center; }
@@ -72,7 +68,6 @@
   .icon-btn.del  { color: #f87171; }
   .icon-btn:hover { filter: brightness(0.7); }
 
-  /* ---------- Hücre inputları ---------- */
   .cell-input { font-size: 12px; padding: 3px 4px; border: 1px solid #d1d5db; border-radius: 4px; }
   .w-musteri  { width: 110px; }
   .w-kategori { width: 80px; }
@@ -80,7 +75,6 @@
   .w-date     { width: 132px; }
   .w-aciklama { width: 110px; }
 
-  /* ---------- Modal ---------- */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
   .modal { background: #fff; border-radius: 8px; padding: 20px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
   .modal h2 { font-size: 16px; margin: 0 0 12px; }
@@ -105,7 +99,7 @@
 <header>
   <div>
     <h1>📋 Sevkiyat Planlama — İhracat</h1>
-    <p class="subtitle">Veriler bu tarayıcıda (localStorage) saklanır.</p>
+    <p class="subtitle">Veriler veritabanında (Firebase) saklanır — ekip aynı tabloyu görür, 30 sn'de bir otomatik yenilenir.</p>
   </div>
   <div class="toolbar">
     <input id="search" placeholder="🔍 Müşteri ara" style="min-width:150px" />
@@ -145,7 +139,6 @@
 
 <datalist id="musteri-list"></datalist>
 
-<!-- Form ile ekleme modalı -->
 <div id="modal" class="modal-bg hidden">
   <div class="modal">
     <h2>Yeni sevkiyat kaydı</h2>
@@ -173,6 +166,11 @@
 </div>
 
 <script>
+/* ================= Firebase bağlantısı — DEĞİŞTİR! ================= */
+/* Firebase Console → Realtime Database → Data sekmesindeki adres */
+const FIREBASE_DB_URL = "https://sevkiyat-app-default-rtdb.europe-west1.firebasedatabase.app".replace(/\/+$/, "");
+const NODE = "sevkiyat";
+
 /* ================= Sabitler ================= */
 const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUNLER = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
@@ -181,13 +179,13 @@ const BLMS = ["EXPORT-1","EXPORT-2","EXPORT-3"];
 const TIPLER = ["KOMPLETIR","PARSIYEL TIR","40 HC","20 HC"];
 const GELDI = ["", "GELDİ", "HAYIR"];
 const M3_VARSAYILAN = { "KOMPLETIR": 90, "PARSIYEL TIR": 90, "40 HC": 140, "20 HC": 70 };
-const STORAGE_KEY = "sevkiyat-records";
 
 /* ================= Yardımcılar ================= */
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c =>
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
+function numOrDash(v) { return (v !== null && v !== undefined && v !== "") ? v : "-"; }
 function getISOWeek(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -218,45 +216,100 @@ function durumIcon(d) {
   if (d === "Yükleniyor") return '<span class="st-load">⟳</span>';
   return '<span class="st-wait">?</span>';
 }
-function genId() {
-  return "r-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
-}
 function emptyRecord() {
   return {
-    id: "", musteri: "", blm: "EXPORT-1", kategori: "PLANLI", sevkiyatTipi: "KOMPLETIR",
+    musteri: "", blm: "EXPORT-1", kategori: "PLANLI", sevkiyatTipi: "KOMPLETIR",
     ad: 1, planlananTarih: todayISO(), reelPlan: todayISO(), gerceklesenTarih: "",
     durum: "Yükleme Bekliyor", aciklama: "", araciGeldi: "", prsM3: "", m3: 90, oncelikli: false
   };
 }
+/* Kaydı veritabanına yazmaya uygun hale getir */
+function toDb(r) {
+  return {
+    musteri: (r.musteri || "").trim(),
+    blm: r.blm || "EXPORT-1",
+    kategori: r.kategori || "PLANLI",
+    sevkiyatTipi: r.sevkiyatTipi || "KOMPLETIR",
+    ad: Number(r.ad) || 1,
+    planlananTarih: r.planlananTarih || "",
+    reelPlan: r.reelPlan || "",
+    gerceklesenTarih: r.gerceklesenTarih || "",
+    durum: r.durum || "Yükleme Bekliyor",
+    aciklama: r.aciklama || "",
+    araciGeldi: r.araciGeldi || "",
+    prsM3: (r.prsM3 === "" || r.prsM3 == null) ? null : Number(r.prsM3),
+    m3: (r.m3 === "" || r.m3 == null) ? null : Number(r.m3),
+    oncelikli: !!r.oncelikli
+  };
+}
+
+/* ================= API çağrıları (Firebase REST) ================= */
+async function check(res, label) {
+  if (res.ok) return res.json();
+  let msg = label + " (HTTP " + res.status + ")";
+  try { const j = await res.json(); if (j.error) msg += ": " + j.error; } catch {}
+  throw new Error(msg);
+}
+
+async function apiList() {
+  if (FIREBASE_DB_URL.includes("BURAYA")) {
+    throw new Error("Firebase adresi ayarlanmamış — kodun en üstündeki FIREBASE_DB_URL değerini kendi adresinle değiştir.");
+  }
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`);
+  const data = await check(res, "Veriler yüklenemedi");
+  if (!data) return [];
+  return Object.entries(data)
+    .map(([key, val]) => ({ id: key, ...(val || {}) }))
+    .sort((a, b) => b.id.localeCompare(a.id)); // en yeni önce
+}
+
+async function apiInsert(rec) {
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(toDb(rec))
+  });
+  const data = await check(res, "Kayıt eklenemedi");
+  return { id: data.name, ...toDb(rec) }; // Firebase push anahtarını döndürür
+}
+
+async function apiUpdate(id, rec) {
+  const body = toDb(rec);
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  await check(res, "Kayıt güncellenemedi");
+  return { id, ...body };
+}
+
+async function apiDelete(id) {
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, { method: "DELETE" });
+  await check(res, "Kayıt silinemedi");
+}
 
 /* ================= State ================= */
 let rows = [];
+let loading = false;
 let editingId = null;
 let editData = null;
 let addingInline = false;
 let inlineData = null;
 let weekFilter = "all";
 
-/* ================= Veri yükle / kaydet ================= */
-function load() {
+/* ================= Yükle / hata ================= */
+async function load(withSpinner = true) {
+  loading = withSpinner;
+  if (withSpinner) render();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    rows = raw ? JSON.parse(raw) : [];
+    rows = await apiList();
     setSaveError("");
   } catch (e) {
     rows = [];
-    setSaveError("Veri okunamadı.");
+    setSaveError(e.message);
   }
-  render();
-}
-function persist(next) {
-  rows = next;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
-    setSaveError("");
-  } catch (e) {
-    setSaveError("Kaydedilemedi, tekrar deneyin.");
-  }
+  loading = false;
   render();
 }
 function setSaveError(msg) {
@@ -375,8 +428,8 @@ function rowHtml(r) {
     <td class="truncate" title="${esc(r.aciklama)}">${esc(r.aciklama) || "-"}</td>
     <td>${esc(r.araciGeldi) || "-"}</td>
     <td class="center">${durumIcon(r.durum)}</td>
-    <td class="center">${esc(r.prsM3) || "-"}</td>
-    <td class="center">${esc(r.m3) || "-"}</td>
+    <td class="center">${numOrDash(r.prsM3)}</td>
+    <td class="center">${numOrDash(r.m3)}</td>
     <td class="nowrap">
       <button class="icon-btn" data-action="edit" data-id="${r.id}" title="Düzenle">✏️</button>
       <button class="icon-btn del" data-action="delete" data-id="${r.id}" title="Sil">🗑️</button>
@@ -386,8 +439,9 @@ function rowHtml(r) {
 function renderTable(list) {
   const tbody = document.getElementById("tbody");
   let html = "";
+  if (loading) html += `<tr><td colspan="17" class="empty">Yükleniyor…</td></tr>`;
   if (addingInline) html += formRowHtml(inlineData, "inline", "inline-row", "save-inline", "cancel-inline");
-  if (list.length === 0 && !addingInline) {
+  if (!loading && list.length === 0 && !addingInline) {
     html += `<tr><td colspan="17" class="empty">Kayıt yok. "Yeni kayıt" ile başlayın.</td></tr>`;
   }
   list.forEach(r => {
@@ -403,17 +457,33 @@ function renderTable(list) {
 }
 
 /* ================= İşlemler ================= */
-function saveInline() {
+async function saveInline() {
   if (!(inlineData.musteri || "").trim()) { alert("Müşteri adı zorunlu."); return; }
-  const rec = { ...inlineData, id: genId(), musteri: inlineData.musteri.trim() };
-  addingInline = false; inlineData = null;
-  persist([rec, ...rows]);
+  try {
+    const rec = await apiInsert(inlineData);
+    addingInline = false; inlineData = null;
+    rows = [rec, ...rows];
+    setSaveError("");
+    render();
+  } catch (e) { setSaveError(e.message); }
 }
-function saveEdit() {
+async function saveEdit() {
   if (!(editData.musteri || "").trim()) { alert("Müşteri adı zorunlu."); return; }
-  const next = rows.map(r => r.id === editingId ? { ...editData, musteri: editData.musteri.trim() } : r);
-  editingId = null; editData = null;
-  persist(next);
+  try {
+    const updated = await apiUpdate(editingId, editData);
+    rows = rows.map(r => r.id === editingId ? updated : r);
+    editingId = null; editData = null;
+    setSaveError("");
+    render();
+  } catch (e) { setSaveError(e.message); }
+}
+async function deleteRow(id) {
+  try {
+    await apiDelete(id);
+    rows = rows.filter(r => r.id !== id);
+    setSaveError("");
+    render();
+  } catch (e) { setSaveError(e.message); }
 }
 
 /* ================= Olaylar ================= */
@@ -432,12 +502,11 @@ document.getElementById("tbody").addEventListener("click", e => {
       break;
     }
     case "delete":
-      if (confirm("Bu kayıt silinsin mi?")) persist(rows.filter(r => r.id !== id));
+      if (confirm("Bu kayıt veritabanından silinsin mi?")) deleteRow(id);
       break;
   }
 });
 
-// Hücre inputları → state (render ETMİYORUZ, böylece focus kaybolmaz)
 function onFieldInput(e) {
   const el = e.target;
   const field = el.dataset.field;
@@ -446,7 +515,7 @@ function onFieldInput(e) {
   const val = el.value;
   if (scope === "inline" && inlineData) inlineData[field] = val;
   else if (scope === "edit" && editData) editData[field] = val;
-  if (field === "durum") { // status ikonunu canlı güncelle
+  if (field === "durum") {
     const cell = el.closest("tr")?.querySelector(".st-cell");
     if (cell) cell.innerHTML = durumIcon(val);
   }
@@ -454,7 +523,6 @@ function onFieldInput(e) {
 document.getElementById("tbody").addEventListener("input", onFieldInput);
 document.getElementById("tbody").addEventListener("change", onFieldInput);
 
-// Enter ile kaydet
 document.getElementById("tbody").addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
   const scope = e.target.dataset.scope;
@@ -462,10 +530,9 @@ document.getElementById("tbody").addEventListener("keydown", e => {
   else if (scope === "edit") saveEdit();
 });
 
-// Üst bar kontrolleri
 document.getElementById("search").addEventListener("input", render);
 document.getElementById("weekFilter").addEventListener("change", e => { weekFilter = e.target.value; render(); });
-document.getElementById("btnReload").addEventListener("click", load);
+document.getElementById("btnReload").addEventListener("click", () => load(true));
 document.getElementById("btnToggleSummary").addEventListener("click", () => {
   const s = document.getElementById("summary");
   s.classList.toggle("hidden");
@@ -511,11 +578,10 @@ function getVal(id) { return document.getElementById(id).value; }
 
 document.getElementById("btnShowForm").addEventListener("click", openModal);
 document.getElementById("btnCancelForm").addEventListener("click", closeModal);
-document.getElementById("btnSaveForm").addEventListener("click", () => {
+document.getElementById("btnSaveForm").addEventListener("click", async () => {
   const musteri = getVal("f-musteri").trim();
   if (!musteri) { alert("Müşteri adı zorunlu."); return; }
   const rec = emptyRecord();
-  rec.id = genId();
   rec.musteri = musteri;
   rec.blm = getVal("f-blm");
   rec.kategori = getVal("f-kategori");
@@ -530,32 +596,30 @@ document.getElementById("btnSaveForm").addEventListener("click", () => {
   rec.m3 = getVal("f-m3");
   rec.aciklama = getVal("f-aciklama");
   rec.oncelikli = document.getElementById("f-oncelikli").checked;
-  persist([rec, ...rows]);
-  closeModal();
+  try {
+    const saved = await apiInsert(rec);
+    rows = [saved, ...rows];
+    setSaveError("");
+    render();
+    closeModal();
+  } catch (e) { setSaveError(e.message); }
 });
-// Sevkiyat tipi değişince M3 varsayılanını güncelle
 document.getElementById("f-sevkiyatTipi").addEventListener("change", e => {
   const def = M3_VARSAYILAN[e.target.value];
   if (def !== undefined) document.getElementById("f-m3").value = def;
 });
-// Modal dışına tıklayınca kapat
 document.getElementById("modal").addEventListener("click", e => {
   if (e.target === e.currentTarget) closeModal();
 });
 
-// Aynı tarayıcıda açık diğer sekmelerle anlık senkron (bonus)
-window.addEventListener("storage", e => {
-  if (e.key !== STORAGE_KEY) return;
-  try { rows = JSON.parse(e.newValue) || []; } catch { return; }
-  if (editingId) {
-    const fresh = rows.find(r => r.id === editingId);
-    if (fresh) editData = { ...fresh };
-  }
-  render();
-});
+/* Otomatik yenileme (30 sn) — düzenleme yapılmıyorken */
+setInterval(() => {
+  if (document.hidden || addingInline || editingId) return;
+  load(false);
+}, 30000);
 
 /* ================= Başlat ================= */
-load();
+load(true);
 </script>
 </body>
 </html>
