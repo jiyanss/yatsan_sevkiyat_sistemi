@@ -458,26 +458,55 @@ function clearAuthState() {
   updateUserUI();
 }
 let refreshPromise = null;
-async function ensureToken() {
+async function doTokenRefresh() {
   const s = getAuthState();
   if (!s) return null;
-  if (s.exp - Date.now() > 60000) return s.idToken;
-  if (!refreshPromise) {
-    refreshPromise = (async () => {
-      const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ grant_type: "refresh_token", refresh_token: s.refreshToken })
-      });
-      const j = await res.json();
-      if (!res.ok || !j.id_token) throw new Error("Oturum yenilenemedi");
-      saveAuthState(j.id_token, j.refresh_token, j.expires_in, s.email);
-      return j.id_token;
-    })();
-  }
-  try { return await refreshPromise; }
-  finally { refreshPromise = null; }
+  const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ grant_type: "refresh_token", refresh_token: s.refreshToken })
+  });
+  const j = await res.json();
+  if (!res.ok || !j.id_token) return null;
+  saveAuthState(j.id_token, j.refresh_token, j.expires_in, s.email);
+  return j.id_token;
 }
-async function authFetch(url, opts = {}) {
+async function ensureToken(force = false) {
+  const s = getAuthState();
+  if (!s) return null;
+  if (!force && s.exp - Date.now() > 60000) return s.idToken;
+  if (!refreshPromise) {
+    refreshPromise = doTokenRefresh();
+    refreshPromise.finally(() => { refreshPromise = null; });
+  }
+  const t = await refreshPromise;
+  if (!t) {
+    clearAuthState();
+    showLogin("Oturum geçersiz — tekrar giriş yapın.");
+    throw new Error("Oturum yenilenemedi");
+  }
+  return t;
+}
+async function authFetch(url, opts = {}, _canRetry = true) {
+  const token = await ensureToken();
+  if (!token) throw new Error("Oturum bulunamadı");
+  /* RTDB REST için resmi yöntem: ?auth=<idToken> (Bearer başlığına ek olarak) */
+  const sep = url.includes("?") ? "&" : "?";
+  const authedUrl = url + sep + "auth=" + encodeURIComponent(token);
+  const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
+  const res = await fetch(authedUrl, { ...opts, headers });
+  if (res.status === 403) {
+    throw new Error("Veritabanı kuralları bu işlemi engelledi (403). Firebase Console → Realtime Database → Rules bölümünü kontrol et.");
+  }
+  if (res.status === 401) {
+    if (_canRetry) {
+      await ensureToken(true); /* token'ı zorla yenile, bir kez daha dene */
+      return authFetch(url, opts, false);
+    }
+    /* Token yeni yenilendi ve hâlâ 401 → sorun kurallarda */
+    throw new Error("Veritabanı erişimi reddedildi (401). Oturumun geçerli ama kurallar erişime izin vermiyor. Firebase Console → Realtime Database → Rules: .read ve .write değerlerini 'auth != null' yapıp Publish'e bas.");
+  }
+  return res;
+}
   const token = await ensureToken();
   if (!token) throw new Error("Oturum bulunamadı");
   const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
