@@ -18,6 +18,15 @@
     --red: #dc2626; --red-soft: #fef2f2;
     --radius: 12px;
   }
+  /* 🌙 Karanlık tema */
+  body.dark {
+    --bg: #0b1220; --surface: #151f31; --border: #2b3a52;
+    --text: #e2e8f0; --muted: #8aa0b8;
+    --primary: #818cf8; --primary-dark: #6366f1; --primary-soft: #1e2749;
+    --green: #34d399; --green-soft: #0d2b22;
+    --amber: #fbbf24; --amber-soft: #2d2410;
+    --red: #f87171; --red-soft: #31151a;
+  }
   * { box-sizing: border-box; }
   body {
     margin: 0; padding: 0;
@@ -51,7 +60,7 @@
   .user-chip.is-admin { background: var(--amber-soft); color: var(--amber); }
   .guest-chip {
     font-size: 11px; font-weight: 500; padding: 6px 10px; border-radius: 999px;
-    background: #f1f5f9; color: var(--muted); white-space: nowrap;
+    background: var(--bg); color: var(--muted); white-space: nowrap;
   }
 
   input, select {
@@ -59,26 +68,26 @@
     font-size: 13px; background: var(--surface); color: var(--text);
     font-family: inherit; transition: border-color .15s, box-shadow .15s;
   }
-  input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+  input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.2); }
   .btn {
     border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px;
     font-size: 13px; font-weight: 500; background: var(--surface); cursor: pointer;
     color: var(--text); font-family: inherit; transition: all .15s;
   }
-  .btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+  .btn:hover { background: var(--primary-soft); border-color: var(--primary); }
   .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(79,70,229,.25); }
   .btn.primary:hover { background: var(--primary-dark); }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
 
   main { padding: 16px 20px 32px; max-width: 1600px; margin: 0 auto; }
 
-  .error { background: var(--red-soft); border: 1px solid #fecaca; color: var(--red); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; }
-  .info { background: var(--primary-soft); border: 1px solid #c7d2fe; color: var(--primary-dark); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; }
-  .hint { font-size: 11px; color: var(--muted); background: #f8fafc; border: 1px dashed var(--border); border-radius: 8px; padding: 7px 10px; margin: 0 0 12px; }
+  .error { background: var(--red-soft); border: 1px solid var(--red); color: var(--red); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .info { background: var(--primary-soft); border: 1px solid var(--primary); color: var(--primary); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .hint { font-size: 11px; color: var(--muted); background: var(--bg); border: 1px dashed var(--border); border-radius: 8px; padding: 7px 10px; margin: 0 0 12px; }
 
   .statbar {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    box-shadow: 0 1px 3px rgba(15, 23, 42, .05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
     display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
     padding: 12px 20px; margin-bottom: 16px;
   }
@@ -101,7 +110,7 @@
 
   .table-wrap {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    box-shadow: 0 1px 3px rgba(15, 23, 42, .05); overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .08); overflow-x: auto;
   }
   table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   thead tr { background: #1e293b; color: #fff; }
@@ -109,17 +118,17 @@
     padding: 8px 6px; text-align: left; font-weight: 600; white-space: nowrap;
     font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #cbd5e1;
   }
-  td { padding: 5px 6px; border-top: 1px solid #f1f5f9; white-space: nowrap; vertical-align: middle; }
+  td { padding: 5px 6px; border-top: 1px solid var(--border); white-space: nowrap; vertical-align: middle; }
   tr.row:hover { background: var(--primary-soft); }
   tr.priority { background: var(--amber-soft); }
-  tr.priority:hover { background: #fef3c7; }
+  tr.priority:hover { background: var(--amber-soft); }
   tr.today-row { background: var(--green-soft); }
-  tr.today-row:hover { background: #d1fae5; }
+  tr.today-row:hover { background: var(--green-soft); }
   tr.inline-row { background: var(--primary-soft); }
   td.strong { font-weight: 600; }
   td.center { text-align: center; }
-  td.muted { color: #94a3b8; }
-  td.empty { text-align: center; padding: 40px 8px; color: #94a3b8; }
+  td.muted { color: var(--muted); }
+  td.empty { text-align: center; padding: 40px 8px; color: var(--muted); }
   td.truncate { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .nowrap { white-space: nowrap; }
 
@@ -131,15 +140,13 @@
   body.can-edit td.editable { cursor: pointer; }
   body.can-edit td.editable:hover {
     background: var(--primary-soft);
-    box-shadow: inset 0 0 0 1.5px #a5b4fc;
+    box-shadow: inset 0 0 0 1.5px var(--primary);
   }
-  body.can-edit tr.priority td.editable:hover { background: #fef3c7; box-shadow: inset 0 0 0 1.5px #a5b4fc; }
-  body.can-edit tr.today-row td.editable:hover { background: #d1fae5; box-shadow: inset 0 0 0 1.5px #6ee7b7; }
 
   .badge { padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 600; }
-  .badge.done    { background: var(--green-soft); color: var(--green); border: 1px solid #a7f3d0; }
-  .badge.loading { background: var(--amber-soft); color: var(--amber); border: 1px solid #fde68a; }
-  .badge.waiting { background: var(--red-soft);  color: var(--red);  border: 1px solid #fecaca; }
+  .badge.done    { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); }
+  .badge.loading { background: var(--amber-soft); color: var(--amber); border: 1px solid var(--amber); }
+  .badge.waiting { background: var(--red-soft);  color: var(--red);  border: 1px solid var(--red); }
 
   .st-ok   { color: var(--green); font-weight: 700; }
   .st-wait { color: var(--red); font-weight: 700; font-size: 11px; }
@@ -150,13 +157,13 @@
     background: none; border: none; cursor: pointer; padding: 4px 5px;
     font-size: 13px; line-height: 1; border-radius: 6px; transition: background .15s;
   }
-  .icon-btn:hover { background: #e2e8f0; }
+  .icon-btn:hover { background: var(--primary-soft); }
   .icon-btn.del:hover { background: var(--red-soft); }
   .icon-btn.dup:hover { background: var(--green-soft); }
 
-  .cell-input { font-size: 11.5px; padding: 3px 4px; border: 1px solid var(--border); border-radius: 6px; max-width: 100%; }
-  .cell-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79,70,229,.15); }
-  .cell-input[readonly] { background: #f1f5f9; color: var(--muted); cursor: not-allowed; }
+  .cell-input { font-size: 11.5px; padding: 3px 4px; border: 1px solid var(--border); border-radius: 6px; max-width: 100%; background: var(--surface); color: var(--text); }
+  .cell-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99,102,241,.2); }
+  .cell-input[readonly] { background: var(--bg); color: var(--muted); cursor: not-allowed; }
   .w-musteri  { width: 100px; }
   .w-kategori { width: 70px; }
   .w-num      { width: 52px; }
@@ -164,14 +171,14 @@
   .w-aciklama { width: 90px; }
 
   .modal-bg {
-    position: fixed; inset: 0; background: rgba(15, 23, 42, .5); backdrop-filter: blur(2px);
+    position: fixed; inset: 0; background: rgba(0, 0, 0, .55); backdrop-filter: blur(2px);
     display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
   }
   .modal-bg.login-bg { z-index: 70; }
   .modal {
     background: var(--surface); border-radius: 16px; padding: 22px; width: 100%;
     max-width: 500px; max-height: 92vh; overflow-y: auto;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, .25); animation: pop .18s ease-out;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .4); animation: pop .18s ease-out;
   }
   .modal.wide { max-width: 960px; }
   @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -187,9 +194,9 @@
 
   .rpt { margin-bottom: 18px; }
   .rpt h3 { font-size: 13px; margin: 0 0 6px; }
-  .rpt thead tr { background: #f1f5f9; color: #334155; }
+  .rpt thead tr { background: var(--bg); color: var(--text); }
   .rpt th { padding: 7px 9px; }
-  .rpt tfoot tr { background: #f8fafc; font-weight: 600; }
+  .rpt tfoot tr { background: var(--bg); font-weight: 600; }
   .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
   .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
   .chart-box.wide { grid-column: 1 / -1; }
@@ -197,10 +204,9 @@
   .chart-holder { position: relative; height: 230px; }
   .chart-holder.tall { height: 340px; }
 
-  .prev-head { background: #f1f5f9 !important; color: var(--text) !important; }
-  .success { background: var(--green-soft); border: 1px solid #a7f3d0; color: var(--green); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-top: 12px; }
+  .prev-head { background: var(--bg) !important; color: var(--text) !important; }
+  .success { background: var(--green-soft); border: 1px solid var(--green); color: var(--green); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-top: 12px; }
 
-  /* Zaman çizelgesi (geçmiş) */
   .timeline { position: relative; padding-left: 22px; }
   .timeline::before {
     content: ""; position: absolute; left: 7px; top: 4px; bottom: 4px;
@@ -221,7 +227,6 @@
   .tl-head { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
   .tl-head b { color: var(--text); font-weight: 600; }
   .tl-text { font-size: 12px; line-height: 1.45; }
-  .tl-text .chg { color: var(--primary-dark); background: var(--primary-soft); border-radius: 4px; padding: 1px 4px; }
   .tl-text .musteri-tag { font-weight: 700; }
 
   .login-card { max-width: 380px; text-align: center; }
@@ -231,6 +236,13 @@
   .login-form { display: flex; flex-direction: column; gap: 10px; text-align: left; }
   .login-form label span { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
   .login-form input { width: 100%; padding: 10px 12px; font-size: 14px; }
+
+  .toast {
+    position: fixed; right: 16px; bottom: 16px; z-index: 80;
+    background: #1e293b; color: #f8fafc; padding: 11px 15px; border-radius: 10px;
+    font-size: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.35); max-width: 340px;
+    animation: pop .2s ease-out;
+  }
 
   @media (max-width: 720px) {
     header { padding: 10px 12px; }
@@ -244,6 +256,22 @@
     .chart-grid { grid-template-columns: 1fr; }
     .btn { padding: 8px 10px; }
   }
+
+  /* 🖨️ Yazdırma: sadece başlık + özet + tablo */
+  @media print {
+    header .toolbar, #saveError, #guestInfo, .hint, .modal-bg, .toast { display: none !important; }
+    body, body.dark {
+      --bg: #fff; --surface: #fff; --border: #ccc; --text: #111; --muted: #666;
+      --primary-soft: #eef2ff; --green-soft: #ecfdf5; --amber-soft: #fffbeb; --red-soft: #fef2f2;
+    }
+    body { background: #fff; }
+    main { padding: 0; max-width: none; }
+    header { position: static; border: none; }
+    .table-wrap { border: 1px solid #999; box-shadow: none; overflow: visible; border-radius: 0; }
+    td:last-child, th:last-child { display: none; }
+    thead tr { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tr { page-break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
@@ -253,19 +281,28 @@
     <div class="logo">🚢</div>
     <div>
       <h1>Sevkiyat Planlama — İhracat</h1>
-      <p class="subtitle">Bu hafta + gecikenler · hücre düzenleme · ⧉ çoğalt · 🕘 geçmiş izleme</p>
+      <p class="subtitle">Canlı senkron · bu hafta + gecikenler · varsayılan: kalan yüklemeler</p>
     </div>
   </div>
   <div class="toolbar">
-    <input id="search" placeholder="🔍 Müşteri ara" style="min-width:140px" />
+    <input id="search" placeholder="🔍 Müşteri ara" style="min-width:130px" />
     <select id="weekFilter"><option value="current">Bu hafta</option><option value="all">Tüm haftalar</option></select>
+    <select id="statusFilter">
+      <option value="kalan">Kalan (tamamlanmamış)</option>
+      <option value="all">Tüm durumlar</option>
+      <option value="bekliyor">Yükleme Bekliyor</option>
+      <option value="yukleniyor">Yükleniyor</option>
+      <option value="tamamlandi">Tamamlandı</option>
+    </select>
     <button class="btn" id="btnToggleSummary">Özeti gizle</button>
     <button class="btn" id="btnReports">📊 Raporlar</button>
     <button class="btn" id="btnHistory">🕘 Geçmiş</button>
-    <button class="btn" id="btnExport">📤 Excel'e Aktar</button>
+    <button class="btn" id="btnPrint">🖨️ Yazdır</button>
+    <button class="btn" id="btnExport">📤 Excel</button>
     <button class="btn" id="btnImportOpen">📥 Excel Yükle</button>
-    <button class="btn" id="btnReload">↻ Yenile</button>
-    <button class="btn" id="btnShowForm">+ Form ile ekle</button>
+    <button class="btn" id="btnTheme">🌙</button>
+    <button class="btn" id="btnReload">↻</button>
+    <button class="btn" id="btnShowForm">+ Form</button>
     <button class="btn primary" id="btnInlineAdd">+ Yeni kayıt</button>
     <div class="user-box" id="userBox"></div>
   </div>
@@ -304,7 +341,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Düzenleme: hücreye tıkla → değiştir → <b>Enter</b> → kaydedilir, <b>Esc</b> iptal eder. <b>⧉</b> kaydı bugüne çoğaltır. Tüm ekleme/düzenleme/silme işlemleri <b>🕘 Geçmiş</b>'e kaydedilir.</p>
+  <p class="hint" style="margin-top:8px">💡 Düzenleme: hücreye tıkla → değiştir → <b>Enter</b> → kaydedilir, <b>Esc</b> iptal eder. <b>⧉</b> kaydı bugüne çoğaltır. Durum filtresi varsayılan olarak <b>Kalan</b>'ı gösterir. Başkasının yaptığı değişiklikler anında ekrana düşer.</p>
 </main>
 
 <datalist id="musteri-list"></datalist>
@@ -325,7 +362,7 @@
       <label><span>Durum</span><select id="f-durum"></select></label>
       <label><span>Aracı geldi mi</span><select id="f-araciGeldi"></select></label>
       <label><span>PRS M3</span><input id="f-prsM3" type="number" /></label>
-      <label><span>M3 (otomatik)</span><input id="f-m3" type="number" readonly style="background:#f1f5f9" /></label>
+      <label><span>M3 (otomatik)</span><input id="f-m3" type="number" readonly style="background:var(--bg)" /></label>
       <label class="col-2"><span>Açıklama</span><input id="f-aciklama" /></label>
       <label class="col-2 check"><input id="f-oncelikli" type="checkbox" /><span>Öncelikli (satırı sarı vurgula)</span></label>
     </div>
@@ -339,7 +376,7 @@
 <div id="reportModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>📊 Raporlar ve Grafikler</h2>
-    <p class="hint">Değerler yükleme adedi (AD) bazlıdır. Aktif filtreler (arama + hafta) raporları da etkiler.</p>
+    <p class="hint">Değerler yükleme adedi (AD) bazlıdır. Aktif filtreler (arama + hafta + durum) raporları da etkiler.</p>
     <div id="reportContent"></div>
     <div class="modal-actions"><button class="btn" id="btnCloseReport">Kapat</button></div>
   </div>
@@ -390,24 +427,24 @@
   </div>
 </div>
 
+<div id="toast" class="toast hidden"></div>
+
 <script>
 /* ================= Firebase yapılandırması ================= */
 const FIREBASE_DB_URL = "https://sevkiyat-app-default-rtdb.europe-west1.firebasedatabase.app".replace(/\/+$/, "");
 const FIREBASE_API_KEY = "AIzaSyAagmdq0N2TG4IQ7noDFL6xQh4-ps-QrgI";
 const NODE = "sevkiyat";
-const HIST_NODE = "sevkiyat_history"; /* ← Rules'ta bu düğüme de izin verilmeli! */
+const HIST_NODE = "sevkiyat_history";
 
 /* ============================================================
    ROLLER — BURADAN YÖNETİLİR
-   ------------------------------------------------------------
-   • ADMIN_EMAILS: Bu listedeki e-postalar ADMİN'dir.
-     Admin ekstra olarak: silme + Excel yükleme yapabilir.
-   • Listede olmayan girişli kullanıcılar: ekleme + düzenleme + çoğaltma.
-   • Giriş yapmayanlar: sadece görüntüleme + geçmiş izleme.
+   • ADMIN_EMAILS: admin'ler (silme + Excel yükleme)
+   • Diğer girişli kullanıcılar: ekleme + düzenleme + çoğaltma
+   • Giriş yapmayanlar: görüntüleme + rapor + geçmiş
    ============================================================ */
 const ADMIN_EMAILS = [
   "admin@yatsan.com"
-  /* Yeni admin eklemek için: , "baska@yatsan.com" */
+  /* Yeni admin: , "baska@yatsan.com" */
 ];
 const PERMISSIONS = {
   "inline-add": "user",  "form-add": "user",
@@ -597,7 +634,7 @@ async function authFetch(url, opts = {}, _canRetry = true) {
   const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
   const res = await fetch(authedUrl, { ...opts, headers });
   if (res.status === 403) {
-    throw new Error("Veritabanı kuralları bu işlemi engelledi (403). Firebase Console → Realtime Database → Rules bölümünü kontrol et.");
+    throw new Error("Veritabanı kuralları bu işlemi engelledi (403). Rules bölümünü kontrol et.");
   }
   if (res.status === 401) {
     if (_canRetry) {
@@ -647,27 +684,18 @@ function toDb(r) {
     updatedBy: currentUser ? currentUser.email : ""
   };
 }
-/* ---------- Geçmiş kaydı (append-only, hata toleranslı) ---------- */
 async function apiLog(action, recId, musteri, detay) {
-  if (!currentUser) return; /* girişsiz işlem loglanamaz (zaten yazma yapılamaz) */
+  if (!currentUser) return;
   try {
     await authFetch(`${FIREBASE_DB_URL}/${HIST_NODE}.json`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ts: Date.now(),
-        user: currentUser.email,
-        action,
-        recId: recId || "",
-        musteri: musteri || "",
-        detay: detay || ""
+        ts: Date.now(), user: currentUser.email, action,
+        recId: recId || "", musteri: musteri || "", detay: detay || ""
       })
     });
-  } catch (e) {
-    /* Geçmiş yazılamazsa ana işlemi bozmasın — sadece uyarı banner'ı */
-    console.warn("Geçmiş kaydı yazılamadı:", e.message);
-  }
+  } catch (e) { console.warn("Geçmiş kaydı yazılamadı:", e.message); }
 }
-/* Geçmiş okuma herkese açık (kural: .read true) */
 async function apiListHistory(limit = 150) {
   const res = await fetch(`${FIREBASE_DB_URL}/${HIST_NODE}.json`);
   const data = await check(res, "Geçmiş yüklenemedi");
@@ -683,7 +711,10 @@ async function apiList() {
   if (!data) return [];
   return Object.entries(data).map(([key, val]) => ({ id: key, ...(val || {}) }));
 }
+/* markLocalOp: kendi yazma işlemlerimizi işaretler → canlı bildirim kendi değişikliğimizde çıkmaz */
+function markLocalOp() { lastLocalOp = Date.now(); }
 async function apiInsert(rec) {
+  markLocalOp();
   const body = toDb(rec);
   const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
@@ -692,6 +723,7 @@ async function apiInsert(rec) {
   return { id: data.name, ...body };
 }
 async function apiUpdate(id, rec) {
+  markLocalOp();
   const body = toDb(rec);
   const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
@@ -700,10 +732,12 @@ async function apiUpdate(id, rec) {
   return { id, ...body };
 }
 async function apiDelete(id) {
+  markLocalOp();
   const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, { method: "DELETE" });
   await check(res, "Kayıt silinemedi");
 }
 async function apiBulkInsert(recs) {
+  markLocalOp();
   const body = {};
   const stamp = Date.now().toString(36);
   recs.forEach((rec, i) => { body["imp-" + stamp + "-" + String(i).padStart(4, "0")] = toDb(rec); });
@@ -719,17 +753,47 @@ let loading = false;
 let addingInline = false;
 let inlineData = null;
 let weekFilter = "current";
+let statusFilter = "kalan";
 let pendingAction = null;
 let editingCell = null;
 let committing = false;
 
-/* ================= Yükle / hata ================= */
-async function load(withSpinner = true) {
+/* ================= Yükle / hata / canlı bildirim ================= */
+let lastLocalOp = 0;
+let toastTimer = null;
+function showToast(html) {
+  const t = document.getElementById("toast");
+  t.innerHTML = html;
+  t.classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add("hidden"), 4500);
+}
+function diffRows(prev, next) {
+  const pm = new Map(prev.map(r => [r.id, JSON.stringify(toDb(r))]));
+  let added = 0, updated = 0, deleted = 0;
+  next.forEach(r => {
+    const s = JSON.stringify(toDb(r));
+    if (!pm.has(r.id)) added++;
+    else if (pm.get(r.id) !== s) updated++;
+    pm.delete(r.id);
+  });
+  return { added, updated, deleted: pm.size };
+}
+async function load(withSpinner = true, live = false) {
+  const prev = rows;
   loading = withSpinner;
   if (withSpinner) render();
   try {
     rows = await apiList();
     setSaveError("");
+    if (live && prev.length >= 0) {
+      const d = diffRows(prev, rows);
+      const parts = [];
+      if (d.added) parts.push(`➕ ${d.added} yeni kayıt`);
+      if (d.updated) parts.push(`✏️ ${d.updated} güncellendi`);
+      if (d.deleted) parts.push(`🗑️ ${d.deleted} silindi`);
+      if (parts.length) showToast("🔄 Ekip değişikliği algılandı:<br><b>" + parts.join(" · ") + "</b>");
+    }
   } catch (e) {
     setSaveError(e.message);
   }
@@ -745,6 +809,25 @@ function setGuestInfo(msg) {
   const el = document.getElementById("guestInfo");
   if (msg) { el.innerHTML = msg; el.classList.remove("hidden"); }
   else el.classList.add("hidden");
+}
+
+/* ---------- 🔄 Canlı senkron (Firebase SSE) ---------- */
+let liveTimer = null;
+function liveReload() {
+  if (document.hidden || addingInline || editingCell) return;
+  if (Date.now() - lastLocalOp < 3000) return; /* kendi değişikliğimiz */
+  if (!document.getElementById("importModal").classList.contains("hidden")) return;
+  load(false, true);
+}
+function startLiveSync() {
+  try {
+    const es = new EventSource(`${FIREBASE_DB_URL}/${NODE}.json`);
+    es.onmessage = () => {
+      clearTimeout(liveTimer);
+      liveTimer = setTimeout(liveReload, 800); /* hafif debounce */
+    };
+    es.onerror = () => { /* bağlantı koparsa SSE kendiliğinden yeniden bağlanır */ };
+  } catch (e) { /* SSE desteklenmezse 30 sn'lik interval çalışmaya devam eder */ }
 }
 
 /* ================= Filtre & özet ================= */
@@ -763,6 +846,11 @@ function filtered() {
       const isDelayed = r.planlananTarih && r.planlananTarih < today && r.durum !== "Yükleme Tamamlandı";
       if (!(String(r.hafta) === String(thisWeek) || isDelayed)) return false;
     } else if (weekFilter !== "all" && String(r.hafta) !== String(weekFilter)) return false;
+    /* 🆕 Durum filtresi */
+    if (statusFilter === "kalan" && r.durum === "Yükleme Tamamlandı") return false;
+    else if (statusFilter === "bekliyor" && r.durum !== "Yükleme Bekliyor") return false;
+    else if (statusFilter === "yukleniyor" && r.durum !== "Yükleniyor") return false;
+    else if (statusFilter === "tamamlandi" && r.durum !== "Yükleme Tamamlandı") return false;
     if (q && !(r.musteri || "").toLowerCase().includes(q)) return false;
     return true;
   });
@@ -916,7 +1004,7 @@ function renderTable(list) {
   if (loading) html += `<tr><td colspan="18" class="empty">Yükleniyor…</td></tr>`;
   if (addingInline) html += formRowHtml(inlineData, "inline", "inline-row", "save-inline", "cancel-inline");
   if (!loading && list.length === 0 && !addingInline) {
-    html += `<tr><td colspan="18" class="empty">Bu haftaya ve gecikenlere ait kayıt yok. 🎉</td></tr>`;
+    html += `<tr><td colspan="18" class="empty">Filtrelere uyan kayıt yok. 🎉</td></tr>`;
   }
   list.forEach(r => { html += rowHtml(r); });
   tbody.innerHTML = html;
@@ -970,7 +1058,6 @@ async function commitCell() {
     const saved = await apiUpdate(id, updated);
     rows = rows.map(r => r.id === id ? saved : r);
     setSaveError("");
-    /* Değişiklik geçmişine yaz */
     const parts = [`${FIELD_LABELS[field] || field}: "${dispVal(field, row[field])}" → "${dispVal(field, val)}"`];
     if (String(updated.m3 ?? "") !== String(row.m3 ?? "")) {
       parts.push(`${FIELD_LABELS.m3}: "${dispVal("m3", row.m3)}" → "${dispVal("m3", updated.m3)}"`);
@@ -1132,6 +1219,7 @@ document.getElementById("tbody").addEventListener("change", e => {
 
 document.getElementById("search").addEventListener("input", render);
 document.getElementById("weekFilter").addEventListener("change", e => { weekFilter = e.target.value; render(); });
+document.getElementById("statusFilter").addEventListener("change", e => { statusFilter = e.target.value; render(); });
 document.getElementById("btnReload").addEventListener("click", async () => {
   if (editingCell) await commitCell();
   load(true);
@@ -1146,6 +1234,24 @@ document.getElementById("btnShowForm").addEventListener("click", () => gate("for
 document.getElementById("btnImportOpen").addEventListener("click", () => gate("import"));
 document.getElementById("btnExport").addEventListener("click", exportExcel);
 document.getElementById("btnHistory").addEventListener("click", showHistory);
+document.getElementById("btnPrint").addEventListener("click", () => {
+  if (editingCell) commitCell();
+  setTimeout(() => window.print(), 100);
+});
+document.getElementById("btnTheme").addEventListener("click", toggleTheme);
+
+/* ================= 🌙 Karanlık mod ================= */
+const THEME_KEY = "sevkiyat_theme";
+function applyTheme(dark) {
+  document.body.classList.toggle("dark", dark);
+  localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
+  document.getElementById("btnTheme").textContent = dark ? "☀️" : "🌙";
+  document.getElementById("btnTheme").title = dark ? "Açık temaya geç" : "Karanlık temaya geç";
+}
+function toggleTheme() {
+  applyTheme(!document.body.classList.contains("dark"));
+}
+applyTheme(localStorage.getItem(THEME_KEY) === "dark");
 
 /* ================= Modal form ================= */
 function fillSelect(id, options) {
@@ -1263,14 +1369,11 @@ function statsTable(map, title, colLabel) {
     <tfoot><tr><td>TOPLAM</td><td class="center">${fmtN(tA)}</td><td class="center">${fmtN(tT)}</td><td class="center">${fmtN(tA - tT)}</td><td class="center">${tG ? fmtN(tG) : "-"}</td><td class="center">${fmtN(tM)}</td><td class="center">%${oran}</td></tr></tfoot>
   </table></div></div>`;
 }
-
-/* ---------- Plan vs Gerçekleşen sapma analizi ---------- */
 function sapmaAnalizi(list) {
   const kayitlar = list.filter(r => r.gerceklesenTarih && r.planlananTarih && r.durum === "Yükleme Tamamlandı");
   if (!kayitlar.length) return null;
   const satirlar = kayitlar.map(r => ({
     musteri: r.musteri,
-    ad: adet(r),
     sapma: Math.round((parseLocalDate(r.gerceklesenTarih) - parseLocalDate(r.planlananTarih)) / 86400000)
   }));
   const n = satirlar.length;
@@ -1300,20 +1403,23 @@ function sapmaTable(az) {
         <td class="center">%${zOran}</td></tr>`;
     }).join("");
   return `<div class="rpt"><h3>🗓️ Plan vs Gerçekleşen — sapma analizi</h3>
-    <p class="hint">Sadece tamamlanmış kayıtlar: sapma = gerçekleşen tarih − planlanan tarih. <b>+gün</b> = geç yüklendi (kırmızı), <b>−gün</b> = erken (mavi), 0 = zamanında (yeşil). Müşteriler ortalama sapmaya göre azalan sıralı — en tepedekiler planı en çok tutmayanlar.</p>
+    <p class="hint">Sadece tamamlanmış kayıtlar: sapma = gerçekleşen − planlanan. <b>+gün</b> = geç (kırmızı), <b>−gün</b> = erken (mavi). Müşteriler ortalama sapmaya göre azalan sıralı.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>Müşteri</th><th>Tamamlanan yükleme</th><th>Ortalama sapma</th><th>En kötü sapma</th><th>Zamanında</th></tr></thead>
       <tbody>${rowsHtml}</tbody>
       <tfoot><tr><td>GENEL</td><td class="center">${az.n}</td>
-        <td class="center" style="${az.ort > 0 ? "color:var(--red)" : "color:var(--green)"};font-weight:700">${fmtSapma(az.ort)} gün</td>
+        <td class="center" style="font-weight:700;${az.ort > 0 ? "color:var(--red)" : "color:var(--green)"}">${fmtSapma(az.ort)} gün</td>
         <td class="center" style="${az.enKotu > 0 ? "color:var(--red)" : ""}">${fmtSapma(az.enKotu)} gün</td>
         <td class="center">%${(az.zamaninda / az.n * 100).toFixed(0)}</td></tr></tfoot>
     </table></div></div>`;
 }
 function makeCharts(list) {
   if (typeof Chart === "undefined") return;
+  const isDark = document.body.classList.contains("dark");
   Chart.defaults.font.family = "'Inter', sans-serif";
   Chart.defaults.font.size = 11;
+  Chart.defaults.color = isDark ? "#94a3b8" : "#334155";
+  const gridColor = isDark ? "#2b3a52" : "#e2e8f0";
   const s = computeSummary(list);
 
   chartInstances.push(new Chart(document.getElementById("chDurum"), {
@@ -1329,7 +1435,7 @@ function makeCharts(list) {
     type: "bar",
     data: { labels: GUNLER, datasets: [{ label: "Yükleme adedi", data: s.gunAd, backgroundColor: "#4f46e5", borderRadius: 6 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } }, x: { grid: { display: false } } } }
   }));
   const tipMap = groupStats(list, r => r.sevkiyatTipi);
   chartInstances.push(new Chart(document.getElementById("chTip"), {
@@ -1337,7 +1443,7 @@ function makeCharts(list) {
     data: { labels: [...tipMap.keys()],
       datasets: [{ label: "Yükleme adedi", data: [...tipMap.values()].map(g => g.ad), backgroundColor: "#0ea5e9", borderRadius: 6 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } }, x: { grid: { display: false } } } }
   }));
   const blmMap = groupStats(list, r => r.blm);
   chartInstances.push(new Chart(document.getElementById("chBlm"), {
@@ -1345,7 +1451,7 @@ function makeCharts(list) {
     data: { labels: [...blmMap.keys()],
       datasets: [{ label: "Yükleme adedi", data: [...blmMap.values()].map(g => g.ad), backgroundColor: "#8b5cf6", borderRadius: 6 }] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } }, x: { grid: { display: false } } } }
   }));
   const musMap = [...groupStats(list, r => r.musteri).entries()].sort((a, b) => b[1].ad - a[1].ad);
   chartInstances.push(new Chart(document.getElementById("chMusteri"), {
@@ -1360,10 +1466,9 @@ function makeCharts(list) {
     },
     options: { responsive: true, maintainAspectRatio: false, indexAxis: "y",
       plugins: { legend: { position: "bottom" } },
-      scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: true } } }
+      scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
+                y: { stacked: true, grid: { display: false } } } }
   }));
-
-  /* Haftalık trend — filtrelerden bağımsız, tüm verinin son 8 haftası */
   const haftaMap = new Map();
   enriched(rows).forEach(r => {
     if (r.hafta === "-") return;
@@ -1386,7 +1491,7 @@ function makeCharts(list) {
     },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: "bottom" } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } }, x: { grid: { display: false } } } }
   }));
 }
 function buildReports() {
@@ -1406,7 +1511,7 @@ function buildReports() {
       </div>`;
   const az = sapmaAnalizi(list);
   c.innerHTML = chartBlock +
-    (az ? sapmaTable(az) : `<p class="hint">🗓️ Sapma analizi için henüz tamamlanmış (gerçekleşen tarihi dolu) kayıt yok — kayıtların gerçekleşen tarihini girince burada otomatik çıkar.</p>`) +
+    (az ? sapmaTable(az) : `<p class="hint">🗓️ Sapma analizi için henüz tamamlanmış (gerçekleşen tarihi dolu) kayıt yok.</p>`) +
     statsTable(groupStats(list, r => r.musteri), "Müşteri bazlı", "Müşteri") +
     statsTable(groupStats(list, r => r.sevkiyatTipi), "Sevkiyat tipi bazlı", "Tip") +
     statsTable(groupStats(list, r => r.blm), "BLM bazlı", "BLM") +
@@ -1426,7 +1531,7 @@ document.getElementById("reportModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) { destroyCharts(); e.currentTarget.classList.add("hidden"); }
 });
 
-/* ================= GEÇMİŞ GÖRÜNTÜLEME ================= */
+/* ================= GEÇMİŞ ================= */
 async function showHistory() {
   const c = document.getElementById("historyContent");
   c.innerHTML = `<p class="hint">Yükleniyor…</p>`;
@@ -1434,7 +1539,7 @@ async function showHistory() {
   try {
     const hist = await apiListHistory(150);
     if (!hist.length) {
-      c.innerHTML = `<p class="hint">Henüz geçmiş kaydı yok — ilk ekleme/düzenleme işleminden sonra burada görünecek.</p>`;
+      c.innerHTML = `<p class="hint">Henüz geçmiş kaydı yok.</p>`;
       return;
     }
     c.innerHTML = `<div class="timeline">` + hist.map(h => {
@@ -1447,7 +1552,7 @@ async function showHistory() {
       </div>`;
     }).join("") + `</div>`;
   } catch (e) {
-    c.innerHTML = `<div class="error">Geçmiş yüklenemedi: ${esc(e.message)}<br><br>⚠️ Muhtemel neden: Firebase Rules'ta <b>sevkiyat_history</b> düğümü için <b>.read: true</b> izni yok. Dosyayla gelen güncel kuralları Publish et.</div>`;
+    c.innerHTML = `<div class="error">Geçmiş yüklenemedi: ${esc(e.message)}<br>⚠️ Rules'ta <b>sevkiyat_history</b> için <b>.read: true</b> olmalı.</div>`;
   }
 }
 document.getElementById("btnCloseHistory").addEventListener("click", () => {
@@ -1756,9 +1861,11 @@ setInterval(() => {
   if (Date.now() - lastActivity > IDLE_MS) doLogout("15 dakika işlem olmadığı için oturum kapatıldı.");
 }, 10000);
 
+/* Yedek 30 sn yenileme — SSE çalışmazsa bile veriler güncel kalır */
 setInterval(() => {
   if (document.hidden || addingInline || editingCell) return;
   if (!document.getElementById("importModal").classList.contains("hidden")) return;
+  if (Date.now() - lastLocalOp < 5000) return;
   load(false);
 }, 30000);
 
@@ -1774,6 +1881,7 @@ updateUserUI();
     } catch (e) { /* ensureToken gerekli temizliği yaptı */ }
   }
   await load(true);
+  startLiveSync();
 })();
 </script>
 </body>
