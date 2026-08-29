@@ -94,26 +94,33 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     box-shadow: 0 1px 3px rgba(15, 23, 42, .05); overflow-x: auto;
   }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
   thead tr { background: #1e293b; color: #fff; }
   th {
-    padding: 10px 10px; text-align: left; font-weight: 600; white-space: nowrap;
-    font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: #cbd5e1;
+    padding: 8px 6px; text-align: left; font-weight: 600; white-space: nowrap;
+    font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #cbd5e1;
   }
-  td { padding: 8px 10px; border-top: 1px solid #f1f5f9; white-space: nowrap; vertical-align: middle; }
+  td { padding: 5px 6px; border-top: 1px solid #f1f5f9; white-space: nowrap; vertical-align: middle; }
   tr.row:hover { background: var(--primary-soft); }
   tr.priority { background: var(--amber-soft); }
   tr.priority:hover { background: #fef3c7; }
-  tr.editing { background: #fef9c3; }
   tr.inline-row { background: var(--primary-soft); }
   td.strong { font-weight: 600; }
   td.center { text-align: center; }
   td.muted { color: #94a3b8; }
   td.empty { text-align: center; padding: 40px 8px; color: #94a3b8; }
-  td.truncate { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+  td.truncate { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .nowrap { white-space: nowrap; }
 
-  .badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  /* Hücre düzenleme */
+  td.editable { cursor: pointer; }
+  td.editable:hover {
+    background: var(--primary-soft);
+    box-shadow: inset 0 0 0 1.5px #a5b4fc;
+  }
+  tr.priority td.editable:hover { background: #fef3c7; box-shadow: inset 0 0 0 1.5px #a5b4fc; }
+
+  .badge { padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 600; }
   .badge.done    { background: var(--green-soft); color: var(--green); border: 1px solid #a7f3d0; }
   .badge.loading { background: var(--amber-soft); color: var(--amber); border: 1px solid #fde68a; }
   .badge.waiting { background: var(--red-soft);  color: var(--red);  border: 1px solid #fecaca; }
@@ -124,19 +131,20 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .icon-btn {
-    background: none; border: none; cursor: pointer; padding: 7px;
-    font-size: 14px; line-height: 1; border-radius: 6px; transition: background .15s;
+    background: none; border: none; cursor: pointer; padding: 4px 5px;
+    font-size: 13px; line-height: 1; border-radius: 6px; transition: background .15s;
   }
   .icon-btn:hover { background: #e2e8f0; }
   .icon-btn.del:hover { background: var(--red-soft); }
 
-  .cell-input { font-size: 12px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; }
+  .cell-input { font-size: 11.5px; padding: 3px 4px; border: 1px solid var(--border); border-radius: 6px; max-width: 100%; }
+  .cell-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79,70,229,.15); }
   .cell-input[readonly] { background: #f1f5f9; color: var(--muted); cursor: not-allowed; }
-  .w-musteri  { width: 115px; }
-  .w-kategori { width: 80px; }
-  .w-num      { width: 62px; }
-  .w-date     { width: 135px; }
-  .w-aciklama { width: 110px; }
+  .w-musteri  { width: 100px; }
+  .w-kategori { width: 70px; }
+  .w-num      { width: 52px; }
+  .w-date     { width: 118px; }
+  .w-aciklama { width: 90px; }
 
   .modal-bg {
     position: fixed; inset: 0; background: rgba(15, 23, 42, .5); backdrop-filter: blur(2px);
@@ -193,7 +201,6 @@
     .form-grid { grid-template-columns: 1fr; }
     .col-2 { grid-column: span 1; }
     .chart-grid { grid-template-columns: 1fr; }
-    .icon-btn { padding: 9px; font-size: 16px; }
     .btn { padding: 8px 10px; }
   }
 </style>
@@ -205,12 +212,12 @@
     <div class="logo">🚢</div>
     <div>
       <h1>Sevkiyat Planlama — İhracat</h1>
-      <p class="subtitle">Ekip veritabanı · otomatik yenilenir · değişiklikler kayıt altında</p>
+      <p class="subtitle">Ekip veritabanı · hücreye tıkla, düzenle, Enter'a bas — otomatik kaydedilir</p>
     </div>
   </div>
   <div class="toolbar">
     <input id="search" placeholder="🔍 Müşteri ara" style="min-width:150px" />
-    <select id="weekFilter"><option value="all">Tüm haftalar</option></select>
+    <select id="weekFilter"><option value="current">Bu hafta</option><option value="all">Tüm haftalar</option></select>
     <button class="btn" id="btnToggleSummary">Özeti gizle</button>
     <button class="btn" id="btnReports">📊 Raporlar</button>
     <button class="btn" id="btnExport">📤 Excel'e Aktar</button>
@@ -250,6 +257,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
+  <p class="hint" style="margin-top:8px">💡 Düzenleme: tablodaki hücreye tıkla → değeri değiştir → <b>Enter</b> (veya başka yere tıkla) → otomatik kaydedilir. <b>Esc</b> iptal eder. M3, Hafta ve Ay otomatik hesaplanır.</p>
 </main>
 
 <datalist id="musteri-list"></datalist>
@@ -335,7 +343,7 @@ const NODE = "sevkiyat";
 const ADMIN_EMAILS = ["admin@yatsan.com"];
 const PERMISSIONS = {
   "inline-add": "user",  "form-add": "user",
-  "edit": "user",        "save-edit": "user",  "save-inline": "user",
+  "cell-edit": "user",   "save-inline": "user",
   "delete": "admin",     "import": "admin",    "do-import": "admin"
 };
 const IDLE_MS = 15 * 60 * 1000;
@@ -351,6 +359,22 @@ const GELDI = ["", "GELDİ", "HAYIR"];
 const M3_CARPAN = { "KOMPLE TIR": 90, "40 HC": 70, "20 DC": 35 };
 const SORT_DESC = true;
 const DURUM_SIRA = { "Yükleniyor": 0, "Yükleme Bekliyor": 1, "Yükleme Tamamlandı": 2 };
+
+/* Hücre düzenleme tanımları: hangi alan, ne tip input, hangi genişlik */
+const CELL_DEFS = {
+  musteri:          { kind: "text",   w: "w-musteri", list: true },
+  blm:              { kind: "select", options: BLMS },
+  kategori:         { kind: "text",   w: "w-kategori" },
+  sevkiyatTipi:     { kind: "select", options: TIPLER },
+  ad:               { kind: "number", w: "w-num" },
+  planlananTarih:   { kind: "date",   w: "w-date" },
+  reelPlan:         { kind: "date",   w: "w-date" },
+  gerceklesenTarih: { kind: "date",   w: "w-date" },
+  durum:            { kind: "select", options: DURUMLAR },
+  aciklama:         { kind: "text",   w: "w-aciklama" },
+  araciGeldi:       { kind: "select", options: GELDI },
+  prsM3:            { kind: "number", w: "w-num" },
+};
 
 /* ================= Yardımcılar ================= */
 function esc(s) {
@@ -477,7 +501,6 @@ async function ensureToken(force = false) {
 async function authFetch(url, opts = {}, _canRetry = true) {
   const token = await ensureToken();
   if (!token) throw new Error("Oturum bulunamadı");
-  /* RTDB REST'te ID token'ın garantili yolu ?auth= parametresidir; Bearer başlığı da eklenir */
   const sep = url.includes("?") ? "&" : "?";
   const authedUrl = url + sep + "auth=" + encodeURIComponent(token);
   const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
@@ -572,12 +595,12 @@ async function apiBulkInsert(recs) {
 /* ================= State ================= */
 let rows = [];
 let loading = false;
-let editingId = null;
-let editData = null;
 let addingInline = false;
 let inlineData = null;
-let weekFilter = "all";
+let weekFilter = "current";
 let pendingAction = null;
+let editingCell = null;   /* { id, field } — aktif hücre düzenlemesi */
+let committing = false;
 
 /* ================= Yükle / hata ================= */
 async function load(withSpinner = true) {
@@ -607,8 +630,11 @@ function enriched(list) {
 }
 function filtered() {
   const q = document.getElementById("search").value.trim().toLowerCase();
+  const thisWeek = getISOWeek(new Date());
   const result = enriched(rows).filter(r => {
-    if (weekFilter !== "all" && String(r.hafta) !== String(weekFilter)) return false;
+    if (weekFilter === "current") {
+      if (r.hafta === "-" || String(r.hafta) !== String(thisWeek)) return false;
+    } else if (weekFilter !== "all" && String(r.hafta) !== String(weekFilter)) return false;
     if (q && !(r.musteri || "").toLowerCase().includes(q)) return false;
     return true;
   });
@@ -644,9 +670,11 @@ function renderDatalist() {
   document.getElementById("musteri-list").innerHTML = cust.map(c => `<option value="${esc(c)}">`).join("");
 }
 function renderWeekFilter() {
+  const thisWeek = getISOWeek(new Date());
   const weeks = [...new Set(enriched(rows).map(r => r.hafta).filter(w => w !== "-"))].sort((a, b) => a - b);
   document.getElementById("weekFilter").innerHTML =
-    `<option value="all">Tüm haftalar</option>` +
+    `<option value="current" ${weekFilter === "current" ? "selected" : ""}>Bu hafta (${thisWeek})</option>` +
+    `<option value="all" ${weekFilter === "all" ? "selected" : ""}>Tüm haftalar</option>` +
     weeks.map(w => `<option value="${w}" ${String(w) === String(weekFilter) ? "selected" : ""}>Hafta ${w}</option>`).join("");
 }
 function renderSummary(list) {
@@ -669,6 +697,27 @@ function fSelect(data, scope, field, options) {
     ${options.map(o => `<option value="${esc(o)}" ${String(data[field]) === o ? "selected" : ""}>${o === "" ? "-" : esc(o)}</option>`).join("")}
   </select>`;
 }
+
+/* --- Hücre düzenleme inputu --- */
+function cellInputHtml(r, field) {
+  const def = CELL_DEFS[field];
+  if (def.kind === "select") {
+    return `<select class="cell-input" data-cid="${r.id}" data-cfield="${field}">
+      ${def.options.map(o => `<option value="${esc(o)}" ${String(r[field]) === o ? "selected" : ""}>${o === "" ? "-" : esc(o)}</option>`).join("")}
+    </select>`;
+  }
+  const t = def.kind === "date" ? "date" : def.kind === "number" ? "number" : "text";
+  return `<input type="${t}" class="cell-input ${def.w || ""}" data-cid="${r.id}" data-cfield="${field}"
+    value="${esc(String(r[field] ?? ""))}" ${def.list ? 'list="musteri-list"' : ""} />`;
+}
+/* Görüntüleme + düzenleme birleşik hücre üretici */
+function tdHtml(r, field, extraCls, viewFn) {
+  const def = CELL_DEFS[field];
+  const editing = editingCell && editingCell.id === r.id && editingCell.field === field;
+  const content = editing ? cellInputHtml(r, field) : viewFn(r);
+  return `<td class="${extraCls || ""}${def ? " editable" : ""}"${def ? ` data-field="${field}"` : ""}>${content}</td>`;
+}
+
 function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
   return `<tr class="${rowClass}">
     <td>${fInput(d, scope, "musteri", "text", "w-musteri", true)}</td>
@@ -696,26 +745,25 @@ function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
 }
 function rowHtml(r) {
   const dt = parseLocalDate(r.planlananTarih);
-  return `<tr class="row ${r.oncelikli ? "priority" : ""}">
-    <td class="strong">${esc(r.musteri)}</td>
-    <td>${esc(r.blm)}</td>
-    <td>${esc(r.kategori)}</td>
-    <td>${esc(r.sevkiyatTipi)}</td>
-    <td class="center">${esc(r.ad)}</td>
-    <td>${formatDate(r.planlananTarih)}</td>
-    <td class="center">${dt ? getISOWeek(dt) : "-"}</td>
-    <td>${dt ? AYLAR[dt.getMonth()] : "-"}</td>
-    <td>${formatDate(r.reelPlan)}</td>
-    <td>${formatDate(r.gerceklesenTarih)}</td>
-    <td><span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></td>
-    <td class="truncate" title="${esc(r.aciklama)}">${esc(r.aciklama) || "-"}</td>
-    <td>${esc(r.araciGeldi) || "-"}</td>
+  return `<tr class="row ${r.oncelikli ? "priority" : ""}" data-rowid="${r.id}">
+    ${tdHtml(r, "musteri", "strong", x => esc(x.musteri))}
+    ${tdHtml(r, "blm", "", x => esc(x.blm))}
+    ${tdHtml(r, "kategori", "", x => esc(x.kategori))}
+    ${tdHtml(r, "sevkiyatTipi", "", x => esc(x.sevkiyatTipi))}
+    ${tdHtml(r, "ad", "center", x => esc(x.ad))}
+    ${tdHtml(r, "planlananTarih", "", x => formatDate(x.planlananTarih))}
+    <td class="center muted">${dt ? getISOWeek(dt) : "-"}</td>
+    <td class="muted">${dt ? AYLAR[dt.getMonth()] : "-"}</td>
+    ${tdHtml(r, "reelPlan", "", x => formatDate(x.reelPlan))}
+    ${tdHtml(r, "gerceklesenTarih", "", x => formatDate(x.gerceklesenTarih))}
+    ${tdHtml(r, "durum", "", x => `<span class="badge ${durumClass(x.durum)}">${esc(x.durum)}</span>`)}
+    ${tdHtml(r, "aciklama", "truncate", x => `<span title="${esc(x.aciklama)}">${esc(x.aciklama) || "-"}</span>`)}
+    ${tdHtml(r, "araciGeldi", "", x => esc(x.araciGeldi) || "-")}
     <td class="center">${durumIcon(r.durum)}</td>
-    <td class="center">${numOrDash(r.prsM3)}</td>
+    ${tdHtml(r, "prsM3", "center", x => numOrDash(x.prsM3))}
     <td class="center">${numOrDash(r.m3)}</td>
     <td class="muted" title="${esc(r.createdBy || "")}">${esc(shortUser(r.createdBy))}</td>
     <td class="nowrap">
-      <button class="icon-btn" data-action="edit" data-id="${r.id}" title="Düzenle">✏️</button>
       <button class="icon-btn del" data-action="delete" data-id="${r.id}" title="Sil">🗑️</button>
     </td>
   </tr>`;
@@ -726,18 +774,63 @@ function renderTable(list) {
   if (loading) html += `<tr><td colspan="18" class="empty">Yükleniyor…</td></tr>`;
   if (addingInline) html += formRowHtml(inlineData, "inline", "inline-row", "save-inline", "cancel-inline");
   if (!loading && list.length === 0 && !addingInline) {
-    html += `<tr><td colspan="18" class="empty">Kayıt yok. "Yeni kayıt" ile başlayın.</td></tr>`;
+    html += `<tr><td colspan="18" class="empty">Bu haftaya ait kayıt yok. "Tüm haftalar" seçerek eski verilere bakabilirsin.</td></tr>`;
   }
-  list.forEach(r => {
-    html += (editingId === r.id && editData)
-      ? formRowHtml(editData, "edit", "editing", "save-edit", "cancel-edit")
-      : rowHtml(r);
-  });
+  list.forEach(r => { html += rowHtml(r); });
   tbody.innerHTML = html;
   if (addingInline) {
     const first = tbody.querySelector('input[data-field="musteri"]');
     if (first) first.focus();
   }
+  if (editingCell) {
+    const inp = tbody.querySelector(`[data-cid="${editingCell.id}"][data-cfield="${editingCell.field}"]`);
+    if (inp) {
+      inp.focus();
+      if (inp.type === "text") { try { inp.select(); } catch (e) {} }
+    }
+  }
+}
+
+/* ================= Hücre düzenleme mantığı ================= */
+function startCellEdit(id, field) {
+  if (editingCell && (editingCell.id !== id || editingCell.field !== field)) {
+    commitCell(); /* açık hücreyi kapat/kaydet */
+  }
+  editingCell = { id, field };
+  render();
+}
+async function commitCell() {
+  const cur = editingCell;
+  if (!cur || committing) return;
+  committing = true;
+  editingCell = null;
+  const { id, field } = cur;
+  const inp = document.querySelector(`[data-cid="${id}"][data-cfield="${field}"]`);
+  const row = rows.find(r => r.id === id);
+  if (!inp || !row) { committing = false; render(); return; }
+  let val = inp.value;
+  if (field === "musteri") val = val.trim();
+  if (field === "ad") val = Number(val) || 1;
+  if (field === "prsM3") val = val === "" ? null : Number(val);
+  const changed = String(row[field] ?? "") !== String(val ?? "");
+  if (!changed) { committing = false; render(); return; }
+  const updated = { ...row, [field]: val };
+  /* Tip/AD/PRS değiştiyse M3'ü yeniden hesapla */
+  if (["sevkiyatTipi", "ad", "prsM3"].includes(field)) {
+    const m3 = hesaplaM3(updated.sevkiyatTipi, updated.ad, updated.prsM3);
+    if (m3 !== null) updated.m3 = m3;
+  }
+  try {
+    const saved = await apiUpdate(id, updated);
+    rows = rows.map(r => r.id === id ? saved : r);
+    setSaveError("");
+  } catch (e) { setSaveError(e.message); }
+  committing = false;
+  render();
+}
+function cancelCell() {
+  editingCell = null;
+  render();
 }
 
 /* ================= Yetki kapısı ================= */
@@ -753,13 +846,8 @@ function runAction({ type, param }) {
     case "form-add":    openModal(); break;
     case "import":      openImport(); break;
     case "save-inline": saveInline(); break;
-    case "save-edit":   saveEdit(); break;
     case "do-import":   doImport(); break;
-    case "edit": {
-      const row = rows.find(r => r.id === param);
-      if (row) { editingId = param; editData = { ...row }; render(); }
-      break;
-    }
+    case "cell-edit":   startCellEdit(param.id, param.field); break;
     case "delete":
       if (confirm("Bu kayıt veritabanından silinsin mi?")) deleteRow(param);
       break;
@@ -782,16 +870,6 @@ async function saveInline() {
     render();
   } catch (e) { setSaveError(e.message); }
 }
-async function saveEdit() {
-  if (!(editData.musteri || "").trim()) { alert("Müşteri adı zorunlu."); return; }
-  try {
-    const updated = await apiUpdate(editingId, editData);
-    rows = rows.map(r => r.id === editingId ? updated : r);
-    editingId = null; editData = null;
-    setSaveError("");
-    render();
-  } catch (e) { setSaveError(e.message); }
-}
 async function deleteRow(id) {
   try {
     await apiDelete(id);
@@ -804,56 +882,71 @@ async function deleteRow(id) {
 /* ================= Olaylar ================= */
 document.getElementById("tbody").addEventListener("click", e => {
   const btn = e.target.closest("button[data-action]");
-  if (!btn) return;
-  const { action, id } = btn.dataset;
-  switch (action) {
-    case "save-inline":   gate("save-inline"); break;
-    case "cancel-inline": addingInline = false; inlineData = null; render(); break;
-    case "save-edit":     gate("save-edit"); break;
-    case "cancel-edit":   editingId = null; editData = null; render(); break;
-    case "edit":          gate("edit", id); break;
-    case "delete":        gate("delete", id); break;
+  if (btn) {
+    const { action, id } = btn.dataset;
+    switch (action) {
+      case "save-inline":   gate("save-inline"); break;
+      case "cancel-inline": addingInline = false; inlineData = null; render(); break;
+      case "delete":        gate("delete", id); break;
+    }
+    return;
   }
+  if (e.target.closest("input, select, option")) return; /* düzenlenen hücrenin inputu */
+  const td = e.target.closest("td[data-field]");
+  if (!td) return;
+  const tr = td.closest("tr[data-rowid]");
+  if (!tr) return;
+  gate("cell-edit", { id: tr.dataset.rowid, field: td.dataset.field });
 });
 function onFieldInput(e) {
   const el = e.target;
   const field = el.dataset.field;
   if (!field) return;
-  const scope = el.dataset.scope;
-  const val = el.value;
-  const data = scope === "inline" ? inlineData : editData;
-  if (scope === "inline" && inlineData) inlineData[field] = val;
-  else if (scope === "edit" && editData) editData[field] = val;
-
+  if (inlineData) inlineData[field] = el.value;
   if (field === "durum") {
     const cell = el.closest("tr")?.querySelector(".st-cell");
-    if (cell) cell.innerHTML = durumIcon(val);
+    if (cell) cell.innerHTML = durumIcon(el.value);
   }
   if (field === "sevkiyatTipi" || field === "ad" || field === "prsM3") {
     const tr = el.closest("tr");
     const m3In = tr?.querySelector('input[data-field="m3"]');
-    if (!tr || !m3In) return;
-    const tip = field === "sevkiyatTipi" ? val : data?.sevkiyatTipi;
+    if (!tr || !m3In || !inlineData) return;
+    const tip = field === "sevkiyatTipi" ? el.value : inlineData.sevkiyatTipi;
     if (!tip) return;
     if (field === "ad" && tip === "PARSIYEL TIR") return;
     const adVal  = tr.querySelector('input[data-field="ad"]')?.value;
     const prsVal = tr.querySelector('input[data-field="prsM3"]')?.value;
     const yeni = hesaplaM3(tip, adVal, prsVal);
-    if (yeni !== null) { m3In.value = yeni; if (data) data.m3 = yeni; }
+    if (yeni !== null) { m3In.value = yeni; inlineData.m3 = yeni; }
   }
 }
 document.getElementById("tbody").addEventListener("input", onFieldInput);
 document.getElementById("tbody").addEventListener("change", onFieldInput);
+
+/* Hücre düzenleme: Enter kaydet, Esc iptal, odak kaybında kaydet */
 document.getElementById("tbody").addEventListener("keydown", e => {
+  if (e.target.matches("[data-cid]")) {
+    if (e.key === "Enter") { e.preventDefault(); commitCell(); }
+    else if (e.key === "Escape") { e.preventDefault(); cancelCell(); }
+    return;
+  }
   if (e.key !== "Enter") return;
   const scope = e.target.dataset.scope;
   if (scope === "inline") gate("save-inline");
-  else if (scope === "edit") gate("save-edit");
+});
+document.getElementById("tbody").addEventListener("focusout", e => {
+  if (e.target.matches && e.target.matches("[data-cid]")) commitCell();
+});
+document.getElementById("tbody").addEventListener("change", e => {
+  if (e.target.matches && e.target.matches("select[data-cid]")) commitCell();
 });
 
 document.getElementById("search").addEventListener("input", render);
 document.getElementById("weekFilter").addEventListener("change", e => { weekFilter = e.target.value; render(); });
-document.getElementById("btnReload").addEventListener("click", () => load(true));
+document.getElementById("btnReload").addEventListener("click", async () => {
+  if (editingCell) await commitCell();
+  load(true);
+});
 document.getElementById("btnToggleSummary").addEventListener("click", () => {
   const s = document.getElementById("summary");
   s.classList.toggle("hidden");
@@ -1332,7 +1425,7 @@ async function tryLogin() {
 }
 function doLogout(msg) {
   clearAuthState();
-  rows = []; addingInline = false; inlineData = null; editingId = null; editData = null;
+  rows = []; addingInline = false; inlineData = null; editingCell = null;
   render();
   showLogin(msg || "Oturum kapatıldı. Tekrar giriş yapabilirsin.");
 }
@@ -1351,9 +1444,9 @@ setInterval(() => {
   if (Date.now() - lastActivity > IDLE_MS) doLogout("15 dakika işlem olmadığı için oturum kapatıldı.");
 }, 10000);
 
-/* Otomatik yenileme (30 sn) */
+/* Otomatik yenileme (30 sn) — hücre düzenleme/ekleme sırasında engellenir */
 setInterval(() => {
-  if (document.hidden || !currentUser || addingInline || editingId) return;
+  if (document.hidden || !currentUser || addingInline || editingCell) return;
   if (!document.getElementById("importModal").classList.contains("hidden")) return;
   load(false);
 }, 30000);
