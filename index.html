@@ -79,19 +79,23 @@
   .statbar {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     box-shadow: 0 1px 3px rgba(15, 23, 42, .05);
-    display: flex; flex-wrap: wrap; align-items: center; gap: 20px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
     padding: 12px 20px; margin-bottom: 16px;
   }
-  .stat { display: flex; flex-direction: column; gap: 2px; min-width: 86px; }
+  .stat { display: flex; flex-direction: column; gap: 2px; min-width: 80px; }
   .s-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
   .s-val { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
   .s-val.green { color: var(--green); }
   .s-val.amber { color: var(--amber); }
+  .s-val.red { color: var(--red); }
+  .s-val.blue { color: var(--primary); }
   .s-div { width: 1px; height: 34px; background: var(--border); }
   .days { display: flex; gap: 14px; margin-left: auto; }
   .day { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 34px; }
   .day span { font-size: 10px; font-weight: 600; color: var(--muted); }
   .day b { font-size: 15px; font-weight: 700; }
+  .day.today span { color: var(--green); }
+  .day.today b { color: var(--green); }
   .day.total span { color: var(--primary); }
   .day.total b { color: var(--primary); }
 
@@ -109,6 +113,8 @@
   tr.row:hover { background: var(--primary-soft); }
   tr.priority { background: var(--amber-soft); }
   tr.priority:hover { background: #fef3c7; }
+  tr.today-row { background: var(--green-soft); }
+  tr.today-row:hover { background: #d1fae5; }
   tr.inline-row { background: var(--primary-soft); }
   td.strong { font-weight: 600; }
   td.center { text-align: center; }
@@ -117,13 +123,18 @@
   td.truncate { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .nowrap { white-space: nowrap; }
 
-  /* Hücre düzenleme — sadece girişli kullanıcıda imleç efekti */
+  .late-badge {
+    color: var(--red); font-size: 9.5px; font-weight: 700; margin-top: 1px;
+    letter-spacing: .02em; white-space: nowrap;
+  }
+
   body.can-edit td.editable { cursor: pointer; }
   body.can-edit td.editable:hover {
     background: var(--primary-soft);
     box-shadow: inset 0 0 0 1.5px #a5b4fc;
   }
   body.can-edit tr.priority td.editable:hover { background: #fef3c7; box-shadow: inset 0 0 0 1.5px #a5b4fc; }
+  body.can-edit tr.today-row td.editable:hover { background: #d1fae5; box-shadow: inset 0 0 0 1.5px #6ee7b7; }
 
   .badge { padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 600; }
   .badge.done    { background: var(--green-soft); color: var(--green); border: 1px solid #a7f3d0; }
@@ -141,6 +152,7 @@
   }
   .icon-btn:hover { background: #e2e8f0; }
   .icon-btn.del:hover { background: var(--red-soft); }
+  .icon-btn.dup:hover { background: var(--green-soft); }
 
   .cell-input { font-size: 11.5px; padding: 3px 4px; border: 1px solid var(--border); border-radius: 6px; max-width: 100%; }
   .cell-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(79,70,229,.15); }
@@ -188,6 +200,30 @@
   .prev-head { background: #f1f5f9 !important; color: var(--text) !important; }
   .success { background: var(--green-soft); border: 1px solid #a7f3d0; color: var(--green); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-top: 12px; }
 
+  /* Zaman çizelgesi (geçmiş) */
+  .timeline { position: relative; padding-left: 22px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 7px; top: 4px; bottom: 4px;
+    width: 2px; background: var(--border); border-radius: 2px;
+  }
+  .tl-item { position: relative; padding: 0 0 14px; }
+  .tl-item:last-child { padding-bottom: 0; }
+  .tl-dot {
+    position: absolute; left: -22px; top: 3px; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--primary); border: 3px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  .tl-dot.add   { background: var(--green); }
+  .tl-dot.edit  { background: var(--primary); }
+  .tl-dot.del   { background: var(--red); }
+  .tl-dot.dup   { background: #0ea5e9; }
+  .tl-dot.excel { background: #8b5cf6; }
+  .tl-head { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+  .tl-head b { color: var(--text); font-weight: 600; }
+  .tl-text { font-size: 12px; line-height: 1.45; }
+  .tl-text .chg { color: var(--primary-dark); background: var(--primary-soft); border-radius: 4px; padding: 1px 4px; }
+  .tl-text .musteri-tag { font-weight: 700; }
+
   .login-card { max-width: 380px; text-align: center; }
   .login-card .logo { margin: 0 auto 14px; width: 56px; height: 56px; font-size: 28px; }
   .login-card h2 { font-size: 19px; }
@@ -201,7 +237,7 @@
     main { padding: 12px 12px 24px; }
     h1 { font-size: 15px; }
     .s-div { display: none; }
-    .statbar { gap: 14px; padding: 12px 14px; }
+    .statbar { gap: 12px; padding: 12px 14px; }
     .days { margin-left: 0; width: 100%; justify-content: space-between; }
     .form-grid { grid-template-columns: 1fr; }
     .col-2 { grid-column: span 1; }
@@ -217,14 +253,15 @@
     <div class="logo">🚢</div>
     <div>
       <h1>Sevkiyat Planlama — İhracat</h1>
-      <p class="subtitle">Görüntüleme herkese açık · ekleme/düzenleme/silme için giriş yapın</p>
+      <p class="subtitle">Bu hafta + gecikenler · hücre düzenleme · ⧉ çoğalt · 🕘 geçmiş izleme</p>
     </div>
   </div>
   <div class="toolbar">
-    <input id="search" placeholder="🔍 Müşteri ara" style="min-width:150px" />
+    <input id="search" placeholder="🔍 Müşteri ara" style="min-width:140px" />
     <select id="weekFilter"><option value="current">Bu hafta</option><option value="all">Tüm haftalar</option></select>
     <button class="btn" id="btnToggleSummary">Özeti gizle</button>
     <button class="btn" id="btnReports">📊 Raporlar</button>
+    <button class="btn" id="btnHistory">🕘 Geçmiş</button>
     <button class="btn" id="btnExport">📤 Excel'e Aktar</button>
     <button class="btn" id="btnImportOpen">📥 Excel Yükle</button>
     <button class="btn" id="btnReload">↻ Yenile</button>
@@ -245,6 +282,10 @@
     <div class="s-div"></div>
     <div class="stat"><span class="s-label">Kalan</span><span class="s-val amber" id="sum-kalan">0</span></div>
     <div class="s-div"></div>
+    <div class="stat"><span class="s-label">Bugün</span><span class="s-val blue" id="sum-bugun">0</span></div>
+    <div class="s-div"></div>
+    <div class="stat"><span class="s-label">Geciken</span><span class="s-val red" id="sum-geciken">0</span></div>
+    <div class="s-div"></div>
     <div class="stat"><span class="s-label">Toplam M3</span><span class="s-val" id="sum-m3">0</span></div>
     <div class="s-div"></div>
     <div class="stat"><span class="s-label">Tamamlanma</span><span class="s-val" id="sum-verimlilik">0%</span></div>
@@ -263,7 +304,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Düzenleme: hücreye tıkla → değiştir → <b>Enter</b> → otomatik kaydedilir. <b>Esc</b> iptal eder. M3, Hafta ve Ay otomatik hesaplanır. Silme ve Excel yükleme admin yetkisi gerektirir.</p>
+  <p class="hint" style="margin-top:8px">💡 Düzenleme: hücreye tıkla → değiştir → <b>Enter</b> → kaydedilir, <b>Esc</b> iptal eder. <b>⧉</b> kaydı bugüne çoğaltır. Tüm ekleme/düzenleme/silme işlemleri <b>🕘 Geçmiş</b>'e kaydedilir.</p>
 </main>
 
 <datalist id="musteri-list"></datalist>
@@ -298,9 +339,18 @@
 <div id="reportModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>📊 Raporlar ve Grafikler</h2>
-    <p class="hint">Tüm değerler yükleme adedi (AD) bazlıdır. Aktif filtreler (arama + hafta) raporları da etkiler.</p>
+    <p class="hint">Değerler yükleme adedi (AD) bazlıdır. Aktif filtreler (arama + hafta) raporları da etkiler.</p>
     <div id="reportContent"></div>
     <div class="modal-actions"><button class="btn" id="btnCloseReport">Kapat</button></div>
+  </div>
+</div>
+
+<div id="historyModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>🕘 Değişiklik Geçmişi</h2>
+    <p class="hint">Son 150 hareket. Kim, ne zaman, ne yaptı — tüm ekleme/düzenleme/silme/çoğaltma/Excel işlemleri kayıt altında.</p>
+    <div id="historyContent" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-actions"><button class="btn" id="btnCloseHistory">Kapat</button></div>
   </div>
 </div>
 
@@ -345,16 +395,15 @@
 const FIREBASE_DB_URL = "https://sevkiyat-app-default-rtdb.europe-west1.firebasedatabase.app".replace(/\/+$/, "");
 const FIREBASE_API_KEY = "AIzaSyAagmdq0N2TG4IQ7noDFL6xQh4-ps-QrgI";
 const NODE = "sevkiyat";
+const HIST_NODE = "sevkiyat_history"; /* ← Rules'ta bu düğüme de izin verilmeli! */
 
 /* ============================================================
    ROLLER — BURADAN YÖNETİLİR
    ------------------------------------------------------------
    • ADMIN_EMAILS: Bu listedeki e-postalar ADMİN'dir.
      Admin ekstra olarak: silme + Excel yükleme yapabilir.
-   • Listede olmayan girişli kullanıcılar: ekleme + düzenleme.
-   • Giriş yapmayanlar: sadece görüntüleme.
-   • Yetki matrisini değiştirmek için PERMISSIONS altındaki
-     "user"/"admin" değerlerini değiştir.
+   • Listede olmayan girişli kullanıcılar: ekleme + düzenleme + çoğaltma.
+   • Giriş yapmayanlar: sadece görüntüleme + geçmiş izleme.
    ============================================================ */
 const ADMIN_EMAILS = [
   "admin@yatsan.com"
@@ -362,10 +411,10 @@ const ADMIN_EMAILS = [
 ];
 const PERMISSIONS = {
   "inline-add": "user",  "form-add": "user",
-  "cell-edit": "user",   "save-inline": "user",
-  "delete": "admin",     "import": "admin",    "do-import": "admin"
+  "cell-edit": "user",   "save-inline": "user",  "duplicate": "user",
+  "delete": "admin",     "import": "admin",      "do-import": "admin"
 };
-const IDLE_MS = 15 * 60 * 1000; /* girişliyken 15 dk işlem yoksa oturum kapanır */
+const IDLE_MS = 15 * 60 * 1000;
 
 /* ================= Sabitler ================= */
 const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
@@ -393,6 +442,19 @@ const CELL_DEFS = {
   araciGeldi:       { kind: "select", options: GELDI },
   prsM3:            { kind: "number", w: "w-num" },
 };
+const FIELD_LABELS = {
+  musteri: "Müşteri", blm: "BLM", kategori: "Kategori", sevkiyatTipi: "Tip",
+  ad: "AD", planlananTarih: "Planlanan", reelPlan: "Reel Plan",
+  gerceklesenTarih: "Gerçekleşen", durum: "Durum", aciklama: "Açıklama",
+  araciGeldi: "Aracı", prsM3: "PRS M3", m3: "M3", oncelikli: "Öncelikli"
+};
+const ACTION_META = {
+  "ekleme":     { label: "Kayıt eklendi",   dot: "add" },
+  "guncelleme": { label: "Güncellendi",     dot: "edit" },
+  "silme":      { label: "Silindi",         dot: "del" },
+  "cogaltma":   { label: "Çoğaltıldı",      dot: "dup" },
+  "excel":      { label: "Excel yükleme",   dot: "excel" }
+};
 
 /* ================= Yardımcılar ================= */
 function esc(s) {
@@ -404,6 +466,11 @@ function pad2(n) { return String(n).padStart(2, "0"); }
 function fmtN(n) { return (Math.round(n * 100) / 100).toLocaleString("tr-TR"); }
 function adet(r) { return Number(r.ad) || 0; }
 function shortUser(e) { return e ? String(e).split("@")[0] : "-"; }
+function fmtDateTime(ts) {
+  const d = new Date(ts);
+  return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function fmtSapma(n) { return (n > 0 ? "+" : "") + (Math.round(n * 10) / 10).toLocaleString("tr-TR"); }
 function getISOWeek(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -423,6 +490,12 @@ function formatDate(iso) {
 function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+function gecikmeGunu(r) {
+  if (!r.planlananTarih || r.durum === "Yükleme Tamamlandı") return 0;
+  const today = todayISO();
+  if (r.planlananTarih >= today) return 0;
+  return Math.round((parseLocalDate(today) - parseLocalDate(r.planlananTarih)) / 86400000);
 }
 function durumClass(d) {
   if (d === "Yükleme Tamamlandı") return "done";
@@ -516,7 +589,6 @@ async function ensureToken(force = false) {
   }
   return t;
 }
-/* Yazma istekleri için: auth zorunlu */
 async function authFetch(url, opts = {}, _canRetry = true) {
   const token = await ensureToken();
   if (!token) throw new Error("Oturum bulunamadı");
@@ -532,7 +604,7 @@ async function authFetch(url, opts = {}, _canRetry = true) {
       await ensureToken(true);
       return authFetch(url, opts, false);
     }
-    throw new Error("Veritabanı erişimi reddedildi (401). Kurallar yazmaya izin vermiyor. Rules: .write \"auth != null\" olmalı.");
+    throw new Error("Veritabanı erişimi reddedildi (401). Kurallar yazmaya izin vermiyor.");
   }
   return res;
 }
@@ -575,14 +647,42 @@ function toDb(r) {
     updatedBy: currentUser ? currentUser.email : ""
   };
 }
-/* OKUMA herkese açık — auth gerekmez */
+/* ---------- Geçmiş kaydı (append-only, hata toleranslı) ---------- */
+async function apiLog(action, recId, musteri, detay) {
+  if (!currentUser) return; /* girişsiz işlem loglanamaz (zaten yazma yapılamaz) */
+  try {
+    await authFetch(`${FIREBASE_DB_URL}/${HIST_NODE}.json`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ts: Date.now(),
+        user: currentUser.email,
+        action,
+        recId: recId || "",
+        musteri: musteri || "",
+        detay: detay || ""
+      })
+    });
+  } catch (e) {
+    /* Geçmiş yazılamazsa ana işlemi bozmasın — sadece uyarı banner'ı */
+    console.warn("Geçmiş kaydı yazılamadı:", e.message);
+  }
+}
+/* Geçmiş okuma herkese açık (kural: .read true) */
+async function apiListHistory(limit = 150) {
+  const res = await fetch(`${FIREBASE_DB_URL}/${HIST_NODE}.json`);
+  const data = await check(res, "Geçmiş yüklenemedi");
+  if (!data) return [];
+  return Object.entries(data)
+    .map(([key, val]) => ({ id: key, ...(val || {}) }))
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+    .slice(0, limit);
+}
 async function apiList() {
   const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`);
   const data = await check(res, "Veriler yüklenemedi");
   if (!data) return [];
   return Object.entries(data).map(([key, val]) => ({ id: key, ...(val || {}) }));
 }
-/* YAZMA işlemleri auth ister */
 async function apiInsert(rec) {
   const body = toDb(rec);
   const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
@@ -657,9 +757,11 @@ function enriched(list) {
 function filtered() {
   const q = document.getElementById("search").value.trim().toLowerCase();
   const thisWeek = getISOWeek(new Date());
+  const today = todayISO();
   const result = enriched(rows).filter(r => {
     if (weekFilter === "current") {
-      if (r.hafta === "-" || String(r.hafta) !== String(thisWeek)) return false;
+      const isDelayed = r.planlananTarih && r.planlananTarih < today && r.durum !== "Yükleme Tamamlandı";
+      if (!(String(r.hafta) === String(thisWeek) || isDelayed)) return false;
     } else if (weekFilter !== "all" && String(r.hafta) !== String(weekFilter)) return false;
     if (q && !(r.musteri || "").toLowerCase().includes(q)) return false;
     return true;
@@ -667,9 +769,12 @@ function filtered() {
   return sortList(result);
 }
 function computeSummary(list) {
+  const today = todayISO();
   const toplamAd = list.reduce((s, r) => s + adet(r), 0);
   const tamamAd  = list.filter(r => r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + adet(r), 0);
   const yukleniyorAd = list.filter(r => r.durum === "Yükleniyor").reduce((s, r) => s + adet(r), 0);
+  const bugunAd   = list.filter(r => r.planlananTarih === today).reduce((s, r) => s + adet(r), 0);
+  const gecikenAd = list.reduce((s, r) => s + (gecikmeGunu(r) > 0 ? adet(r) : 0), 0);
   const toplamM3 = list.reduce((s, r) => s + (Number(r.m3) || 0), 0);
   const oran = toplamAd ? (tamamAd / toplamAd) * 100 : 0;
   const gunIdx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
@@ -680,7 +785,8 @@ function computeSummary(list) {
     const idx = gunIdx[dt.getDay()];
     if (idx !== undefined) gunAd[idx] += adet(r);
   });
-  return { toplamAd, tamamAd, kalanAd: toplamAd - tamamAd, yukleniyorAd, toplamM3, oran, gunAd };
+  return { toplamAd, tamamAd, kalanAd: toplamAd - tamamAd, yukleniyorAd,
+           bugunAd, gecikenAd, toplamM3, oran, gunAd };
 }
 
 /* ================= Render ================= */
@@ -699,7 +805,7 @@ function renderWeekFilter() {
   const thisWeek = getISOWeek(new Date());
   const weeks = [...new Set(enriched(rows).map(r => r.hafta).filter(w => w !== "-"))].sort((a, b) => a - b);
   document.getElementById("weekFilter").innerHTML =
-    `<option value="current" ${weekFilter === "current" ? "selected" : ""}>Bu hafta (${thisWeek})</option>` +
+    `<option value="current" ${weekFilter === "current" ? "selected" : ""}>Bu hafta (${thisWeek}) + gecikenler</option>` +
     `<option value="all" ${weekFilter === "all" ? "selected" : ""}>Tüm haftalar</option>` +
     weeks.map(w => `<option value="${w}" ${String(w) === String(weekFilter) ? "selected" : ""}>Hafta ${w}</option>`).join("");
 }
@@ -708,10 +814,15 @@ function renderSummary(list) {
   document.getElementById("sum-toplam").textContent = fmtN(s.toplamAd);
   document.getElementById("sum-tamamlanan").textContent = fmtN(s.tamamAd);
   document.getElementById("sum-kalan").textContent = fmtN(s.kalanAd);
+  document.getElementById("sum-bugun").textContent = fmtN(s.bugunAd);
+  document.getElementById("sum-geciken").textContent = fmtN(s.gecikenAd);
   document.getElementById("sum-m3").textContent = fmtN(s.toplamM3);
   document.getElementById("sum-verimlilik").textContent = s.oran.toFixed(1) + "%";
+  const todayDow = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[new Date().getDay()];
   document.getElementById("dist").innerHTML =
-    GUN_KISA.map((g, i) => `<div class="day"><span>${g}</span><b>${s.gunAd[i]}</b></div>`).join("") +
+    GUN_KISA.map((g, i) =>
+      `<div class="day ${i === todayDow ? "today" : ""}"><span>${g}</span><b>${s.gunAd[i]}</b></div>`
+    ).join("") +
     `<div class="day total"><span>Toplam</span><b>${fmtN(s.toplamAd)}</b></div>`;
 }
 function fInput(data, scope, field, type, cls, datalist, extra) {
@@ -740,6 +851,12 @@ function tdHtml(r, field, extraCls, viewFn) {
   const content = editing ? cellInputHtml(r, field) : viewFn(r);
   return `<td class="${extraCls || ""}${def ? " editable" : ""}"${def ? ` data-field="${field}"` : ""}>${content}</td>`;
 }
+function planlananView(x) {
+  let html = formatDate(x.planlananTarih);
+  const g = gecikmeGunu(x);
+  if (g > 0) html += `<div class="late-badge">⚠ ${g} gün gecikti</div>`;
+  return html;
+}
 function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
   return `<tr class="${rowClass}">
     <td>${fInput(d, scope, "musteri", "text", "w-musteri", true)}</td>
@@ -767,13 +884,15 @@ function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
 }
 function rowHtml(r) {
   const dt = parseLocalDate(r.planlananTarih);
-  return `<tr class="row ${r.oncelikli ? "priority" : ""}" data-rowid="${r.id}">
+  const isToday = r.planlananTarih === todayISO();
+  const rowCls = r.oncelikli ? "priority" : (isToday ? "today-row" : "");
+  return `<tr class="row ${rowCls}" data-rowid="${r.id}">
     ${tdHtml(r, "musteri", "strong", x => esc(x.musteri))}
     ${tdHtml(r, "blm", "", x => esc(x.blm))}
     ${tdHtml(r, "kategori", "", x => esc(x.kategori))}
     ${tdHtml(r, "sevkiyatTipi", "", x => esc(x.sevkiyatTipi))}
     ${tdHtml(r, "ad", "center", x => esc(x.ad))}
-    ${tdHtml(r, "planlananTarih", "", x => formatDate(x.planlananTarih))}
+    ${tdHtml(r, "planlananTarih", "", planlananView)}
     <td class="center muted">${dt ? getISOWeek(dt) : "-"}</td>
     <td class="muted">${dt ? AYLAR[dt.getMonth()] : "-"}</td>
     ${tdHtml(r, "reelPlan", "", x => formatDate(x.reelPlan))}
@@ -786,6 +905,7 @@ function rowHtml(r) {
     <td class="center">${numOrDash(r.m3)}</td>
     <td class="muted" title="${esc(r.createdBy || "")}">${esc(shortUser(r.createdBy))}</td>
     <td class="nowrap">
+      <button class="icon-btn dup" data-action="duplicate" data-id="${r.id}" title="Kopyala (bugüne planlar, durum sıfırlanır)">⧉</button>
       <button class="icon-btn del" data-action="delete" data-id="${r.id}" title="Sil">🗑️</button>
     </td>
   </tr>`;
@@ -796,7 +916,7 @@ function renderTable(list) {
   if (loading) html += `<tr><td colspan="18" class="empty">Yükleniyor…</td></tr>`;
   if (addingInline) html += formRowHtml(inlineData, "inline", "inline-row", "save-inline", "cancel-inline");
   if (!loading && list.length === 0 && !addingInline) {
-    html += `<tr><td colspan="18" class="empty">Bu haftaya ait kayıt yok. "Tüm haftalar" seçerek eski verilere bakabilirsin.</td></tr>`;
+    html += `<tr><td colspan="18" class="empty">Bu haftaya ve gecikenlere ait kayıt yok. 🎉</td></tr>`;
   }
   list.forEach(r => { html += rowHtml(r); });
   tbody.innerHTML = html;
@@ -814,6 +934,11 @@ function renderTable(list) {
 }
 
 /* ================= Hücre düzenleme ================= */
+function dispVal(field, val) {
+  const def = CELL_DEFS[field];
+  if (def && def.kind === "date") return formatDate(val);
+  return String(val ?? "") || "-";
+}
 function startCellEdit(id, field) {
   if (editingCell && (editingCell.id !== id || editingCell.field !== field)) {
     commitCell();
@@ -845,6 +970,12 @@ async function commitCell() {
     const saved = await apiUpdate(id, updated);
     rows = rows.map(r => r.id === id ? saved : r);
     setSaveError("");
+    /* Değişiklik geçmişine yaz */
+    const parts = [`${FIELD_LABELS[field] || field}: "${dispVal(field, row[field])}" → "${dispVal(field, val)}"`];
+    if (String(updated.m3 ?? "") !== String(row.m3 ?? "")) {
+      parts.push(`${FIELD_LABELS.m3}: "${dispVal("m3", row.m3)}" → "${dispVal("m3", updated.m3)}"`);
+    }
+    await apiLog("guncelleme", id, updated.musteri, parts.join(" · "));
   } catch (e) { setSaveError(e.message); }
   committing = false;
   render();
@@ -873,6 +1004,7 @@ function runAction({ type, param }) {
     case "save-inline": saveInline(); break;
     case "do-import":   doImport(); break;
     case "cell-edit":   startCellEdit(param.id, param.field); break;
+    case "duplicate":   duplicateRow(param); break;
     case "delete":
       if (confirm("Bu kayıt veritabanından silinsin mi?")) deleteRow(param);
       break;
@@ -893,14 +1025,46 @@ async function saveInline() {
     rows = [rec, ...rows];
     setSaveError("");
     render();
+    await apiLog("ekleme", rec.id, rec.musteri, `satır içi ekleme · ${rec.sevkiyatTipi} · AD: ${rec.ad}`);
+  } catch (e) { setSaveError(e.message); }
+}
+async function duplicateRow(id) {
+  const src = rows.find(r => r.id === id);
+  if (!src) return;
+  const rec = emptyRecord();
+  rec.musteri = src.musteri;
+  rec.blm = src.blm;
+  rec.kategori = src.kategori;
+  rec.sevkiyatTipi = src.sevkiyatTipi;
+  rec.ad = src.ad;
+  rec.planlananTarih = todayISO();
+  rec.reelPlan = todayISO();
+  rec.gerceklesenTarih = "";
+  rec.durum = "Yükleme Bekliyor";
+  rec.aciklama = src.aciklama || "";
+  rec.araciGeldi = "";
+  rec.prsM3 = src.prsM3 ?? "";
+  const m3 = hesaplaM3(rec.sevkiyatTipi, rec.ad, rec.prsM3);
+  rec.m3 = m3 !== null ? m3 : (src.m3 ?? "");
+  rec.oncelikli = src.oncelikli;
+  try {
+    const saved = await apiInsert(rec);
+    rows = [saved, ...rows];
+    setSaveError("");
+    setGuestInfo("ℹ️ Kayıt çoğaltıldı ve <b>bugüne</b> planlandı, durum sıfırlandı — tarihleri gerekirse hücreden güncelle.");
+    render();
+    await apiLog("cogaltma", saved.id, rec.musteri, `kaynak planlanan: ${formatDate(src.planlananTarih)} → bugün`);
   } catch (e) { setSaveError(e.message); }
 }
 async function deleteRow(id) {
+  const src = rows.find(r => r.id === id);
   try {
     await apiDelete(id);
     rows = rows.filter(r => r.id !== id);
     setSaveError("");
     render();
+    await apiLog("silme", id, src ? src.musteri : "",
+      src ? `${src.sevkiyatTipi} · AD: ${src.ad} · planlanan: ${formatDate(src.planlananTarih)}` : "");
   } catch (e) { setSaveError(e.message); }
 }
 
@@ -912,6 +1076,7 @@ document.getElementById("tbody").addEventListener("click", e => {
     switch (action) {
       case "save-inline":   gate("save-inline"); break;
       case "cancel-inline": addingInline = false; inlineData = null; render(); break;
+      case "duplicate":     gate("duplicate", id); break;
       case "delete":        gate("delete", id); break;
     }
     return;
@@ -980,6 +1145,7 @@ document.getElementById("btnInlineAdd").addEventListener("click", () => gate("in
 document.getElementById("btnShowForm").addEventListener("click", () => gate("form-add"));
 document.getElementById("btnImportOpen").addEventListener("click", () => gate("import"));
 document.getElementById("btnExport").addEventListener("click", exportExcel);
+document.getElementById("btnHistory").addEventListener("click", showHistory);
 
 /* ================= Modal form ================= */
 function fillSelect(id, options) {
@@ -1054,6 +1220,7 @@ document.getElementById("btnSaveForm").addEventListener("click", async () => {
     setSaveError("");
     render();
     closeModal();
+    await apiLog("ekleme", saved.id, rec.musteri, `form ile ekleme · ${rec.sevkiyatTipi} · AD: ${rec.ad} · planlanan: ${formatDate(rec.planlananTarih)}`);
   } catch (e) { setSaveError(e.message); }
 });
 document.getElementById("modal").addEventListener("click", e => {
@@ -1070,30 +1237,78 @@ function groupStats(list, keyFn) {
   const m = new Map();
   list.forEach(r => {
     const k = keyFn(r) || "-";
-    if (!m.has(k)) m.set(k, { ad: 0, tamam: 0, yuk: 0, bek: 0, m3: 0 });
+    if (!m.has(k)) m.set(k, { ad: 0, tamam: 0, yuk: 0, bek: 0, geciken: 0, m3: 0 });
     const g = m.get(k);
     const a = adet(r);
     g.ad += a; g.m3 += Number(r.m3) || 0;
     if (r.durum === "Yükleme Tamamlandı") g.tamam += a;
     else if (r.durum === "Yükleniyor") g.yuk += a;
     else g.bek += a;
+    if (gecikmeGunu(r) > 0) g.geciken += a;
   });
   return m;
 }
 function statsTable(map, title, colLabel) {
   let rowsHtml = "";
-  let tA = 0, tT = 0, tM = 0;
+  let tA = 0, tT = 0, tG = 0, tM = 0;
   [...map.entries()].sort((a, b) => b[1].ad - a[1].ad).forEach(([k, g]) => {
-    tA += g.ad; tT += g.tamam; tM += g.m3;
+    tA += g.ad; tT += g.tamam; tG += g.geciken; tM += g.m3;
     const oran = g.ad ? (g.tamam / g.ad * 100).toFixed(1) : "0.0";
-    rowsHtml += `<tr><td class="strong">${esc(k)}</td><td class="center">${fmtN(g.ad)}</td><td class="center">${fmtN(g.tamam)}</td><td class="center">${fmtN(g.ad - g.tamam)}</td><td class="center">${fmtN(g.m3)}</td><td class="center">%${oran}</td></tr>`;
+    rowsHtml += `<tr><td class="strong">${esc(k)}</td><td class="center">${fmtN(g.ad)}</td><td class="center">${fmtN(g.tamam)}</td><td class="center">${fmtN(g.ad - g.tamam)}</td><td class="center" style="${g.geciken ? "color:var(--red);font-weight:600" : ""}">${g.geciken ? fmtN(g.geciken) : "-"}</td><td class="center">${fmtN(g.m3)}</td><td class="center">%${oran}</td></tr>`;
   });
   const oran = tA ? (tT / tA * 100).toFixed(1) : "0.0";
   return `<div class="rpt"><h3>${esc(title)}</h3><div class="table-wrap"><table>
-    <thead><tr><th>${esc(colLabel)}</th><th>Yükleme (adet)</th><th>Tamamlanan</th><th>Kalan</th><th>Toplam M3</th><th>Tamamlanma</th></tr></thead>
-    <tbody>${rowsHtml || `<tr><td colspan="6" class="empty">Veri yok</td></tr>`}</tbody>
-    <tfoot><tr><td>TOPLAM</td><td class="center">${fmtN(tA)}</td><td class="center">${fmtN(tT)}</td><td class="center">${fmtN(tA - tT)}</td><td class="center">${fmtN(tM)}</td><td class="center">%${oran}</td></tr></tfoot>
+    <thead><tr><th>${esc(colLabel)}</th><th>Yükleme (adet)</th><th>Tamamlanan</th><th>Kalan</th><th>Geciken</th><th>Toplam M3</th><th>Tamamlanma</th></tr></thead>
+    <tbody>${rowsHtml || `<tr><td colspan="7" class="empty">Veri yok</td></tr>`}</tbody>
+    <tfoot><tr><td>TOPLAM</td><td class="center">${fmtN(tA)}</td><td class="center">${fmtN(tT)}</td><td class="center">${fmtN(tA - tT)}</td><td class="center">${tG ? fmtN(tG) : "-"}</td><td class="center">${fmtN(tM)}</td><td class="center">%${oran}</td></tr></tfoot>
   </table></div></div>`;
+}
+
+/* ---------- Plan vs Gerçekleşen sapma analizi ---------- */
+function sapmaAnalizi(list) {
+  const kayitlar = list.filter(r => r.gerceklesenTarih && r.planlananTarih && r.durum === "Yükleme Tamamlandı");
+  if (!kayitlar.length) return null;
+  const satirlar = kayitlar.map(r => ({
+    musteri: r.musteri,
+    ad: adet(r),
+    sapma: Math.round((parseLocalDate(r.gerceklesenTarih) - parseLocalDate(r.planlananTarih)) / 86400000)
+  }));
+  const n = satirlar.length;
+  const ort = satirlar.reduce((a, s) => a + s.sapma, 0) / n;
+  const zamaninda = satirlar.filter(s => s.sapma <= 0).length;
+  const enKotu = Math.max(...satirlar.map(s => s.sapma));
+  const m = new Map();
+  satirlar.forEach(s => {
+    if (!m.has(s.musteri)) m.set(s.musteri, { n: 0, toplam: 0, kotu: -Infinity, zamaninda: 0 });
+    const g = m.get(s.musteri);
+    g.n++; g.toplam += s.sapma;
+    if (s.sapma > g.kotu) g.kotu = s.sapma;
+    if (s.sapma <= 0) g.zamaninda++;
+  });
+  return { n, ort, zamaninda, enKotu, musteri: m };
+}
+function sapmaTable(az) {
+  const rowsHtml = [...az.musteri.entries()]
+    .sort((a, b) => b[1].toplam / b[1].n - a[1].toplam / a[1].n)
+    .map(([k, g]) => {
+      const ort = g.toplam / g.n;
+      const zOran = (g.zamaninda / g.n * 100).toFixed(0);
+      const renk = ort > 0 ? "color:var(--red);font-weight:600" : ort < 0 ? "color:var(--primary);font-weight:600" : "color:var(--green);font-weight:600";
+      return `<tr><td class="strong">${esc(k)}</td><td class="center">${g.n}</td>
+        <td class="center" style="${renk}">${fmtSapma(ort)} gün</td>
+        <td class="center" style="${g.kotu > 0 ? "color:var(--red)" : ""}">${fmtSapma(g.kotu)} gün</td>
+        <td class="center">%${zOran}</td></tr>`;
+    }).join("");
+  return `<div class="rpt"><h3>🗓️ Plan vs Gerçekleşen — sapma analizi</h3>
+    <p class="hint">Sadece tamamlanmış kayıtlar: sapma = gerçekleşen tarih − planlanan tarih. <b>+gün</b> = geç yüklendi (kırmızı), <b>−gün</b> = erken (mavi), 0 = zamanında (yeşil). Müşteriler ortalama sapmaya göre azalan sıralı — en tepedekiler planı en çok tutmayanlar.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Müşteri</th><th>Tamamlanan yükleme</th><th>Ortalama sapma</th><th>En kötü sapma</th><th>Zamanında</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot><tr><td>GENEL</td><td class="center">${az.n}</td>
+        <td class="center" style="${az.ort > 0 ? "color:var(--red)" : "color:var(--green)"};font-weight:700">${fmtSapma(az.ort)} gün</td>
+        <td class="center" style="${az.enKotu > 0 ? "color:var(--red)" : ""}">${fmtSapma(az.enKotu)} gün</td>
+        <td class="center">%${(az.zamaninda / az.n * 100).toFixed(0)}</td></tr></tfoot>
+    </table></div></div>`;
 }
 function makeCharts(list) {
   if (typeof Chart === "undefined") return;
@@ -1147,6 +1362,32 @@ function makeCharts(list) {
       plugins: { legend: { position: "bottom" } },
       scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: true } } }
   }));
+
+  /* Haftalık trend — filtrelerden bağımsız, tüm verinin son 8 haftası */
+  const haftaMap = new Map();
+  enriched(rows).forEach(r => {
+    if (r.hafta === "-") return;
+    if (!haftaMap.has(r.hafta)) haftaMap.set(r.hafta, { ad: 0, tamam: 0 });
+    const g = haftaMap.get(r.hafta);
+    g.ad += adet(r);
+    if (r.durum === "Yükleme Tamamlandı") g.tamam += adet(r);
+  });
+  const haftalar = [...haftaMap.keys()].sort((a, b) => a - b).slice(-8);
+  chartInstances.push(new Chart(document.getElementById("chTrend"), {
+    type: "line",
+    data: {
+      labels: haftalar.map(h => h + ". hf"),
+      datasets: [
+        { label: "Toplam yükleme", data: haftalar.map(h => haftaMap.get(h).ad),
+          borderColor: "#4f46e5", backgroundColor: "rgba(79,70,229,.12)", fill: true, tension: .35, borderWidth: 2.5, pointRadius: 3.5 },
+        { label: "Tamamlanan", data: haftalar.map(h => haftaMap.get(h).tamam),
+          borderColor: "#059669", backgroundColor: "transparent", tension: .35, borderWidth: 2, borderDash: [5, 4], pointRadius: 3 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  }));
 }
 function buildReports() {
   destroyCharts();
@@ -1160,9 +1401,12 @@ function buildReports() {
         <div class="chart-box"><h3>Gün bazlı planlanan adet</h3><div class="chart-holder"><canvas id="chGun"></canvas></div></div>
         <div class="chart-box"><h3>Sevkiyat tipi bazlı adet</h3><div class="chart-holder"><canvas id="chTip"></canvas></div></div>
         <div class="chart-box"><h3>BLM bazlı adet</h3><div class="chart-holder"><canvas id="chBlm"></canvas></div></div>
+        <div class="chart-box wide"><h3>📈 Haftalık trend — son 8 hafta (tüm veriler, filtrelerden bağımsız)</h3><div class="chart-holder"><canvas id="chTrend"></canvas></div></div>
         <div class="chart-box wide"><h3>Müşteri bazlı yükleme adedi</h3><div class="chart-holder tall"><canvas id="chMusteri"></canvas></div></div>
       </div>`;
+  const az = sapmaAnalizi(list);
   c.innerHTML = chartBlock +
+    (az ? sapmaTable(az) : `<p class="hint">🗓️ Sapma analizi için henüz tamamlanmış (gerçekleşen tarihi dolu) kayıt yok — kayıtların gerçekleşen tarihini girince burada otomatik çıkar.</p>`) +
     statsTable(groupStats(list, r => r.musteri), "Müşteri bazlı", "Müşteri") +
     statsTable(groupStats(list, r => r.sevkiyatTipi), "Sevkiyat tipi bazlı", "Tip") +
     statsTable(groupStats(list, r => r.blm), "BLM bazlı", "BLM") +
@@ -1182,7 +1426,38 @@ document.getElementById("reportModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) { destroyCharts(); e.currentTarget.classList.add("hidden"); }
 });
 
-/* ================= EXCEL DIŞA AKTARMA (herkese açık) ================= */
+/* ================= GEÇMİŞ GÖRÜNTÜLEME ================= */
+async function showHistory() {
+  const c = document.getElementById("historyContent");
+  c.innerHTML = `<p class="hint">Yükleniyor…</p>`;
+  document.getElementById("historyModal").classList.remove("hidden");
+  try {
+    const hist = await apiListHistory(150);
+    if (!hist.length) {
+      c.innerHTML = `<p class="hint">Henüz geçmiş kaydı yok — ilk ekleme/düzenleme işleminden sonra burada görünecek.</p>`;
+      return;
+    }
+    c.innerHTML = `<div class="timeline">` + hist.map(h => {
+      const meta = ACTION_META[h.action] || { label: h.action, dot: "edit" };
+      const musteriHtml = h.musteri ? `<span class="musteri-tag">${esc(h.musteri)}</span> — ` : "";
+      return `<div class="tl-item">
+        <div class="tl-dot ${meta.dot}"></div>
+        <div class="tl-head"><b>${esc(shortUser(h.user))}</b> · ${fmtDateTime(h.ts)} · ${esc(meta.label)}</div>
+        <div class="tl-text">${musteriHtml}${esc(h.detay || "")}</div>
+      </div>`;
+    }).join("") + `</div>`;
+  } catch (e) {
+    c.innerHTML = `<div class="error">Geçmiş yüklenemedi: ${esc(e.message)}<br><br>⚠️ Muhtemel neden: Firebase Rules'ta <b>sevkiyat_history</b> düğümü için <b>.read: true</b> izni yok. Dosyayla gelen güncel kuralları Publish et.</div>`;
+  }
+}
+document.getElementById("btnCloseHistory").addEventListener("click", () => {
+  document.getElementById("historyModal").classList.add("hidden");
+});
+document.getElementById("historyModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+});
+
+/* ================= EXCEL DIŞA AKTARMA ================= */
 function exportExcel() {
   if (typeof XLSX === "undefined") { alert("Excel kütüphanesi (CDN) yüklenemedi."); return; }
   const list = filtered();
@@ -1197,6 +1472,7 @@ function exportExcel() {
     "Reel Plan": r.reelPlan ? formatDate(r.reelPlan) : "",
     "Gerçekleşen Tarih": r.gerceklesenTarih ? formatDate(r.gerceklesenTarih) : "",
     "Durum": r.durum,
+    "Gecikme (gün)": gecikmeGunu(r) > 0 ? gecikmeGunu(r) : "",
     "Açıklama": r.aciklama || "",
     "Aracı Geldi": r.araciGeldi || "",
     "PRS M3": r.prsM3 ?? "",
@@ -1205,7 +1481,7 @@ function exportExcel() {
     "Ekleyen": r.createdBy || ""
   }));
   const ws = XLSX.utils.json_to_sheet(data);
-  ws["!cols"] = [{wch:24},{wch:10},{wch:10},{wch:14},{wch:6},{wch:15},{wch:15},{wch:16},{wch:18},{wch:26},{wch:11},{wch:8},{wch:8},{wch:10},{wch:22}];
+  ws["!cols"] = [{wch:24},{wch:10},{wch:10},{wch:14},{wch:6},{wch:15},{wch:15},{wch:16},{wch:26},{wch:12},{wch:11},{wch:8},{wch:8},{wch:10},{wch:10},{wch:22}];
   try {
     const range = XLSX.utils.decode_range(ws["!ref"]);
     ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: range.e.r, c: range.e.c } }) };
@@ -1215,7 +1491,7 @@ function exportExcel() {
   XLSX.writeFile(wb, `sevkiyat_${todayISO()}.xlsx`);
 }
 
-/* ================= EXCEL İÇE AKTARMA (admin) ================= */
+/* ================= EXCEL İÇE AKTARMA ================= */
 const APP_FIELDS = [
   { key: "musteri",         label: "Müşteri *",        kw: ["musteri", "firma", "customer"] },
   { key: "blm",             label: "BLM",              kw: ["blm"] },
@@ -1371,6 +1647,7 @@ async function doImport() {
     res.textContent = `✅ ${recs.length} kayıt yüklendi` + (skipped ? `, ${skipped} satır atlandı (Müşteri boş).` : ".");
     res.classList.remove("hidden");
     await load(false);
+    await apiLog("excel", "", "", `${recs.length} kayıt toplu yüklendi${skipped ? ` · ${skipped} satır atlandı` : ""}`);
   } catch (e) {
     setSaveError(e.message);
     alert("Yükleme hatası: " + e.message);
@@ -1451,7 +1728,6 @@ async function tryLogin() {
     btn.disabled = false; btn.textContent = "Giriş yap";
   }
 }
-/* Çıkışta sayfada kalınır — veriler görünmeye devam eder */
 function doLogout(msg) {
   clearAuthState();
   addingInline = false; inlineData = null;
@@ -1471,7 +1747,6 @@ document.getElementById("loginModal").addEventListener("click", e => {
   document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") tryLogin(); });
 });
 
-/* Boşta kalma: SADECE girişli kullanıcı için 15 dk sonra oturum kapanır */
 let lastActivity = Date.now();
 ["click", "keydown", "touchstart", "mousemove"].forEach(ev =>
   document.addEventListener(ev, () => { lastActivity = Date.now(); }, { passive: true })
@@ -1481,14 +1756,13 @@ setInterval(() => {
   if (Date.now() - lastActivity > IDLE_MS) doLogout("15 dakika işlem olmadığı için oturum kapatıldı.");
 }, 10000);
 
-/* Otomatik yenileme (30 sn) — girişsiz izleyiciler için de çalışır */
 setInterval(() => {
   if (document.hidden || addingInline || editingCell) return;
   if (!document.getElementById("importModal").classList.contains("hidden")) return;
   load(false);
 }, 30000);
 
-/* ================= Başlat: giriş beklemeden verileri yükle ================= */
+/* ================= Başlat ================= */
 updateUserUI();
 (async () => {
   const s = getAuthState();
