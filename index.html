@@ -1,174 +1,268 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8 />
+<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sevkiyat Planlama — İhracat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
+  :root {
+    --bg: #f1f5f9; --surface: #ffffff; --border: #e2e8f0;
+    --text: #0f172a; --muted: #64748b;
+    --primary: #4f46e5; --primary-dark: #4338ca; --primary-soft: #eef2ff;
+    --green: #059669; --green-soft: #ecfdf5;
+    --amber: #d97706; --amber-soft: #fffbeb;
+    --red: #dc2626; --red-soft: #fef2f2;
+    --radius: 12px;
+  }
   * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 16px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    background: #f9fafb; color: #111827; font-size: 14px;
+    margin: 0; padding: 0;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg); color: var(--text); font-size: 14px;
   }
   .hidden { display: none !important; }
 
-  header { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  h1 { font-size: 20px; margin: 0; }
-  .subtitle { font-size: 12px; color: #6b7280; margin: 4px 0 0; }
-  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .admin-box { display: flex; gap: 6px; align-items: center; padding-left: 8px; border-left: 1px solid #e5e7eb; }
-  .admin-badge { font-size: 12px; font-weight: 600; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; border-radius: 6px; padding: 5px 8px; white-space: nowrap; }
-  input, select { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; font-size: 13px; background: #fff; color: #111827; }
-  .btn { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 12px; font-size: 13px; background: #fff; cursor: pointer; }
-  .btn:hover { background: #f3f4f6; }
-  .btn.dark { background: #111827; color: #fff; border-color: #111827; }
-  .btn.dark:hover { background: #1f2937; }
+  /* ---------- Header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 30;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 12px;
+    justify-content: space-between; align-items: center;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 11px;
+    background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, .3);
+  }
+  h1 { font-size: 17px; margin: 0; font-weight: 700; letter-spacing: -0.02em; }
+  .subtitle { font-size: 11px; color: var(--muted); margin: 2px 0 0; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+  .user-box { display: flex; gap: 7px; align-items: center; }
+  .user-chip {
+    font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 999px;
+    background: var(--primary-soft); color: var(--primary); white-space: nowrap;
+  }
+  .user-chip.is-admin { background: var(--amber-soft); color: var(--amber); }
+
+  input, select {
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px;
+    font-size: 13px; background: var(--surface); color: var(--text);
+    font-family: inherit; transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+  .btn {
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px;
+    font-size: 13px; font-weight: 500; background: var(--surface); cursor: pointer;
+    color: var(--text); font-family: inherit; transition: all .15s;
+  }
+  .btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(79,70,229,.25); }
+  .btn.primary:hover { background: var(--primary-dark); }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
 
-  .error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
-  .hint { font-size: 11px; color: #6b7280; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 6px; padding: 6px 10px; margin: 0 0 12px; }
+  /* ---------- Ana konteyner ---------- */
+  main { padding: 16px 20px 32px; max-width: 1600px; margin: 0 auto; }
 
-  .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
-  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
-  .card .label { font-size: 12px; color: #6b7280; margin: 0 0 4px; }
-  .card .value { font-size: 24px; font-weight: 600; margin: 0; }
-  .value.green { color: #16a34a; }
-  .value.amber { color: #d97706; }
-  .card.wide { grid-column: 1 / -1; }
-  .distribution { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; text-align: center; }
-  .dist-label { font-size: 11px; color: #6b7280; margin: 0 0 2px; }
-  .dist-val { font-size: 17px; margin: 0; font-weight: 600; }
-  .dist-val.strong { font-weight: 700; }
+  .error { background: var(--red-soft); border: 1px solid #fecaca; color: var(--red); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .hint { font-size: 11px; color: var(--muted); background: #f8fafc; border: 1px dashed var(--border); border-radius: 8px; padding: 7px 10px; margin: 0 0 12px; }
 
-  .table-wrap { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow-x: auto; }
+  /* ---------- Tek satır özet şeridi ---------- */
+  .statbar {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .05);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 20px;
+    padding: 12px 20px; margin-bottom: 16px;
+  }
+  .stat { display: flex; flex-direction: column; gap: 2px; min-width: 86px; }
+  .s-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .s-val { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .s-val.green { color: var(--green); }
+  .s-val.amber { color: var(--amber); }
+  .s-div { width: 1px; height: 34px; background: var(--border); }
+  .days { display: flex; gap: 14px; margin-left: auto; }
+  .day { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 34px; }
+  .day span { font-size: 10px; font-weight: 600; color: var(--muted); }
+  .day b { font-size: 15px; font-weight: 700; }
+  .day.total span { color: var(--primary); }
+  .day.total b { color: var(--primary); }
+
+  /* ---------- Tablo ---------- */
+  .table-wrap {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .05); overflow-x: auto;
+  }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  thead tr { background: #111827; color: #fff; }
-  th { padding: 8px; text-align: left; font-weight: 500; white-space: nowrap; }
-  td { padding: 6px 8px; border-top: 1px solid #f3f4f6; white-space: nowrap; vertical-align: middle; }
-  tr.row:hover { background: #f9fafb; }
-  tr.priority, tr.editing { background: #fefce8; }
-  tr.inline-row { background: #eff6ff; }
+  thead tr { background: #1e293b; color: #fff; }
+  th {
+    padding: 10px 10px; text-align: left; font-weight: 600; white-space: nowrap;
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: #cbd5e1;
+  }
+  th:first-child { border-top-left-radius: var(--radius); }
+  td { padding: 8px 10px; border-top: 1px solid #f1f5f9; white-space: nowrap; vertical-align: middle; }
+  tr.row:hover { background: var(--primary-soft); }
+  tr.priority { background: var(--amber-soft); }
+  tr.priority:hover { background: #fef3c7; }
+  tr.editing { background: #fef9c3; }
+  tr.inline-row { background: var(--primary-soft); }
   td.strong { font-weight: 600; }
   td.center { text-align: center; }
-  td.muted { color: #9ca3af; }
-  td.empty { text-align: center; padding: 32px 8px; color: #9ca3af; }
+  td.muted { color: #94a3b8; }
+  td.empty { text-align: center; padding: 40px 8px; color: #94a3b8; }
   td.truncate { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
   .nowrap { white-space: nowrap; }
 
-  .badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
-  .badge.done    { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-  .badge.loading { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
-  .badge.waiting { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge.done    { background: var(--green-soft); color: var(--green); border: 1px solid #a7f3d0; }
+  .badge.loading { background: var(--amber-soft); color: var(--amber); border: 1px solid #fde68a; }
+  .badge.waiting { background: var(--red-soft);  color: var(--red);  border: 1px solid #fecaca; }
 
-  .st-ok   { color: #16a34a; font-weight: 700; }
-  .st-wait { color: #dc2626; font-weight: 700; font-size: 11px; }
-  .st-load { color: #d97706; display: inline-block; animation: spin 1.5s linear infinite; }
+  .st-ok   { color: var(--green); font-weight: 700; }
+  .st-wait { color: var(--red); font-weight: 700; font-size: 11px; }
+  .st-load { color: var(--amber); display: inline-block; animation: spin 1.5s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .icon-btn { background: none; border: none; cursor: pointer; padding: 2px 5px; font-size: 14px; line-height: 1; }
-  .icon-btn.ok   { color: #16a34a; }
-  .icon-btn.mute { color: #9ca3af; }
-  .icon-btn.del  { color: #f87171; }
-  .icon-btn:hover { filter: brightness(0.7); }
+  .icon-btn {
+    background: none; border: none; cursor: pointer; padding: 7px;
+    font-size: 14px; line-height: 1; border-radius: 6px; transition: background .15s;
+  }
+  .icon-btn:hover { background: #e2e8f0; }
+  .icon-btn.del:hover { background: var(--red-soft); }
 
-  .cell-input { font-size: 12px; padding: 3px 4px; border: 1px solid #d1d5db; border-radius: 4px; }
-  .cell-input[readonly] { background: #f3f4f6; color: #6b7280; }
-  .w-musteri  { width: 110px; }
+  .cell-input { font-size: 12px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; }
+  .cell-input[readonly] { background: #f1f5f9; color: var(--muted); cursor: not-allowed; }
+  .w-musteri  { width: 115px; }
   .w-kategori { width: 80px; }
-  .w-num      { width: 60px; }
-  .w-date     { width: 132px; }
+  .w-num      { width: 62px; }
+  .w-date     { width: 135px; }
   .w-aciklama { width: 110px; }
 
-  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
-  .modal-bg.login-bg { z-index: 60; }
-  .modal { background: #fff; border-radius: 8px; padding: 20px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
-  .modal.wide { max-width: 900px; }
-  .modal h2 { font-size: 16px; margin: 0 0 12px; }
+  /* ---------- Modal ---------- */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, .5); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
+  }
+  .modal-bg.login-bg { z-index: 70; }
+  .modal {
+    background: var(--surface); border-radius: 16px; padding: 22px; width: 100%;
+    max-width: 500px; max-height: 92vh; overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, .25); animation: pop .18s ease-out;
+  }
+  .modal.wide { max-width: 960px; }
+  @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal h2 { font-size: 16px; margin: 0 0 12px; font-weight: 700; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .form-grid label span { display: block; font-size: 12px; color: #6b7280; margin-bottom: 3px; }
+  .form-grid label span { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
   .form-grid input, .form-grid select { width: 100%; }
   .col-2 { grid-column: span 2; }
   .check { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-  .check span { margin: 0 !important; }
+  .check span { margin: 0 !important; text-transform: none !important; letter-spacing: 0 !important; }
   .check input { width: auto !important; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 
-  /* Raporlar */
-  .rpt { margin-bottom: 16px; }
+  /* ---------- Rapor ---------- */
+  .rpt { margin-bottom: 18px; }
   .rpt h3 { font-size: 13px; margin: 0 0 6px; }
-  .rpt thead tr { background: #f3f4f6; color: #374151; }
-  .rpt tfoot tr { background: #f9fafb; font-weight: 600; }
-  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-  .chart-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+  .rpt thead tr { background: #f1f5f9; color: #334155; }
+  .rpt th { padding: 7px 9px; }
+  .rpt tfoot tr { background: #f8fafc; font-weight: 600; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
   .chart-box.wide { grid-column: 1 / -1; }
-  .chart-box h3 { font-size: 13px; margin: 0 0 8px; }
-  .chart-holder { position: relative; height: 220px; }
-  .chart-holder.tall { height: 320px; }
+  .chart-box h3 { font-size: 13px; margin: 0 0 10px; }
+  .chart-holder { position: relative; height: 230px; }
+  .chart-holder.tall { height: 340px; }
 
-  .prev-head { background: #f3f4f6 !important; color: #111827 !important; }
-  .success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-top: 12px; }
+  .prev-head { background: #f1f5f9 !important; color: var(--text) !important; }
+  .success { background: var(--green-soft); border: 1px solid #a7f3d0; color: var(--green); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-top: 12px; }
 
-  @media (max-width: 900px) {
-    .summary { grid-template-columns: repeat(2, 1fr); }
+  /* ---------- Login ---------- */
+  .login-card { max-width: 380px; text-align: center; }
+  .login-card .logo { margin: 0 auto 14px; width: 56px; height: 56px; font-size: 28px; }
+  .login-card h2 { font-size: 19px; }
+  .login-card p.sub { font-size: 12px; color: var(--muted); margin: 0 0 18px; }
+  .login-form { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+  .login-form label span { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
+  .login-form input { width: 100%; padding: 10px 12px; font-size: 14px; }
+
+  @media (max-width: 720px) {
+    header { padding: 10px 12px; }
+    main { padding: 12px 12px 24px; }
+    h1 { font-size: 15px; }
+    .s-div { display: none; }
+    .statbar { gap: 14px; padding: 12px 14px; }
+    .days { margin-left: 0; width: 100%; justify-content: space-between; }
     .form-grid { grid-template-columns: 1fr; }
     .col-2 { grid-column: span 1; }
     .chart-grid { grid-template-columns: 1fr; }
+    .icon-btn { padding: 9px; font-size: 16px; }
+    .btn { padding: 8px 10px; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <div>
-    <h1>📋 Sevkiyat Planlama — İhracat</h1>
-    <p class="subtitle">Veriler veritabanında (Firebase) saklanır — ekip aynı tabloyu görür, 30 sn'de bir otomatik yenilenir.</p>
+  <div class="brand">
+    <div class="logo">🚢</div>
+    <div>
+      <h1>Sevkiyat Planlama — İhracat</h1>
+      <p class="subtitle">Ekip veritabanı · otomatik yenilenir · değişiklikler kayıt altında</p>
+    </div>
   </div>
   <div class="toolbar">
     <input id="search" placeholder="🔍 Müşteri ara" style="min-width:150px" />
     <select id="weekFilter"><option value="all">Tüm haftalar</option></select>
     <button class="btn" id="btnToggleSummary">Özeti gizle</button>
     <button class="btn" id="btnReports">📊 Raporlar</button>
+    <button class="btn" id="btnExport">📤 Excel'e Aktar</button>
     <button class="btn" id="btnImportOpen">📥 Excel Yükle</button>
     <button class="btn" id="btnReload">↻ Yenile</button>
     <button class="btn" id="btnShowForm">+ Form ile ekle</button>
-    <button class="btn dark" id="btnInlineAdd">+ Yeni kayıt</button>
-    <div class="admin-box" id="adminBox"></div>
+    <button class="btn primary" id="btnInlineAdd">+ Yeni kayıt</button>
+    <div class="user-box" id="userBox"></div>
   </div>
 </header>
 
-<div id="saveError" class="error hidden"></div>
+<main>
+  <div id="saveError" class="error hidden"></div>
 
-<section id="summary">
-  <div class="card"><p class="label">Toplam yükleme adedi</p><p class="value" id="sum-toplam">0</p></div>
-  <div class="card"><p class="label">Tamamlanan yükleme adedi</p><p class="value green" id="sum-tamamlanan">0</p></div>
-  <div class="card"><p class="label">Kalan yükleme adedi</p><p class="value amber" id="sum-kalan">0</p></div>
-  <div class="card"><p class="label">Toplam M3</p><p class="value" id="sum-m3">0</p></div>
-  <div class="card"><p class="label">Tamamlanma oranı</p><p class="value" id="sum-verimlilik">0%</p></div>
-  <div class="card wide">
-    <p class="label">Gün bazlı yükleme adedi (planlanan tarih)</p>
-    <div class="distribution" id="dist"></div>
+  <section class="statbar" id="summary">
+    <div class="stat"><span class="s-label">Toplam Yükleme</span><span class="s-val" id="sum-toplam">0</span></div>
+    <div class="s-div"></div>
+    <div class="stat"><span class="s-label">Tamamlanan</span><span class="s-val green" id="sum-tamamlanan">0</span></div>
+    <div class="s-div"></div>
+    <div class="stat"><span class="s-label">Kalan</span><span class="s-val amber" id="sum-kalan">0</span></div>
+    <div class="s-div"></div>
+    <div class="stat"><span class="s-label">Toplam M3</span><span class="s-val" id="sum-m3">0</span></div>
+    <div class="s-div"></div>
+    <div class="stat"><span class="s-label">Tamamlanma</span><span class="s-val" id="sum-verimlilik">0%</span></div>
+    <div class="days" id="dist"></div>
+  </section>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Müşteri</th><th>BLM</th><th>Kategori</th><th>Sevkiyat Tipi</th><th>AD</th>
+          <th>Planlanan Tarih</th><th>Hafta</th><th>Ay</th><th>Reel Plan</th><th>Gerçekleşen</th>
+          <th>Durum</th><th>Açıklama</th><th>Aracı Geldi</th><th>Status</th><th>PRS M3</th><th>M3</th><th>Ekleyen</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
   </div>
-</section>
-
-<div class="table-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th>Müşteri</th><th>BLM</th><th>Kategori</th><th>Sevkiyat Tipi</th><th>AD</th>
-        <th>Planlanan Tarih</th><th>Hafta</th><th>Ay</th><th>Reel Plan</th><th>Gerçekleşen Tarih</th>
-        <th>Durum</th><th>Açıklama</th><th>Aracı Geldi mi</th><th>Status</th><th>PRS M3</th><th>M3</th><th></th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
-</div>
+</main>
 
 <datalist id="musteri-list"></datalist>
 
-<!-- Form ile ekleme modalı -->
+<!-- Form ile ekleme -->
 <div id="modal" class="modal-bg hidden">
   <div class="modal">
     <h2>Yeni sevkiyat kaydı</h2>
@@ -185,151 +279,90 @@
       <label><span>Durum</span><select id="f-durum"></select></label>
       <label><span>Aracı geldi mi</span><select id="f-araciGeldi"></select></label>
       <label><span>PRS M3</span><input id="f-prsM3" type="number" /></label>
-      <label><span>M3 (otomatik)</span><input id="f-m3" type="number" readonly style="background:#f3f4f6" /></label>
+      <label><span>M3 (otomatik)</span><input id="f-m3" type="number" readonly style="background:#f1f5f9" /></label>
       <label class="col-2"><span>Açıklama</span><input id="f-aciklama" /></label>
       <label class="col-2 check"><input id="f-oncelikli" type="checkbox" /><span>Öncelikli (satırı sarı vurgula)</span></label>
     </div>
     <div class="modal-actions">
       <button class="btn" id="btnCancelForm">Vazgeç</button>
-      <button class="btn dark" id="btnSaveForm">Kaydet</button>
+      <button class="btn primary" id="btnSaveForm">Kaydet</button>
     </div>
   </div>
 </div>
 
-<!-- Raporlar modalı -->
+<!-- Raporlar -->
 <div id="reportModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>📊 Raporlar ve Grafikler</h2>
     <p class="hint">Tüm değerler yükleme adedi (AD) bazlıdır. Aktif filtreler (arama + hafta) raporları da etkiler.</p>
     <div id="reportContent"></div>
-    <div class="modal-actions">
-      <button class="btn" id="btnCloseReport">Kapat</button>
-    </div>
+    <div class="modal-actions"><button class="btn" id="btnCloseReport">Kapat</button></div>
   </div>
 </div>
 
-<!-- Excel içe aktarma modalı -->
+<!-- Excel içe aktarma -->
 <div id="importModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>📥 Excel'den Veri Yükle</h2>
-    <p class="hint">.xlsx / .xls / .csv yükleyin. İlk satır başlık olmalı. Müşteri kolonu zorunludur; M3 boş bırakılırsa tipe göre otomatik hesaplanır.</p>
+    <p class="hint">.xlsx / .xls / .csv · İlk satır başlık olmalı · Müşteri kolonu zorunlu · M3 boşsa tipe göre hesaplanır.</p>
     <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
     <div id="importMapping" class="hidden">
       <h3 style="font-size:13px;margin:14px 0 6px;">Kolon eşleştirme</h3>
       <div class="form-grid" id="mapGrid"></div>
       <h3 style="font-size:13px;margin:14px 0 6px;">Önizleme (ilk 5 satır)</h3>
-      <div class="table-wrap">
-        <table id="previewTable"></table>
-      </div>
+      <div class="table-wrap"><table id="previewTable"></table></div>
       <div class="modal-actions">
         <button class="btn" id="btnCancelImport">Vazgeç</button>
-        <button class="btn dark" id="btnDoImport">Seçili satırları yükle</button>
+        <button class="btn primary" id="btnDoImport">Seçili satırları yükle</button>
       </div>
     </div>
     <div id="importResult" class="success hidden"></div>
   </div>
 </div>
 
-<!-- Admin giriş modalı -->
+<!-- Giriş -->
 <div id="loginModal" class="modal-bg login-bg hidden">
-  <div class="modal" style="max-width:360px">
-    <h2>🔐 Admin Girişi</h2>
-    <p class="hint" id="loginHint">Ekleme, düzenleme ve silme işlemleri için giriş gerekli. Oturum 15 dakika sonra otomatik kapanır.</p>
-    <div class="form-grid" style="grid-template-columns:1fr">
-      <label><span>Kullanıcı adı</span><input id="l-user" autocomplete="username" /></label>
+  <div class="modal login-card">
+    <div class="logo">🚢</div>
+    <h2>Sevkiyat Planlama</h2>
+    <p class="sub">Devam etmek için hesabınla giriş yap. Oturum 15 dakika işlem olmadığında kapanır.</p>
+    <div class="login-form">
+      <label><span>E-posta</span><input id="l-user" type="email" autocomplete="username" /></label>
       <label><span>Şifre</span><input id="l-pass" type="password" autocomplete="current-password" /></label>
     </div>
     <div id="loginError" class="error hidden" style="margin-top:10px;margin-bottom:0"></div>
-    <div class="modal-actions">
-      <button class="btn" id="btnLoginCancel">Vazgeç</button>
-      <button class="btn dark" id="btnLogin">Giriş yap</button>
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn primary" id="btnLogin" style="width:100%;padding:10px">Giriş yap</button>
     </div>
   </div>
 </div>
 
 <script>
-/* ================= Firebase bağlantısı ================= */
+/* ================= Firebase yapılandırması ================= */
 const FIREBASE_DB_URL = "https://sevkiyat-app-default-rtdb.europe-west1.firebasedatabase.app".replace(/\/+$/, "");
+const FIREBASE_API_KEY = "BURAYA-WEB-API-KEY";  /* ← Firebase Console → Project Settings → General → Web API Key */
 const NODE = "sevkiyat";
+const API_KEY_OK = FIREBASE_API_KEY && !FIREBASE_API_KEY.includes("BURAYA");
 
-/* ================= Admin oturumu ================= */
-const ADMIN_USER = "Admin";
-const ADMIN_PASS = "Yatsan";
-const SESSION_MS = 15 * 60 * 1000; /* 15 dakika */
-const SESS_KEY = "sevkiyat_admin_exp";
-let pendingAction = null;
-
-function isAdmin() {
-  return Number(sessionStorage.getItem(SESS_KEY) || 0) > Date.now();
-}
-function remainingMs() {
-  return Math.max(0, Number(sessionStorage.getItem(SESS_KEY) || 0) - Date.now());
-}
-function startSession() {
-  sessionStorage.setItem(SESS_KEY, String(Date.now() + SESSION_MS));
-  updateAdminUI();
-}
-function endSession() {
-  sessionStorage.removeItem(SESS_KEY);
-  updateAdminUI();
-}
-function fmtRemain(ms) {
-  const s = Math.ceil(ms / 1000);
-  return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
-}
-function updateAdminUI() {
-  const box = document.getElementById("adminBox");
-  if (isAdmin()) {
-    box.innerHTML = `<span class="admin-badge">👤 Admin · <span id="adminTimer">${fmtRemain(remainingMs())}</span></span>
-      <button class="btn" id="btnLogout">Çıkış</button>`;
-    document.getElementById("btnLogout").addEventListener("click", endSession);
-  } else {
-    box.innerHTML = `<button class="btn" id="btnLoginOpen">🔐 Admin girişi</button>`;
-    document.getElementById("btnLoginOpen").addEventListener("click", () => { pendingAction = null; openLogin(""); });
-  }
-}
-let lastAdminState = null;
-setInterval(() => {
-  const cur = isAdmin();
-  if (cur !== lastAdminState) { updateAdminUI(); lastAdminState = cur; }
-  const t = document.getElementById("adminTimer");
-  if (t) t.textContent = fmtRemain(remainingMs());
-}, 1000);
-
-/* İşlem kapısı: admin değilse önce login, sonra işlem devam eder */
-function gate(type, param) {
-  if (isAdmin()) { runAction({ type, param }); return; }
-  pendingAction = { type, param };
-  openLogin("Bu işlem için admin girişi gerekiyor.");
-}
-function runAction({ type, param }) {
-  switch (type) {
-    case "inline-add":  doInlineAdd(); break;
-    case "form-add":    openModal(); break;
-    case "import":      openImport(); break;
-    case "save-inline": saveInline(); break;
-    case "save-edit":   saveEdit(); break;
-    case "do-import":   doImport(); break;
-    case "edit": {
-      const row = rows.find(r => r.id === param);
-      if (row) { editingId = param; editData = { ...row }; render(); }
-      break;
-    }
-    case "delete":
-      if (confirm("Bu kayıt veritabanından silinsin mi?")) deleteRow(param);
-      break;
-  }
-}
+/* ================= Roller ve yetkiler ================= */
+const ADMIN_EMAILS = ["admin@yatsan.com"]; /* admin hesapları (Console'da bu e-postayla kullanıcı oluştur) */
+const PERMISSIONS = {
+  "inline-add": "user",  "form-add": "user",
+  "edit": "user",        "save-edit": "user",  "save-inline": "user",
+  "delete": "admin",     "import": "admin",    "do-import": "admin"
+};
+const IDLE_MS = 15 * 60 * 1000; /* 15 dk işlem yoksa oturum kapanır */
 
 /* ================= Sabitler ================= */
 const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUNLER = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
+const GUN_KISA = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const DURUMLAR = ["Yükleme Bekliyor", "Yükleniyor", "Yükleme Tamamlandı"];
 const BLMS = ["EXPORT-1","EXPORT-2","EXPORT-3"];
 const TIPLER = ["KOMPLE TIR","PARSIYEL TIR","40 HC","20 DC"];
 const GELDI = ["", "GELDİ", "HAYIR"];
 const M3_CARPAN = { "KOMPLE TIR": 90, "40 HC": 70, "20 DC": 35 };
-const SORT_DESC = true; /* true: en yeni tarih üstte */
+const SORT_DESC = true;
 const DURUM_SIRA = { "Yükleniyor": 0, "Yükleme Bekliyor": 1, "Yükleme Tamamlandı": 2 };
 
 /* ================= Yardımcılar ================= */
@@ -341,6 +374,7 @@ function numOrDash(v) { return (v !== null && v !== undefined && v !== "") ? v :
 function pad2(n) { return String(n).padStart(2, "0"); }
 function fmtN(n) { return (Math.round(n * 100) / 100).toLocaleString("tr-TR"); }
 function adet(r) { return Number(r.ad) || 0; }
+function shortUser(e) { return e ? String(e).split("@")[0] : "-"; }
 function getISOWeek(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -384,8 +418,6 @@ function hesaplaM3(tip, ad, prsM3) {
   if (carpan === undefined) return null;
   return (Number(ad) || 0) * carpan;
 }
-
-/* ============ TABLO SIRALAMA ============ */
 function tarihCmp(a, b) {
   if (!a && !b) return 0;
   if (!a) return 1;
@@ -408,7 +440,67 @@ function sortList(list) {
   });
 }
 
-/* ================= Firebase REST ================= */
+/* ================= Kimlik doğrulama (Firebase Auth REST) ================= */
+const AUTH_KEY = "sevkiyat_auth";
+let currentUser = null;
+
+function getAuthState() {
+  try { return JSON.parse(sessionStorage.getItem(AUTH_KEY)); } catch { return null; }
+}
+function saveAuthState(idToken, refreshToken, expiresIn, email) {
+  sessionStorage.setItem(AUTH_KEY, JSON.stringify({
+    idToken, refreshToken, email, exp: Date.now() + Number(expiresIn) * 1000
+  }));
+}
+function clearAuthState() {
+  sessionStorage.removeItem(AUTH_KEY);
+  currentUser = null;
+  updateUserUI();
+}
+let refreshPromise = null;
+async function ensureToken() {
+  const s = getAuthState();
+  if (!s) return null;
+  if (s.exp - Date.now() > 60000) return s.idToken;
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grant_type: "refresh_token", refresh_token: s.refreshToken })
+      });
+      const j = await res.json();
+      if (!res.ok || !j.id_token) throw new Error("Oturum yenilenemedi");
+      saveAuthState(j.id_token, j.refresh_token, j.expires_in, s.email);
+      return j.id_token;
+    })();
+  }
+  try { return await refreshPromise; }
+  finally { refreshPromise = null; }
+}
+async function authFetch(url, opts = {}) {
+  const token = await ensureToken();
+  if (!token) throw new Error("Oturum bulunamadı");
+  const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
+  const res = await fetch(url, { ...opts, headers });
+  if (res.status === 401) {
+    clearAuthState();
+    showLogin("Oturum süresi doldu — tekrar giriş yapın.");
+    throw new Error("Oturum süresi doldu");
+  }
+  return res;
+}
+function fbErrText(msg) {
+  if (/EMAIL_NOT_FOUND|INVALID_PASSWORD|INVALID_LOGIN_CREDENTIALS/.test(msg)) return "E-posta veya şifre hatalı.";
+  if (/TOO_MANY_ATTEMPTS/.test(msg)) return "Çok fazla başarısız deneme — birkaç dakika bekleyip tekrar dene.";
+  if (/OPERATION_NOT_ALLOWED/.test(msg)) return "Firebase Console → Authentication'da Email/Password girişi etkinleştirilmemiş.";
+  if (/API_KEY_NOT_VALID/.test(msg)) return "API Key geçersiz — koddaki FIREBASE_API_KEY değerini kontrol et.";
+  return "Giriş başarısız: " + msg;
+}
+function isAdmin() {
+  return !!currentUser && ADMIN_EMAILS.includes(String(currentUser.email).toLowerCase());
+}
+
+/* ================= Firebase REST (veritabanı) ================= */
 async function check(res, label) {
   if (res.ok) return res.json();
   let msg = label + " (HTTP " + res.status + ")";
@@ -430,18 +522,20 @@ function toDb(r) {
     araciGeldi: r.araciGeldi || "",
     prsM3: (r.prsM3 === "" || r.prsM3 == null) ? null : Number(r.prsM3),
     m3: (r.m3 === "" || r.m3 == null) ? null : Number(r.m3),
-    oncelikli: !!r.oncelikli
+    oncelikli: !!r.oncelikli,
+    createdBy: r.createdBy || (currentUser ? currentUser.email : ""),
+    updatedBy: currentUser ? currentUser.email : ""
   };
 }
 async function apiList() {
-  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`);
+  const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`);
   const data = await check(res, "Veriler yüklenemedi");
   if (!data) return [];
   return Object.entries(data).map(([key, val]) => ({ id: key, ...(val || {}) }));
 }
 async function apiInsert(rec) {
   const body = toDb(rec);
-  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
+  const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
   const data = await check(res, "Kayıt eklenemedi");
@@ -449,21 +543,21 @@ async function apiInsert(rec) {
 }
 async function apiUpdate(id, rec) {
   const body = toDb(rec);
-  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, {
+  const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
   await check(res, "Kayıt güncellenemedi");
   return { id, ...body };
 }
 async function apiDelete(id) {
-  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, { method: "DELETE" });
+  const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, { method: "DELETE" });
   await check(res, "Kayıt silinemedi");
 }
 async function apiBulkInsert(recs) {
   const body = {};
   const stamp = Date.now().toString(36);
   recs.forEach((rec, i) => { body["imp-" + stamp + "-" + String(i).padStart(4, "0")] = toDb(rec); });
-  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
+  const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
   await check(res, "Toplu yükleme başarısız");
@@ -477,6 +571,7 @@ let editData = null;
 let addingInline = false;
 let inlineData = null;
 let weekFilter = "all";
+let pendingAction = null;
 
 /* ================= Yükle / hata ================= */
 async function load(withSpinner = true) {
@@ -498,7 +593,7 @@ function setSaveError(msg) {
   el.classList.toggle("hidden", !msg);
 }
 
-/* ================= Filtre, sıralama & özet ================= */
+/* ================= Filtre & özet ================= */
 function enriched(list) {
   return list.map(r => {
     const dt = parseLocalDate(r.planlananTarih);
@@ -514,15 +609,12 @@ function filtered() {
   });
   return sortList(result);
 }
-/* Özet: HER ŞEY yükleme adedi (AD) bazlı — kayıt sayısı yok */
 function computeSummary(list) {
-  const toplamAd   = list.reduce((s, r) => s + adet(r), 0);
-  const tamamAd    = list.filter(r => r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + adet(r), 0);
-  const kalanAd    = toplamAd - tamamAd;
+  const toplamAd = list.reduce((s, r) => s + adet(r), 0);
+  const tamamAd  = list.filter(r => r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + adet(r), 0);
   const yukleniyorAd = list.filter(r => r.durum === "Yükleniyor").reduce((s, r) => s + adet(r), 0);
-  const toplamM3   = list.reduce((s, r) => s + (Number(r.m3) || 0), 0);
-  const oran       = toplamAd ? (tamamAd / toplamAd) * 100 : 0;
-  /* JS: Pazar=0 … Cumartesi=6 → dizide Pazartesi=0 … Pazar=6 */
+  const toplamM3 = list.reduce((s, r) => s + (Number(r.m3) || 0), 0);
+  const oran = toplamAd ? (tamamAd / toplamAd) * 100 : 0;
   const gunIdx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
   const gunAd = GUNLER.map(() => 0);
   list.forEach(r => {
@@ -531,7 +623,7 @@ function computeSummary(list) {
     const idx = gunIdx[dt.getDay()];
     if (idx !== undefined) gunAd[idx] += adet(r);
   });
-  return { toplamAd, tamamAd, kalanAd, yukleniyorAd, toplamM3, oran, gunAd };
+  return { toplamAd, tamamAd, kalanAd: toplamAd - tamamAd, yukleniyorAd, toplamM3, oran, gunAd };
 }
 
 /* ================= Render ================= */
@@ -560,8 +652,8 @@ function renderSummary(list) {
   document.getElementById("sum-m3").textContent = fmtN(s.toplamM3);
   document.getElementById("sum-verimlilik").textContent = s.oran.toFixed(1) + "%";
   document.getElementById("dist").innerHTML =
-    GUNLER.map((g, i) => `<div><p class="dist-label">${g}</p><p class="dist-val">${s.gunAd[i]}</p></div>`).join("") +
-    `<div><p class="dist-label">Toplam</p><p class="dist-val strong">${fmtN(s.toplamAd)}</p></div>`;
+    GUN_KISA.map((g, i) => `<div class="day"><span>${g}</span><b>${s.gunAd[i]}</b></div>`).join("") +
+    `<div class="day total"><span>Toplam</span><b>${fmtN(s.toplamAd)}</b></div>`;
 }
 function fInput(data, scope, field, type, cls, datalist, extra) {
   return `<input type="${type}" class="cell-input ${cls || ""}" data-scope="${scope}" data-field="${field}"
@@ -590,9 +682,10 @@ function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
     <td class="center st-cell">${durumIcon(d.durum)}</td>
     <td>${fInput(d, scope, "prsM3", "number", "w-num")}</td>
     <td>${fInput(d, scope, "m3", "number", "w-num", false, 'readonly tabindex="-1"')}</td>
+    <td class="muted">${esc(shortUser(d.createdBy))}</td>
     <td class="nowrap">
-      <button class="icon-btn ok" data-action="${saveAction}" title="Kaydet">✔</button>
-      <button class="icon-btn mute" data-action="${cancelAction}" title="İptal">✖</button>
+      <button class="icon-btn" data-action="${saveAction}" title="Kaydet">✔</button>
+      <button class="icon-btn" data-action="${cancelAction}" title="İptal">✖</button>
     </td>
   </tr>`;
 }
@@ -615,6 +708,7 @@ function rowHtml(r) {
     <td class="center">${durumIcon(r.durum)}</td>
     <td class="center">${numOrDash(r.prsM3)}</td>
     <td class="center">${numOrDash(r.m3)}</td>
+    <td class="muted" title="${esc(r.createdBy || "")}">${esc(shortUser(r.createdBy))}</td>
     <td class="nowrap">
       <button class="icon-btn" data-action="edit" data-id="${r.id}" title="Düzenle">✏️</button>
       <button class="icon-btn del" data-action="delete" data-id="${r.id}" title="Sil">🗑️</button>
@@ -624,10 +718,10 @@ function rowHtml(r) {
 function renderTable(list) {
   const tbody = document.getElementById("tbody");
   let html = "";
-  if (loading) html += `<tr><td colspan="17" class="empty">Yükleniyor…</td></tr>`;
+  if (loading) html += `<tr><td colspan="18" class="empty">Yükleniyor…</td></tr>`;
   if (addingInline) html += formRowHtml(inlineData, "inline", "inline-row", "save-inline", "cancel-inline");
   if (!loading && list.length === 0 && !addingInline) {
-    html += `<tr><td colspan="17" class="empty">Kayıt yok. "Yeni kayıt" ile başlayın.</td></tr>`;
+    html += `<tr><td colspan="18" class="empty">Kayıt yok. "Yeni kayıt" ile başlayın.</td></tr>`;
   }
   list.forEach(r => {
     html += (editingId === r.id && editData)
@@ -638,6 +732,32 @@ function renderTable(list) {
   if (addingInline) {
     const first = tbody.querySelector('input[data-field="musteri"]');
     if (first) first.focus();
+  }
+}
+
+/* ================= Yetki kapısı ================= */
+function gate(type, param) {
+  if (!currentUser) { pendingAction = { type, param }; showLogin("Devam etmek için giriş yapın."); return; }
+  const need = PERMISSIONS[type] || "user";
+  if (need === "admin" && !isAdmin()) { alert("Bu işlem için admin yetkisi gerekir."); return; }
+  runAction({ type, param });
+}
+function runAction({ type, param }) {
+  switch (type) {
+    case "inline-add":  doInlineAdd(); break;
+    case "form-add":    openModal(); break;
+    case "import":      openImport(); break;
+    case "save-inline": saveInline(); break;
+    case "save-edit":   saveEdit(); break;
+    case "do-import":   doImport(); break;
+    case "edit": {
+      const row = rows.find(r => r.id === param);
+      if (row) { editingId = param; editData = { ...row }; render(); }
+      break;
+    }
+    case "delete":
+      if (confirm("Bu kayıt veritabanından silinsin mi?")) deleteRow(param);
+      break;
   }
 }
 
@@ -737,6 +857,7 @@ document.getElementById("btnToggleSummary").addEventListener("click", () => {
 document.getElementById("btnInlineAdd").addEventListener("click", () => gate("inline-add"));
 document.getElementById("btnShowForm").addEventListener("click", () => gate("form-add"));
 document.getElementById("btnImportOpen").addEventListener("click", () => gate("import"));
+document.getElementById("btnExport").addEventListener("click", exportExcel);
 
 /* ================= Modal form ================= */
 function fillSelect(id, options) {
@@ -787,7 +908,7 @@ document.getElementById("f-prsM3").addEventListener("input", e => {
 });
 document.getElementById("btnCancelForm").addEventListener("click", closeModal);
 document.getElementById("btnSaveForm").addEventListener("click", async () => {
-  if (!isAdmin()) { pendingAction = { type: "form-add-save" }; openLogin("Oturum süresi dolmuş, tekrar giriş yapın."); return; }
+  if (!currentUser) { pendingAction = { type: "form-add" }; closeModal(); showLogin("Kaydetmek için giriş yapın."); return; }
   const musteri = getVal("f-musteri").trim();
   if (!musteri) { alert("Müşteri adı zorunlu."); return; }
   const rec = emptyRecord();
@@ -823,7 +944,6 @@ function destroyCharts() {
   chartInstances.forEach(c => { try { c.destroy(); } catch (e) {} });
   chartInstances = [];
 }
-/* Grup bazında: yükleme adedi, tamamlanan adet, M3 */
 function groupStats(list, keyFn) {
   const m = new Map();
   list.forEach(r => {
@@ -855,60 +975,48 @@ function statsTable(map, title, colLabel) {
 }
 function makeCharts(list) {
   if (typeof Chart === "undefined") return;
+  Chart.defaults.font.family = "'Inter', sans-serif";
   Chart.defaults.font.size = 11;
   const s = computeSummary(list);
 
-  /* 1) Durum dağılımı (donut) */
   chartInstances.push(new Chart(document.getElementById("chDurum"), {
     type: "doughnut",
     data: {
       labels: ["Tamamlanan", "Yükleniyor", "Bekliyor"],
       datasets: [{ data: [s.tamamAd, s.yukleniyorAd, s.kalanAd - s.yukleniyorAd],
-        backgroundColor: ["#16a34a", "#d97706", "#dc2626"], borderWidth: 0 }]
+        backgroundColor: ["#059669", "#d97706", "#dc2626"], borderWidth: 0 }]
     },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: "bottom" } } }
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
   }));
-
-  /* 2) Gün bazlı planlanan adet */
   chartInstances.push(new Chart(document.getElementById("chGun"), {
     type: "bar",
-    data: { labels: GUNLER, datasets: [{ label: "Yükleme adedi", data: s.gunAd, backgroundColor: "#4f46e5", borderRadius: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+    data: { labels: GUNLER, datasets: [{ label: "Yükleme adedi", data: s.gunAd, backgroundColor: "#4f46e5", borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
   }));
-
-  /* 3) Sevkiyat tipi bazlı */
   const tipMap = groupStats(list, r => r.sevkiyatTipi);
   chartInstances.push(new Chart(document.getElementById("chTip"), {
     type: "bar",
     data: { labels: [...tipMap.keys()],
-      datasets: [{ label: "Yükleme adedi", data: [...tipMap.values()].map(g => g.ad), backgroundColor: "#0891b2", borderRadius: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      datasets: [{ label: "Yükleme adedi", data: [...tipMap.values()].map(g => g.ad), backgroundColor: "#0ea5e9", borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
   }));
-
-  /* 4) BLM bazlı */
   const blmMap = groupStats(list, r => r.blm);
   chartInstances.push(new Chart(document.getElementById("chBlm"), {
     type: "bar",
     data: { labels: [...blmMap.keys()],
-      datasets: [{ label: "Yükleme adedi", data: [...blmMap.values()].map(g => g.ad), backgroundColor: "#7c3aed", borderRadius: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      datasets: [{ label: "Yükleme adedi", data: [...blmMap.values()].map(g => g.ad), backgroundColor: "#8b5cf6", borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
   }));
-
-  /* 5) Müşteri bazlı stacked (tamamlanan/yükleniyor/bekliyor) — AD'ye göre azalan */
   const musMap = [...groupStats(list, r => r.musteri).entries()].sort((a, b) => b[1].ad - a[1].ad);
   chartInstances.push(new Chart(document.getElementById("chMusteri"), {
     type: "bar",
     data: {
       labels: musMap.map(([k]) => k),
       datasets: [
-        { label: "Tamamlanan", data: musMap.map(([, g]) => g.tamam), backgroundColor: "#16a34a", stack: "s" },
+        { label: "Tamamlanan", data: musMap.map(([, g]) => g.tamam), backgroundColor: "#059669", stack: "s" },
         { label: "Yükleniyor", data: musMap.map(([, g]) => g.yuk),   backgroundColor: "#d97706", stack: "s" },
         { label: "Bekliyor",   data: musMap.map(([, g]) => g.bek),   backgroundColor: "#dc2626", stack: "s" }
       ]
@@ -923,7 +1031,6 @@ function buildReports() {
   const list = filtered();
   const c = document.getElementById("reportContent");
   if (!list.length) { c.innerHTML = `<p class="hint">Filtrelere uyan kayıt yok.</p>`; return; }
-
   const chartBlock = (typeof Chart === "undefined")
     ? `<p class="hint">⚠️ Grafik kütüphanesi (CDN) yüklenemedi — tablolara bakın.</p>`
     : `<div class="chart-grid">
@@ -933,14 +1040,12 @@ function buildReports() {
         <div class="chart-box"><h3>BLM bazlı adet</h3><div class="chart-holder"><canvas id="chBlm"></canvas></div></div>
         <div class="chart-box wide"><h3>Müşteri bazlı yükleme adedi</h3><div class="chart-holder tall"><canvas id="chMusteri"></canvas></div></div>
       </div>`;
-
   c.innerHTML = chartBlock +
     statsTable(groupStats(list, r => r.musteri), "Müşteri bazlı", "Müşteri") +
     statsTable(groupStats(list, r => r.sevkiyatTipi), "Sevkiyat tipi bazlı", "Tip") +
     statsTable(groupStats(list, r => r.blm), "BLM bazlı", "BLM") +
     statsTable(groupStats(list, r => "Hafta " + r.hafta), "Hafta bazlı", "Hafta") +
     statsTable(groupStats(list, r => r.durum), "Durum bazlı", "Durum");
-
   if (typeof Chart !== "undefined") makeCharts(list);
 }
 document.getElementById("btnReports").addEventListener("click", () => {
@@ -954,6 +1059,39 @@ document.getElementById("btnCloseReport").addEventListener("click", () => {
 document.getElementById("reportModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) { destroyCharts(); e.currentTarget.classList.add("hidden"); }
 });
+
+/* ================= EXCEL DIŞA AKTARMA ================= */
+function exportExcel() {
+  if (typeof XLSX === "undefined") { alert("Excel kütüphanesi (CDN) yüklenemedi."); return; }
+  const list = filtered();
+  if (!list.length) { alert("Aktarılacak kayıt yok."); return; }
+  const data = list.map(r => ({
+    "Müşteri": r.musteri,
+    "BLM": r.blm,
+    "Kategori": r.kategori,
+    "Sevkiyat Tipi": r.sevkiyatTipi,
+    "AD": Number(r.ad) || 0,
+    "Planlanan Tarih": r.planlananTarih ? formatDate(r.planlananTarih) : "",
+    "Reel Plan": r.reelPlan ? formatDate(r.reelPlan) : "",
+    "Gerçekleşen Tarih": r.gerceklesenTarih ? formatDate(r.gerceklesenTarih) : "",
+    "Durum": r.durum,
+    "Açıklama": r.aciklama || "",
+    "Aracı Geldi": r.araciGeldi || "",
+    "PRS M3": r.prsM3 ?? "",
+    "M3": r.m3 ?? "",
+    "Öncelikli": r.oncelikli ? "Evet" : "",
+    "Ekleyen": r.createdBy || ""
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws["!cols"] = [{wch:24},{wch:10},{wch:10},{wch:14},{wch:6},{wch:15},{wch:15},{wch:16},{wch:18},{wch:26},{wch:11},{wch:8},{wch:8},{wch:10},{wch:22}];
+  try {
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: range.e.r, c: range.e.c } }) };
+  } catch (e) {}
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sevkiyat");
+  XLSX.writeFile(wb, `sevkiyat_${todayISO()}.xlsx`);
+}
 
 /* ================= EXCEL İÇE AKTARMA ================= */
 const APP_FIELDS = [
@@ -1118,14 +1256,11 @@ async function doImport() {
   btn.disabled = false; btn.textContent = "Seçili satırları yükle";
 }
 document.getElementById("btnDoImport").addEventListener("click", () => {
-  if (!isAdmin()) { pendingAction = { type: "do-import" }; openLogin("Oturum süresi dolmuş, tekrar giriş yapın."); return; }
+  if (!isAdmin()) { alert("Excel yükleme için admin yetkisi gerekir."); return; }
   doImport();
 });
 function openImport() {
-  if (typeof XLSX === "undefined") {
-    alert("Excel kütüphanesi (CDN) yüklenemedi — internet bağlantısını kontrol et.");
-    return;
-  }
+  if (typeof XLSX === "undefined") { alert("Excel kütüphanesi (CDN) yüklenemedi — internet bağlantısını kontrol et."); return; }
   document.getElementById("importModal").classList.remove("hidden");
 }
 function closeImportModal() {
@@ -1140,59 +1275,108 @@ document.getElementById("importModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) closeImportModal();
 });
 
-/* ================= LOGIN ================= */
-function openLogin(hintMsg) {
-  const hint = document.getElementById("loginHint");
-  hint.textContent = hintMsg || "Ekleme, düzenleme ve silme işlemleri için giriş gerekli. Oturum 15 dakika sonra otomatik kapanır.";
-  document.getElementById("loginError").classList.add("hidden");
+/* ================= LOGIN & OTURUM ================= */
+function showLogin(hintMsg) {
+  const err = document.getElementById("loginError");
+  if (hintMsg) { err.textContent = hintMsg; err.classList.remove("hidden"); }
+  else err.classList.add("hidden");
   document.getElementById("loginModal").classList.remove("hidden");
   document.getElementById("l-user").focus();
 }
-function closeLogin() {
+function hideLogin() {
   document.getElementById("loginModal").classList.add("hidden");
   document.getElementById("l-pass").value = "";
-  pendingAction = null;
 }
-function setLoginError(msg) {
-  const el = document.getElementById("loginError");
-  el.textContent = msg;
-  el.classList.toggle("hidden", !msg);
-}
-function tryLogin() {
-  const u = document.getElementById("l-user").value.trim();
-  const p = document.getElementById("l-pass").value;
-  if (u.toLowerCase() === ADMIN_USER.toLowerCase() && p === ADMIN_PASS) {
-    startSession();
-    document.getElementById("loginModal").classList.add("hidden");
-    document.getElementById("l-pass").value = "";
-    const pa = pendingAction; pendingAction = null;
-    if (pa) runAction(pa);
+function updateUserUI() {
+  const box = document.getElementById("userBox");
+  if (currentUser) {
+    const admin = isAdmin();
+    box.innerHTML = `<span class="user-chip ${admin ? "is-admin" : ""}">${admin ? "🛡️" : "👤"} ${esc(shortUser(currentUser.email))}</span>
+      <button class="btn" id="btnLogout">Çıkış</button>`;
+    document.getElementById("btnLogout").addEventListener("click", () => doLogout(""));
   } else {
-    setLoginError("Kullanıcı adı veya şifre hatalı.");
+    box.innerHTML = "";
   }
 }
+async function tryLogin() {
+  const err = document.getElementById("loginError");
+  if (!API_KEY_OK) {
+    err.textContent = "Kurulum eksik: Firebase Console → Project Settings → General → Web API Key değerini koddaki FIREBASE_API_KEY satırına yapıştır.";
+    err.classList.remove("hidden");
+    return;
+  }
+  const email = document.getElementById("l-user").value.trim();
+  const pass = document.getElementById("l-pass").value;
+  if (!email || !pass) { err.textContent = "E-posta ve şifre girin."; err.classList.remove("hidden"); return; }
+  const btn = document.getElementById("btnLogin");
+  btn.disabled = true; btn.textContent = "Giriş yapılıyor…";
+  try {
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: pass, returnSecureToken: true })
+    });
+    const j = await res.json();
+    if (!res.ok) { err.textContent = fbErrText(j.error?.message || ""); err.classList.remove("hidden"); return; }
+    saveAuthState(j.idToken, j.refreshToken, j.expiresIn, j.email);
+    currentUser = { email: j.email };
+    updateUserUI();
+    hideLogin();
+    await load(true);
+    if (pendingAction) { const pa = pendingAction; pendingAction = null; runAction(pa); }
+  } catch (e) {
+    err.textContent = "Bağlantı hatası: " + e.message;
+    err.classList.remove("hidden");
+  } finally {
+    btn.disabled = false; btn.textContent = "Giriş yap";
+  }
+}
+function doLogout(msg) {
+  clearAuthState();
+  rows = []; addingInline = false; inlineData = null; editingId = null; editData = null;
+  render();
+  showLogin(msg || "Oturum kapatıldı. Tekrar giriş yapabilirsin.");
+}
 document.getElementById("btnLogin").addEventListener("click", tryLogin);
-document.getElementById("btnLoginCancel").addEventListener("click", closeLogin);
-document.getElementById("loginModal").addEventListener("click", e => {
-  if (e.target === e.currentTarget) closeLogin();
-});
 ["l-user", "l-pass"].forEach(id => {
-  document.getElementById(id).addEventListener("keydown", e => {
-    if (e.key === "Enter") tryLogin();
-  });
+  document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") tryLogin(); });
 });
 
-/* Otomatik yenileme (30 sn) — düzenleme/içe aktarma yokken */
+/* Boşta kalma zamanlayıcısı: 15 dk işlem yoksa oturum kapanır */
+let lastActivity = Date.now();
+["click", "keydown", "touchstart", "mousemove"].forEach(ev =>
+  document.addEventListener(ev, () => { lastActivity = Date.now(); }, { passive: true })
+);
 setInterval(() => {
-  if (document.hidden || addingInline || editingId) return;
+  if (!currentUser) return;
+  if (Date.now() - lastActivity > IDLE_MS) doLogout("15 dakika işlem olmadığı için oturum kapatıldı.");
+}, 10000);
+
+/* Otomatik yenileme (30 sn) */
+setInterval(() => {
+  if (document.hidden || !currentUser || addingInline || editingId) return;
   if (!document.getElementById("importModal").classList.contains("hidden")) return;
   load(false);
 }, 30000);
 
 /* ================= Başlat ================= */
-updateAdminUI();
-lastAdminState = isAdmin();
-load(true);
+updateUserUI();
+(async () => {
+  const s = getAuthState();
+  if (s && API_KEY_OK) {
+    try {
+      await ensureToken();
+      currentUser = { email: s.email };
+      updateUserUI();
+      await load(true);
+      return;
+    } catch (e) { clearAuthState(); }
+  }
+  if (!API_KEY_OK) {
+    document.getElementById("l-user").disabled = true;
+    document.getElementById("l-pass").disabled = true;
+  }
+  showLogin(API_KEY_OK ? "" : "Kurulum eksik: Firebase Console → Project Settings → General → Web API Key değerini koddaki FIREBASE_API_KEY satırına yapıştır.");
+})();
 </script>
 </body>
 </html>
