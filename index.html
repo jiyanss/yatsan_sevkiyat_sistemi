@@ -49,6 +49,10 @@
     background: var(--primary-soft); color: var(--primary); white-space: nowrap;
   }
   .user-chip.is-admin { background: var(--amber-soft); color: var(--amber); }
+  .guest-chip {
+    font-size: 11px; font-weight: 500; padding: 6px 10px; border-radius: 999px;
+    background: #f1f5f9; color: var(--muted); white-space: nowrap;
+  }
 
   input, select {
     border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px;
@@ -69,6 +73,7 @@
   main { padding: 16px 20px 32px; max-width: 1600px; margin: 0 auto; }
 
   .error { background: var(--red-soft); border: 1px solid #fecaca; color: var(--red); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .info { background: var(--primary-soft); border: 1px solid #c7d2fe; color: var(--primary-dark); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; }
   .hint { font-size: 11px; color: var(--muted); background: #f8fafc; border: 1px dashed var(--border); border-radius: 8px; padding: 7px 10px; margin: 0 0 12px; }
 
   .statbar {
@@ -112,13 +117,13 @@
   td.truncate { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .nowrap { white-space: nowrap; }
 
-  /* Hücre düzenleme */
-  td.editable { cursor: pointer; }
-  td.editable:hover {
+  /* Hücre düzenleme — sadece girişli kullanıcıda imleç efekti */
+  body.can-edit td.editable { cursor: pointer; }
+  body.can-edit td.editable:hover {
     background: var(--primary-soft);
     box-shadow: inset 0 0 0 1.5px #a5b4fc;
   }
-  tr.priority td.editable:hover { background: #fef3c7; box-shadow: inset 0 0 0 1.5px #a5b4fc; }
+  body.can-edit tr.priority td.editable:hover { background: #fef3c7; box-shadow: inset 0 0 0 1.5px #a5b4fc; }
 
   .badge { padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 600; }
   .badge.done    { background: var(--green-soft); color: var(--green); border: 1px solid #a7f3d0; }
@@ -212,7 +217,7 @@
     <div class="logo">🚢</div>
     <div>
       <h1>Sevkiyat Planlama — İhracat</h1>
-      <p class="subtitle">Ekip veritabanı · hücreye tıkla, düzenle, Enter'a bas — otomatik kaydedilir</p>
+      <p class="subtitle">Görüntüleme herkese açık · ekleme/düzenleme/silme için giriş yapın</p>
     </div>
   </div>
   <div class="toolbar">
@@ -231,6 +236,7 @@
 
 <main>
   <div id="saveError" class="error hidden"></div>
+  <div id="guestInfo" class="info hidden"></div>
 
   <section class="statbar" id="summary">
     <div class="stat"><span class="s-label">Toplam Yükleme</span><span class="s-val" id="sum-toplam">0</span></div>
@@ -257,7 +263,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Düzenleme: tablodaki hücreye tıkla → değeri değiştir → <b>Enter</b> (veya başka yere tıkla) → otomatik kaydedilir. <b>Esc</b> iptal eder. M3, Hafta ve Ay otomatik hesaplanır.</p>
+  <p class="hint" style="margin-top:8px">💡 Düzenleme: hücreye tıkla → değiştir → <b>Enter</b> → otomatik kaydedilir. <b>Esc</b> iptal eder. M3, Hafta ve Ay otomatik hesaplanır. Silme ve Excel yükleme admin yetkisi gerektirir.</p>
 </main>
 
 <datalist id="musteri-list"></datalist>
@@ -301,7 +307,7 @@
 <div id="importModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>📥 Excel'den Veri Yükle</h2>
-    <p class="hint">.xlsx / .xls / .csv · İlk satır başlık olmalı · Müşteri kolonu zorunlu · M3 boşsa tipe göre hesaplanır.</p>
+    <p class="hint">.xlsx / .xls / .csv · İlk satır başlık olmalı · Müşteri kolonu zorunlu · M3 boşsa tipe göre hesaplanır. <b>Admin yetkisi gerekir.</b></p>
     <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
     <div id="importMapping" class="hidden">
       <h3 style="font-size:13px;margin:14px 0 6px;">Kolon eşleştirme</h3>
@@ -321,14 +327,15 @@
   <div class="modal login-card">
     <div class="logo">🚢</div>
     <h2>Sevkiyat Planlama</h2>
-    <p class="sub">Devam etmek için hesabınla giriş yap. 15 dakika işlem olmadığında oturum kapanır.</p>
+    <p class="sub" id="loginSub">Ekleme ve düzenleme için giriş yap. Görüntüleme giriş gerektirmez.</p>
     <div class="login-form">
       <label><span>E-posta</span><input id="l-user" type="email" autocomplete="username" /></label>
       <label><span>Şifre</span><input id="l-pass" type="password" autocomplete="current-password" /></label>
     </div>
     <div id="loginError" class="error hidden" style="margin-top:10px;margin-bottom:0"></div>
-    <div class="modal-actions" style="justify-content:center">
-      <button class="btn primary" id="btnLogin" style="width:100%;padding:10px">Giriş yap</button>
+    <div class="modal-actions" style="gap:8px">
+      <button class="btn" id="btnLoginCancel">Vazgeç</button>
+      <button class="btn primary" id="btnLogin">Giriş yap</button>
     </div>
   </div>
 </div>
@@ -339,14 +346,26 @@ const FIREBASE_DB_URL = "https://sevkiyat-app-default-rtdb.europe-west1.firebase
 const FIREBASE_API_KEY = "AIzaSyAagmdq0N2TG4IQ7noDFL6xQh4-ps-QrgI";
 const NODE = "sevkiyat";
 
-/* ================= Roller ve yetkiler ================= */
-const ADMIN_EMAILS = ["admin@yatsan.com"];
+/* ============================================================
+   ROLLER — BURADAN YÖNETİLİR
+   ------------------------------------------------------------
+   • ADMIN_EMAILS: Bu listedeki e-postalar ADMİN'dir.
+     Admin ekstra olarak: silme + Excel yükleme yapabilir.
+   • Listede olmayan girişli kullanıcılar: ekleme + düzenleme.
+   • Giriş yapmayanlar: sadece görüntüleme.
+   • Yetki matrisini değiştirmek için PERMISSIONS altındaki
+     "user"/"admin" değerlerini değiştir.
+   ============================================================ */
+const ADMIN_EMAILS = [
+  "admin@yatsan.com"
+  /* Yeni admin eklemek için: , "baska@yatsan.com" */
+];
 const PERMISSIONS = {
   "inline-add": "user",  "form-add": "user",
   "cell-edit": "user",   "save-inline": "user",
   "delete": "admin",     "import": "admin",    "do-import": "admin"
 };
-const IDLE_MS = 15 * 60 * 1000;
+const IDLE_MS = 15 * 60 * 1000; /* girişliyken 15 dk işlem yoksa oturum kapanır */
 
 /* ================= Sabitler ================= */
 const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
@@ -360,7 +379,6 @@ const M3_CARPAN = { "KOMPLE TIR": 90, "40 HC": 70, "20 DC": 35 };
 const SORT_DESC = true;
 const DURUM_SIRA = { "Yükleniyor": 0, "Yükleme Bekliyor": 1, "Yükleme Tamamlandı": 2 };
 
-/* Hücre düzenleme tanımları: hangi alan, ne tip input, hangi genişlik */
 const CELL_DEFS = {
   musteri:          { kind: "text",   w: "w-musteri", list: true },
   blm:              { kind: "select", options: BLMS },
@@ -498,6 +516,7 @@ async function ensureToken(force = false) {
   }
   return t;
 }
+/* Yazma istekleri için: auth zorunlu */
 async function authFetch(url, opts = {}, _canRetry = true) {
   const token = await ensureToken();
   if (!token) throw new Error("Oturum bulunamadı");
@@ -513,7 +532,7 @@ async function authFetch(url, opts = {}, _canRetry = true) {
       await ensureToken(true);
       return authFetch(url, opts, false);
     }
-    throw new Error("Veritabanı erişimi reddedildi (401). Oturumun geçerli ama kurallar erişime izin vermiyor. Firebase Console → Realtime Database → Rules: .read ve .write değerlerini \"auth != null\" yapıp Publish'e bas.");
+    throw new Error("Veritabanı erişimi reddedildi (401). Kurallar yazmaya izin vermiyor. Rules: .write \"auth != null\" olmalı.");
   }
   return res;
 }
@@ -556,12 +575,14 @@ function toDb(r) {
     updatedBy: currentUser ? currentUser.email : ""
   };
 }
+/* OKUMA herkese açık — auth gerekmez */
 async function apiList() {
-  const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`);
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`);
   const data = await check(res, "Veriler yüklenemedi");
   if (!data) return [];
   return Object.entries(data).map(([key, val]) => ({ id: key, ...(val || {}) }));
 }
+/* YAZMA işlemleri auth ister */
 async function apiInsert(rec) {
   const body = toDb(rec);
   const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
@@ -599,7 +620,7 @@ let addingInline = false;
 let inlineData = null;
 let weekFilter = "current";
 let pendingAction = null;
-let editingCell = null;   /* { id, field } — aktif hücre düzenlemesi */
+let editingCell = null;
 let committing = false;
 
 /* ================= Yükle / hata ================= */
@@ -619,6 +640,11 @@ function setSaveError(msg) {
   const el = document.getElementById("saveError");
   el.textContent = msg;
   el.classList.toggle("hidden", !msg);
+}
+function setGuestInfo(msg) {
+  const el = document.getElementById("guestInfo");
+  if (msg) { el.innerHTML = msg; el.classList.remove("hidden"); }
+  else el.classList.add("hidden");
 }
 
 /* ================= Filtre & özet ================= */
@@ -697,8 +723,6 @@ function fSelect(data, scope, field, options) {
     ${options.map(o => `<option value="${esc(o)}" ${String(data[field]) === o ? "selected" : ""}>${o === "" ? "-" : esc(o)}</option>`).join("")}
   </select>`;
 }
-
-/* --- Hücre düzenleme inputu --- */
 function cellInputHtml(r, field) {
   const def = CELL_DEFS[field];
   if (def.kind === "select") {
@@ -710,14 +734,12 @@ function cellInputHtml(r, field) {
   return `<input type="${t}" class="cell-input ${def.w || ""}" data-cid="${r.id}" data-cfield="${field}"
     value="${esc(String(r[field] ?? ""))}" ${def.list ? 'list="musteri-list"' : ""} />`;
 }
-/* Görüntüleme + düzenleme birleşik hücre üretici */
 function tdHtml(r, field, extraCls, viewFn) {
   const def = CELL_DEFS[field];
   const editing = editingCell && editingCell.id === r.id && editingCell.field === field;
   const content = editing ? cellInputHtml(r, field) : viewFn(r);
   return `<td class="${extraCls || ""}${def ? " editable" : ""}"${def ? ` data-field="${field}"` : ""}>${content}</td>`;
 }
-
 function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
   return `<tr class="${rowClass}">
     <td>${fInput(d, scope, "musteri", "text", "w-musteri", true)}</td>
@@ -791,10 +813,10 @@ function renderTable(list) {
   }
 }
 
-/* ================= Hücre düzenleme mantığı ================= */
+/* ================= Hücre düzenleme ================= */
 function startCellEdit(id, field) {
   if (editingCell && (editingCell.id !== id || editingCell.field !== field)) {
-    commitCell(); /* açık hücreyi kapat/kaydet */
+    commitCell();
   }
   editingCell = { id, field };
   render();
@@ -815,7 +837,6 @@ async function commitCell() {
   const changed = String(row[field] ?? "") !== String(val ?? "");
   if (!changed) { committing = false; render(); return; }
   const updated = { ...row, [field]: val };
-  /* Tip/AD/PRS değiştiyse M3'ü yeniden hesapla */
   if (["sevkiyatTipi", "ad", "prsM3"].includes(field)) {
     const m3 = hesaplaM3(updated.sevkiyatTipi, updated.ad, updated.prsM3);
     if (m3 !== null) updated.m3 = m3;
@@ -835,7 +856,11 @@ function cancelCell() {
 
 /* ================= Yetki kapısı ================= */
 function gate(type, param) {
-  if (!currentUser) { pendingAction = { type, param }; showLogin("Devam etmek için giriş yapın."); return; }
+  if (!currentUser) {
+    pendingAction = { type, param };
+    showLogin("Bu işlem için giriş yapman gerekiyor — giriş sonrası otomatik devam edecek.");
+    return;
+  }
   const need = PERMISSIONS[type] || "user";
   if (need === "admin" && !isAdmin()) { alert("Bu işlem için admin yetkisi gerekir."); return; }
   runAction({ type, param });
@@ -891,7 +916,7 @@ document.getElementById("tbody").addEventListener("click", e => {
     }
     return;
   }
-  if (e.target.closest("input, select, option")) return; /* düzenlenen hücrenin inputu */
+  if (e.target.closest("input, select, option")) return;
   const td = e.target.closest("td[data-field]");
   if (!td) return;
   const tr = td.closest("tr[data-rowid]");
@@ -923,7 +948,6 @@ function onFieldInput(e) {
 document.getElementById("tbody").addEventListener("input", onFieldInput);
 document.getElementById("tbody").addEventListener("change", onFieldInput);
 
-/* Hücre düzenleme: Enter kaydet, Esc iptal, odak kaybında kaydet */
 document.getElementById("tbody").addEventListener("keydown", e => {
   if (e.target.matches("[data-cid]")) {
     if (e.key === "Enter") { e.preventDefault(); commitCell(); }
@@ -1158,7 +1182,7 @@ document.getElementById("reportModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) { destroyCharts(); e.currentTarget.classList.add("hidden"); }
 });
 
-/* ================= EXCEL DIŞA AKTARMA ================= */
+/* ================= EXCEL DIŞA AKTARMA (herkese açık) ================= */
 function exportExcel() {
   if (typeof XLSX === "undefined") { alert("Excel kütüphanesi (CDN) yüklenemedi."); return; }
   const list = filtered();
@@ -1191,7 +1215,7 @@ function exportExcel() {
   XLSX.writeFile(wb, `sevkiyat_${todayISO()}.xlsx`);
 }
 
-/* ================= EXCEL İÇE AKTARMA ================= */
+/* ================= EXCEL İÇE AKTARMA (admin) ================= */
 const APP_FIELDS = [
   { key: "musteri",         label: "Müşteri *",        kw: ["musteri", "firma", "customer"] },
   { key: "blm",             label: "BLM",              kw: ["blm"] },
@@ -1387,13 +1411,17 @@ function hideLogin() {
 }
 function updateUserUI() {
   const box = document.getElementById("userBox");
+  document.body.classList.toggle("can-edit", !!currentUser);
   if (currentUser) {
     const admin = isAdmin();
     box.innerHTML = `<span class="user-chip ${admin ? "is-admin" : ""}">${admin ? "🛡️" : "👤"} ${esc(shortUser(currentUser.email))}</span>
       <button class="btn" id="btnLogout">Çıkış</button>`;
     document.getElementById("btnLogout").addEventListener("click", () => doLogout(""));
+    setGuestInfo("");
   } else {
-    box.innerHTML = "";
+    box.innerHTML = `<span class="guest-chip">👁️ Görüntüleme modu</span>
+      <button class="btn primary" id="btnLoginOpen">🔐 Giriş yap</button>`;
+    document.getElementById("btnLoginOpen").addEventListener("click", () => showLogin(""));
   }
 }
 async function tryLogin() {
@@ -1414,8 +1442,8 @@ async function tryLogin() {
     currentUser = { email: j.email };
     updateUserUI();
     hideLogin();
-    await load(true);
     if (pendingAction) { const pa = pendingAction; pendingAction = null; runAction(pa); }
+    else render();
   } catch (e) {
     err.textContent = "Bağlantı hatası: " + e.message;
     err.classList.remove("hidden");
@@ -1423,18 +1451,27 @@ async function tryLogin() {
     btn.disabled = false; btn.textContent = "Giriş yap";
   }
 }
+/* Çıkışta sayfada kalınır — veriler görünmeye devam eder */
 function doLogout(msg) {
   clearAuthState();
-  rows = []; addingInline = false; inlineData = null; editingCell = null;
+  addingInline = false; inlineData = null;
+  editingCell = null;
   render();
-  showLogin(msg || "Oturum kapatıldı. Tekrar giriş yapabilirsin.");
+  if (msg) setGuestInfo("ℹ️ " + esc(msg) + " — verileri görüntülemeye devam edebilirsin.");
 }
 document.getElementById("btnLogin").addEventListener("click", tryLogin);
+document.getElementById("btnLoginCancel").addEventListener("click", () => {
+  hideLogin();
+  pendingAction = null;
+});
+document.getElementById("loginModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) { hideLogin(); pendingAction = null; }
+});
 ["l-user", "l-pass"].forEach(id => {
   document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") tryLogin(); });
 });
 
-/* Boşta kalma zamanlayıcısı: 15 dk işlem yoksa oturum kapanır */
+/* Boşta kalma: SADECE girişli kullanıcı için 15 dk sonra oturum kapanır */
 let lastActivity = Date.now();
 ["click", "keydown", "touchstart", "mousemove"].forEach(ev =>
   document.addEventListener(ev, () => { lastActivity = Date.now(); }, { passive: true })
@@ -1444,14 +1481,14 @@ setInterval(() => {
   if (Date.now() - lastActivity > IDLE_MS) doLogout("15 dakika işlem olmadığı için oturum kapatıldı.");
 }, 10000);
 
-/* Otomatik yenileme (30 sn) — hücre düzenleme/ekleme sırasında engellenir */
+/* Otomatik yenileme (30 sn) — girişsiz izleyiciler için de çalışır */
 setInterval(() => {
-  if (document.hidden || !currentUser || addingInline || editingCell) return;
+  if (document.hidden || addingInline || editingCell) return;
   if (!document.getElementById("importModal").classList.contains("hidden")) return;
   load(false);
 }, 30000);
 
-/* ================= Başlat ================= */
+/* ================= Başlat: giriş beklemeden verileri yükle ================= */
 updateUserUI();
 (async () => {
   const s = getAuthState();
@@ -1460,11 +1497,9 @@ updateUserUI();
       await ensureToken();
       currentUser = { email: s.email };
       updateUserUI();
-      await load(true);
-      return;
     } catch (e) { /* ensureToken gerekli temizliği yaptı */ }
   }
-  showLogin("");
+  await load(true);
 })();
 </script>
 </body>
