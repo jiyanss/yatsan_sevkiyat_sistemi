@@ -26,7 +26,6 @@
   }
   .hidden { display: none !important; }
 
-  /* ---------- Header ---------- */
   header {
     position: sticky; top: 0; z-index: 30;
     background: var(--surface); border-bottom: 1px solid var(--border);
@@ -67,13 +66,11 @@
   .btn.primary:hover { background: var(--primary-dark); }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
 
-  /* ---------- Ana konteyner ---------- */
   main { padding: 16px 20px 32px; max-width: 1600px; margin: 0 auto; }
 
   .error { background: var(--red-soft); border: 1px solid #fecaca; color: var(--red); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; }
   .hint { font-size: 11px; color: var(--muted); background: #f8fafc; border: 1px dashed var(--border); border-radius: 8px; padding: 7px 10px; margin: 0 0 12px; }
 
-  /* ---------- Tek satır özet şeridi ---------- */
   .statbar {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     box-shadow: 0 1px 3px rgba(15, 23, 42, .05);
@@ -93,7 +90,6 @@
   .day.total span { color: var(--primary); }
   .day.total b { color: var(--primary); }
 
-  /* ---------- Tablo ---------- */
   .table-wrap {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     box-shadow: 0 1px 3px rgba(15, 23, 42, .05); overflow-x: auto;
@@ -104,7 +100,6 @@
     padding: 10px 10px; text-align: left; font-weight: 600; white-space: nowrap;
     font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: #cbd5e1;
   }
-  th:first-child { border-top-left-radius: var(--radius); }
   td { padding: 8px 10px; border-top: 1px solid #f1f5f9; white-space: nowrap; vertical-align: middle; }
   tr.row:hover { background: var(--primary-soft); }
   tr.priority { background: var(--amber-soft); }
@@ -143,7 +138,6 @@
   .w-date     { width: 135px; }
   .w-aciklama { width: 110px; }
 
-  /* ---------- Modal ---------- */
   .modal-bg {
     position: fixed; inset: 0; background: rgba(15, 23, 42, .5); backdrop-filter: blur(2px);
     display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
@@ -166,7 +160,6 @@
   .check input { width: auto !important; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 
-  /* ---------- Rapor ---------- */
   .rpt { margin-bottom: 18px; }
   .rpt h3 { font-size: 13px; margin: 0 0 6px; }
   .rpt thead tr { background: #f1f5f9; color: #334155; }
@@ -182,7 +175,6 @@
   .prev-head { background: #f1f5f9 !important; color: var(--text) !important; }
   .success { background: var(--green-soft); border: 1px solid #a7f3d0; color: var(--green); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-top: 12px; }
 
-  /* ---------- Login ---------- */
   .login-card { max-width: 380px; text-align: center; }
   .login-card .logo { margin: 0 auto 14px; width: 56px; height: 56px; font-size: 28px; }
   .login-card h2 { font-size: 19px; }
@@ -262,7 +254,6 @@
 
 <datalist id="musteri-list"></datalist>
 
-<!-- Form ile ekleme -->
 <div id="modal" class="modal-bg hidden">
   <div class="modal">
     <h2>Yeni sevkiyat kaydı</h2>
@@ -290,7 +281,6 @@
   </div>
 </div>
 
-<!-- Raporlar -->
 <div id="reportModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>📊 Raporlar ve Grafikler</h2>
@@ -300,7 +290,6 @@
   </div>
 </div>
 
-<!-- Excel içe aktarma -->
 <div id="importModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>📥 Excel'den Veri Yükle</h2>
@@ -320,12 +309,11 @@
   </div>
 </div>
 
-<!-- Giriş -->
 <div id="loginModal" class="modal-bg login-bg hidden">
   <div class="modal login-card">
     <div class="logo">🚢</div>
     <h2>Sevkiyat Planlama</h2>
-    <p class="sub">Devam etmek için hesabınla giriş yap. Oturum 15 dakika işlem olmadığında kapanır.</p>
+    <p class="sub">Devam etmek için hesabınla giriş yap. 15 dakika işlem olmadığında oturum kapanır.</p>
     <div class="login-form">
       <label><span>E-posta</span><input id="l-user" type="email" autocomplete="username" /></label>
       <label><span>Şifre</span><input id="l-pass" type="password" autocomplete="current-password" /></label>
@@ -340,18 +328,17 @@
 <script>
 /* ================= Firebase yapılandırması ================= */
 const FIREBASE_DB_URL = "https://sevkiyat-app-default-rtdb.europe-west1.firebasedatabase.app".replace(/\/+$/, "");
-const FIREBASE_API_KEY = "AIzaSyAagmdq0N2TG4IQ7noDFL6xQh4-ps-QrgI";  /* ← Firebase Console → Project Settings → General → Web API Key */
+const FIREBASE_API_KEY = "AIzaSyAagmdq0N2TG4IQ7noDFL6xQh4-ps-QrgI";
 const NODE = "sevkiyat";
-const API_KEY_OK = FIREBASE_API_KEY && !FIREBASE_API_KEY.includes("BURAYA");
 
 /* ================= Roller ve yetkiler ================= */
-const ADMIN_EMAILS = ["admin@yatsan.com"]; /* admin hesapları (Console'da bu e-postayla kullanıcı oluştur) */
+const ADMIN_EMAILS = ["admin@yatsan.com"];
 const PERMISSIONS = {
   "inline-add": "user",  "form-add": "user",
   "edit": "user",        "save-edit": "user",  "save-inline": "user",
   "delete": "admin",     "import": "admin",    "do-import": "admin"
 };
-const IDLE_MS = 15 * 60 * 1000; /* 15 dk işlem yoksa oturum kapanır */
+const IDLE_MS = 15 * 60 * 1000;
 
 /* ================= Sabitler ================= */
 const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
@@ -457,6 +444,7 @@ function clearAuthState() {
   currentUser = null;
   updateUserUI();
 }
+
 let refreshPromise = null;
 async function doTokenRefresh() {
   const s = getAuthState();
@@ -489,7 +477,7 @@ async function ensureToken(force = false) {
 async function authFetch(url, opts = {}, _canRetry = true) {
   const token = await ensureToken();
   if (!token) throw new Error("Oturum bulunamadı");
-  /* RTDB REST için resmi yöntem: ?auth=<idToken> (Bearer başlığına ek olarak) */
+  /* RTDB REST'te ID token'ın garantili yolu ?auth= parametresidir; Bearer başlığı da eklenir */
   const sep = url.includes("?") ? "&" : "?";
   const authedUrl = url + sep + "auth=" + encodeURIComponent(token);
   const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
@@ -499,22 +487,10 @@ async function authFetch(url, opts = {}, _canRetry = true) {
   }
   if (res.status === 401) {
     if (_canRetry) {
-      await ensureToken(true); /* token'ı zorla yenile, bir kez daha dene */
+      await ensureToken(true);
       return authFetch(url, opts, false);
     }
-    /* Token yeni yenilendi ve hâlâ 401 → sorun kurallarda */
-    throw new Error("Veritabanı erişimi reddedildi (401). Oturumun geçerli ama kurallar erişime izin vermiyor. Firebase Console → Realtime Database → Rules: .read ve .write değerlerini 'auth != null' yapıp Publish'e bas.");
-  }
-  return res;
-}
-  const token = await ensureToken();
-  if (!token) throw new Error("Oturum bulunamadı");
-  const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
-  const res = await fetch(url, { ...opts, headers });
-  if (res.status === 401) {
-    clearAuthState();
-    showLogin("Oturum süresi doldu — tekrar giriş yapın.");
-    throw new Error("Oturum süresi doldu");
+    throw new Error("Veritabanı erişimi reddedildi (401). Oturumun geçerli ama kurallar erişime izin vermiyor. Firebase Console → Realtime Database → Rules: .read ve .write değerlerini \"auth != null\" yapıp Publish'e bas.");
   }
   return res;
 }
@@ -523,6 +499,7 @@ function fbErrText(msg) {
   if (/TOO_MANY_ATTEMPTS/.test(msg)) return "Çok fazla başarısız deneme — birkaç dakika bekleyip tekrar dene.";
   if (/OPERATION_NOT_ALLOWED/.test(msg)) return "Firebase Console → Authentication'da Email/Password girişi etkinleştirilmemiş.";
   if (/API_KEY_NOT_VALID/.test(msg)) return "API Key geçersiz — koddaki FIREBASE_API_KEY değerini kontrol et.";
+  if (/PASSWORD_LOGIN_DISABLED/.test(msg)) return "Firebase Console → Authentication → Sign-in method → Email/Password etkinleştirilmemiş.";
   return "Giriş başarısız: " + msg;
 }
 function isAdmin() {
@@ -610,7 +587,6 @@ async function load(withSpinner = true) {
     rows = await apiList();
     setSaveError("");
   } catch (e) {
-    rows = [];
     setSaveError(e.message);
   }
   loading = false;
@@ -1329,11 +1305,6 @@ function updateUserUI() {
 }
 async function tryLogin() {
   const err = document.getElementById("loginError");
-  if (!API_KEY_OK) {
-    err.textContent = "Kurulum eksik: Firebase Console → Project Settings → General → Web API Key değerini koddaki FIREBASE_API_KEY satırına yapıştır.";
-    err.classList.remove("hidden");
-    return;
-  }
   const email = document.getElementById("l-user").value.trim();
   const pass = document.getElementById("l-pass").value;
   if (!email || !pass) { err.textContent = "E-posta ve şifre girin."; err.classList.remove("hidden"); return; }
@@ -1391,20 +1362,16 @@ setInterval(() => {
 updateUserUI();
 (async () => {
   const s = getAuthState();
-  if (s && API_KEY_OK) {
+  if (s) {
     try {
       await ensureToken();
       currentUser = { email: s.email };
       updateUserUI();
       await load(true);
       return;
-    } catch (e) { clearAuthState(); }
+    } catch (e) { /* ensureToken gerekli temizliği yaptı */ }
   }
-  if (!API_KEY_OK) {
-    document.getElementById("l-user").disabled = true;
-    document.getElementById("l-pass").disabled = true;
-  }
-  showLogin(API_KEY_OK ? "" : "Kurulum eksik: Firebase Console → Project Settings → General → Web API Key değerini koddaki FIREBASE_API_KEY satırına yapıştır.");
+  showLogin("");
 })();
 </script>
 </body>
