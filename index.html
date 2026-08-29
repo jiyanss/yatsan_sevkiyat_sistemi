@@ -2,12 +2,17 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#4f46e5" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Sevkiyat" />
 <title>Sevkiyat Planlama — İhracat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
   :root {
     --bg: #f1f5f9; --surface: #ffffff; --border: #e2e8f0;
@@ -18,7 +23,6 @@
     --red: #dc2626; --red-soft: #fef2f2;
     --radius: 12px;
   }
-  /* 🌙 Karanlık tema */
   body.dark {
     --bg: #0b1220; --surface: #151f31; --border: #2b3a52;
     --text: #e2e8f0; --muted: #8aa0b8;
@@ -38,7 +42,8 @@
   header {
     position: sticky; top: 0; z-index: 30;
     background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 12px;
+    padding: 12px 20px; padding-top: max(12px, env(safe-area-inset-top));
+    display: flex; flex-wrap: wrap; gap: 12px;
     justify-content: space-between; align-items: center;
   }
   .brand { display: flex; align-items: center; gap: 12px; }
@@ -121,9 +126,7 @@
   td { padding: 5px 6px; border-top: 1px solid var(--border); white-space: nowrap; vertical-align: middle; }
   tr.row:hover { background: var(--primary-soft); }
   tr.priority { background: var(--amber-soft); }
-  tr.priority:hover { background: var(--amber-soft); }
   tr.today-row { background: var(--green-soft); }
-  tr.today-row:hover { background: var(--green-soft); }
   tr.inline-row { background: var(--primary-soft); }
   td.strong { font-weight: 600; }
   td.center { text-align: center; }
@@ -180,7 +183,7 @@
     max-width: 500px; max-height: 92vh; overflow-y: auto;
     box-shadow: 0 20px 50px rgba(0, 0, 0, .4); animation: pop .18s ease-out;
   }
-  .modal.wide { max-width: 960px; }
+  .modal.wide { max-width: 1020px; }
   @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   .modal h2 { font-size: 16px; margin: 0 0 12px; font-weight: 700; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -192,17 +195,45 @@
   .check input { width: auto !important; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 
+  .rtabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+  .rtab {
+    border: none; background: none; cursor: pointer; font-family: inherit;
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    padding: 9px 16px; border-bottom: 3px solid transparent; margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+  }
+  .rtab:hover { color: var(--text); }
+  .rtab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; position: relative; overflow: hidden;
+  }
+  .kpi::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--kpi-color, var(--primary));
+  }
+  .kpi-head { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 5px; }
+  .kpi-val { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: var(--kpi-color, var(--text)); }
+  .kpi-sub { font-size: 10.5px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
+  .kpi.c-primary { --kpi-color: var(--primary); }
+  .kpi.c-green   { --kpi-color: var(--green); }
+  .kpi.c-amber   { --kpi-color: var(--amber); }
+  .kpi.c-red     { --kpi-color: var(--red); }
+
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .chart-box.wide { grid-column: 1 / -1; }
+  .chart-box h3 { font-size: 13px; margin: 0 0 10px; }
+  .chart-holder { position: relative; height: 240px; }
+  .chart-holder.tall { height: 340px; }
+
   .rpt { margin-bottom: 18px; }
   .rpt h3 { font-size: 13px; margin: 0 0 6px; }
   .rpt thead tr { background: var(--bg); color: var(--text); }
   .rpt th { padding: 7px 9px; }
   .rpt tfoot tr { background: var(--bg); font-weight: 600; }
-  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
-  .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
-  .chart-box.wide { grid-column: 1 / -1; }
-  .chart-box h3 { font-size: 13px; margin: 0 0 10px; }
-  .chart-holder { position: relative; height: 230px; }
-  .chart-holder.tall { height: 340px; }
 
   .prev-head { background: var(--bg) !important; color: var(--text) !important; }
   .success { background: var(--green-soft); border: 1px solid var(--green); color: var(--green); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-top: 12px; }
@@ -244,8 +275,15 @@
     animation: pop .2s ease-out;
   }
 
+  /* 🆕 PWA kurulum butonu & çevrimdışı rozeti */
+  .pwa-badge {
+    font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 999px;
+    background: var(--red-soft); color: var(--red); border: 1px solid var(--red);
+    white-space: nowrap;
+  }
+
   @media (max-width: 720px) {
-    header { padding: 10px 12px; }
+    header { padding: 10px 12px; padding-top: max(10px, env(safe-area-inset-top)); }
     main { padding: 12px 12px 24px; }
     h1 { font-size: 15px; }
     .s-div { display: none; }
@@ -254,13 +292,13 @@
     .form-grid { grid-template-columns: 1fr; }
     .col-2 { grid-column: span 1; }
     .chart-grid { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .btn { padding: 8px 10px; }
   }
 
-  /* 🖨️ Yazdırma: sadece başlık + özet + tablo */
   @media print {
     header .toolbar, #saveError, #guestInfo, .hint, .modal-bg, .toast { display: none !important; }
-    body, body.dark {
+    body {
       --bg: #fff; --surface: #fff; --border: #ccc; --text: #111; --muted: #666;
       --primary-soft: #eef2ff; --green-soft: #ecfdf5; --amber-soft: #fffbeb; --red-soft: #fef2f2;
     }
@@ -304,6 +342,7 @@
     <button class="btn" id="btnReload">↻</button>
     <button class="btn" id="btnShowForm">+ Form</button>
     <button class="btn primary" id="btnInlineAdd">+ Yeni kayıt</button>
+    <button class="btn hidden" id="btnPwaInstall">📲 Uygulamayı Yükle</button>
     <div class="user-box" id="userBox"></div>
   </div>
 </header>
@@ -311,6 +350,7 @@
 <main>
   <div id="saveError" class="error hidden"></div>
   <div id="guestInfo" class="info hidden"></div>
+  <div id="offlineBadge" class="error hidden">📴 İnternet bağlantısı yok — veriler çevrimiçi olunca yenilenecek.</div>
 
   <section class="statbar" id="summary">
     <div class="stat"><span class="s-label">Toplam Yükleme</span><span class="s-val" id="sum-toplam">0</span></div>
@@ -341,7 +381,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Düzenleme: hücreye tıkla → değiştir → <b>Enter</b> → kaydedilir, <b>Esc</b> iptal eder. <b>⧉</b> kaydı bugüne çoğaltır. Durum filtresi varsayılan olarak <b>Kalan</b>'ı gösterir. Başkasının yaptığı değişiklikler anında ekrana düşer.</p>
+  <p class="hint" style="margin-top:8px">💡 Düzenleme: hücreye tıkla → değiştir → <b>Enter</b> → kaydedilir, <b>Esc</b> iptal eder. <b>⧉</b> kaydı bugüne çoğaltır. Durum filtresi varsayılan olarak <b>Kalan</b>'ı gösterir. Başkasının yaptığı değişiklikler anında ekrana düşer. Telefonda <b>"Ana ekrana ekle"</b> ile uygulama gibi kullanabilirsin.</p>
 </main>
 
 <datalist id="musteri-list"></datalist>
@@ -375,9 +415,15 @@
 
 <div id="reportModal" class="modal-bg hidden">
   <div class="modal wide">
-    <h2>📊 Raporlar ve Grafikler</h2>
-    <p class="hint">Değerler yükleme adedi (AD) bazlıdır. Aktif filtreler (arama + hafta + durum) raporları da etkiler.</p>
-    <div id="reportContent"></div>
+    <h2>📊 Yönetim Raporu</h2>
+    <div class="rtabs">
+      <button class="rtab active" data-rtab="genel">📊 Genel Bakış</button>
+      <button class="rtab" data-rtab="analiz">📈 Trend & Analiz</button>
+      <button class="rtab" data-rtab="detay">📋 Detay Tablolar</button>
+    </div>
+    <div id="reportPaneGenel" class="rpane"></div>
+    <div id="reportPaneAnaliz" class="rpane hidden"></div>
+    <div id="reportPaneDetay" class="rpane hidden"></div>
     <div class="modal-actions"><button class="btn" id="btnCloseReport">Kapat</button></div>
   </div>
 </div>
@@ -607,7 +653,7 @@ async function doTokenRefresh() {
   });
   const j = await res.json();
   if (!res.ok || !j.id_token) return null;
-  saveAuthState(j.id_token, j.refresh_token, j.expires_in, s.email);
+  saveAuthState(j.idToken, j.refresh_token, j.expires_in, s.email);
   return j.id_token;
 }
 async function ensureToken(force = false) {
@@ -711,7 +757,6 @@ async function apiList() {
   if (!data) return [];
   return Object.entries(data).map(([key, val]) => ({ id: key, ...(val || {}) }));
 }
-/* markLocalOp: kendi yazma işlemlerimizi işaretler → canlı bildirim kendi değişikliğimizde çıkmaz */
 function markLocalOp() { lastLocalOp = Date.now(); }
 async function apiInsert(rec) {
   markLocalOp();
@@ -757,6 +802,7 @@ let statusFilter = "kalan";
 let pendingAction = null;
 let editingCell = null;
 let committing = false;
+let activeReportTab = "genel";
 
 /* ================= Yükle / hata / canlı bildirim ================= */
 let lastLocalOp = 0;
@@ -811,11 +857,11 @@ function setGuestInfo(msg) {
   else el.classList.add("hidden");
 }
 
-/* ---------- 🔄 Canlı senkron (Firebase SSE) ---------- */
+/* ---------- Canlı senkron (Firebase SSE) ---------- */
 let liveTimer = null;
 function liveReload() {
   if (document.hidden || addingInline || editingCell) return;
-  if (Date.now() - lastLocalOp < 3000) return; /* kendi değişikliğimiz */
+  if (Date.now() - lastLocalOp < 3000) return;
   if (!document.getElementById("importModal").classList.contains("hidden")) return;
   load(false, true);
 }
@@ -824,10 +870,10 @@ function startLiveSync() {
     const es = new EventSource(`${FIREBASE_DB_URL}/${NODE}.json`);
     es.onmessage = () => {
       clearTimeout(liveTimer);
-      liveTimer = setTimeout(liveReload, 800); /* hafif debounce */
+      liveTimer = setTimeout(liveReload, 800);
     };
-    es.onerror = () => { /* bağlantı koparsa SSE kendiliğinden yeniden bağlanır */ };
-  } catch (e) { /* SSE desteklenmezse 30 sn'lik interval çalışmaya devam eder */ }
+    es.onerror = () => {};
+  } catch (e) {}
 }
 
 /* ================= Filtre & özet ================= */
@@ -846,7 +892,6 @@ function filtered() {
       const isDelayed = r.planlananTarih && r.planlananTarih < today && r.durum !== "Yükleme Tamamlandı";
       if (!(String(r.hafta) === String(thisWeek) || isDelayed)) return false;
     } else if (weekFilter !== "all" && String(r.hafta) !== String(weekFilter)) return false;
-    /* 🆕 Durum filtresi */
     if (statusFilter === "kalan" && r.durum === "Yükleme Tamamlandı") return false;
     else if (statusFilter === "bekliyor" && r.durum !== "Yükleme Bekliyor") return false;
     else if (statusFilter === "yukleniyor" && r.durum !== "Yükleniyor") return false;
@@ -863,7 +908,9 @@ function computeSummary(list) {
   const yukleniyorAd = list.filter(r => r.durum === "Yükleniyor").reduce((s, r) => s + adet(r), 0);
   const bugunAd   = list.filter(r => r.planlananTarih === today).reduce((s, r) => s + adet(r), 0);
   const gecikenAd = list.reduce((s, r) => s + (gecikmeGunu(r) > 0 ? adet(r) : 0), 0);
+  const maxGecikme = list.reduce((m, r) => Math.max(m, gecikmeGunu(r)), 0);
   const toplamM3 = list.reduce((s, r) => s + (Number(r.m3) || 0), 0);
+  const toplamM3Tamam = list.filter(r => r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + (Number(r.m3) || 0), 0);
   const oran = toplamAd ? (tamamAd / toplamAd) * 100 : 0;
   const gunIdx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
   const gunAd = GUNLER.map(() => 0);
@@ -874,7 +921,8 @@ function computeSummary(list) {
     if (idx !== undefined) gunAd[idx] += adet(r);
   });
   return { toplamAd, tamamAd, kalanAd: toplamAd - tamamAd, yukleniyorAd,
-           bugunAd, gecikenAd, toplamM3, oran, gunAd };
+           bekleyenAd: toplamAd - tamamAd - yukleniyorAd,
+           bugunAd, gecikenAd, maxGecikme, toplamM3, toplamM3Tamam, oran, gunAd };
 }
 
 /* ================= Render ================= */
@@ -1240,7 +1288,7 @@ document.getElementById("btnPrint").addEventListener("click", () => {
 });
 document.getElementById("btnTheme").addEventListener("click", toggleTheme);
 
-/* ================= 🌙 Karanlık mod ================= */
+/* ================= Karanlık mod ================= */
 const THEME_KEY = "sevkiyat_theme";
 function applyTheme(dark) {
   document.body.classList.toggle("dark", dark);
@@ -1250,6 +1298,9 @@ function applyTheme(dark) {
 }
 function toggleTheme() {
   applyTheme(!document.body.classList.contains("dark"));
+  if (!document.getElementById("reportModal").classList.contains("hidden")) {
+    buildReports();
+  }
 }
 applyTheme(localStorage.getItem(THEME_KEY) === "dark");
 
@@ -1333,12 +1384,39 @@ document.getElementById("modal").addEventListener("click", e => {
   if (e.target === e.currentTarget) closeModal();
 });
 
-/* ================= RAPORLAR ================= */
+/* ============================================================
+   📊 PROFESYONEL RAPORLAR (sekmeli)
+   ============================================================ */
 let chartInstances = [];
 function destroyCharts() {
   chartInstances.forEach(c => { try { c.destroy(); } catch (e) {} });
   chartInstances = [];
 }
+if (typeof ChartDataLabels !== "undefined") {
+  Chart.register(ChartDataLabels);
+}
+const centerTextPlugin = {
+  id: "centerText",
+  afterDraw(chart, args, opts) {
+    if (!opts || opts.display === false) return;
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    ctx.save();
+    const x = (chartArea.left + chartArea.right) / 2;
+    const y = (chartArea.top + chartArea.bottom) / 2;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "800 30px Inter, sans-serif";
+    ctx.fillStyle = opts.color || "#0f172a";
+    ctx.fillText(opts.text || "", x, y - 6);
+    ctx.font = "600 11px Inter, sans-serif";
+    ctx.fillStyle = opts.subColor || "#64748b";
+    ctx.fillText(opts.subText || "", x, y + 18);
+    ctx.restore();
+  }
+};
+Chart.register(centerTextPlugin);
+
 function groupStats(list, keyFn) {
   const m = new Map();
   list.forEach(r => {
@@ -1402,7 +1480,7 @@ function sapmaTable(az) {
         <td class="center" style="${g.kotu > 0 ? "color:var(--red)" : ""}">${fmtSapma(g.kotu)} gün</td>
         <td class="center">%${zOran}</td></tr>`;
     }).join("");
-  return `<div class="rpt"><h3>🗓️ Plan vs Gerçekleşen — sapma analizi</h3>
+  return `<div class="rpt"><h3>🗓️ Plan vs Gerçekleşen — müşteri sapma tablosu</h3>
     <p class="hint">Sadece tamamlanmış kayıtlar: sapma = gerçekleşen − planlanan. <b>+gün</b> = geç (kırmızı), <b>−gün</b> = erken (mavi). Müşteriler ortalama sapmaya göre azalan sıralı.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>Müşteri</th><th>Tamamlanan yükleme</th><th>Ortalama sapma</th><th>En kötü sapma</th><th>Zamanında</th></tr></thead>
@@ -1413,62 +1491,7 @@ function sapmaTable(az) {
         <td class="center">%${(az.zamaninda / az.n * 100).toFixed(0)}</td></tr></tfoot>
     </table></div></div>`;
 }
-function makeCharts(list) {
-  if (typeof Chart === "undefined") return;
-  const isDark = document.body.classList.contains("dark");
-  Chart.defaults.font.family = "'Inter', sans-serif";
-  Chart.defaults.font.size = 11;
-  Chart.defaults.color = isDark ? "#94a3b8" : "#334155";
-  const gridColor = isDark ? "#2b3a52" : "#e2e8f0";
-  const s = computeSummary(list);
-
-  chartInstances.push(new Chart(document.getElementById("chDurum"), {
-    type: "doughnut",
-    data: {
-      labels: ["Tamamlanan", "Yükleniyor", "Bekliyor"],
-      datasets: [{ data: [s.tamamAd, s.yukleniyorAd, s.kalanAd - s.yukleniyorAd],
-        backgroundColor: ["#059669", "#d97706", "#dc2626"], borderWidth: 0 }]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
-  }));
-  chartInstances.push(new Chart(document.getElementById("chGun"), {
-    type: "bar",
-    data: { labels: GUNLER, datasets: [{ label: "Yükleme adedi", data: s.gunAd, backgroundColor: "#4f46e5", borderRadius: 6 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } }, x: { grid: { display: false } } } }
-  }));
-  const tipMap = groupStats(list, r => r.sevkiyatTipi);
-  chartInstances.push(new Chart(document.getElementById("chTip"), {
-    type: "bar",
-    data: { labels: [...tipMap.keys()],
-      datasets: [{ label: "Yükleme adedi", data: [...tipMap.values()].map(g => g.ad), backgroundColor: "#0ea5e9", borderRadius: 6 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } }, x: { grid: { display: false } } } }
-  }));
-  const blmMap = groupStats(list, r => r.blm);
-  chartInstances.push(new Chart(document.getElementById("chBlm"), {
-    type: "bar",
-    data: { labels: [...blmMap.keys()],
-      datasets: [{ label: "Yükleme adedi", data: [...blmMap.values()].map(g => g.ad), backgroundColor: "#8b5cf6", borderRadius: 6 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } }, x: { grid: { display: false } } } }
-  }));
-  const musMap = [...groupStats(list, r => r.musteri).entries()].sort((a, b) => b[1].ad - a[1].ad);
-  chartInstances.push(new Chart(document.getElementById("chMusteri"), {
-    type: "bar",
-    data: {
-      labels: musMap.map(([k]) => k),
-      datasets: [
-        { label: "Tamamlanan", data: musMap.map(([, g]) => g.tamam), backgroundColor: "#059669", stack: "s" },
-        { label: "Yükleniyor", data: musMap.map(([, g]) => g.yuk),   backgroundColor: "#d97706", stack: "s" },
-        { label: "Bekliyor",   data: musMap.map(([, g]) => g.bek),   backgroundColor: "#dc2626", stack: "s" }
-      ]
-    },
-    options: { responsive: true, maintainAspectRatio: false, indexAxis: "y",
-      plugins: { legend: { position: "bottom" } },
-      scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
-                y: { stacked: true, grid: { display: false } } } }
-  }));
+function haftaData() {
   const haftaMap = new Map();
   enriched(rows).forEach(r => {
     if (r.hafta === "-") return;
@@ -1478,47 +1501,300 @@ function makeCharts(list) {
     if (r.durum === "Yükleme Tamamlandı") g.tamam += adet(r);
   });
   const haftalar = [...haftaMap.keys()].sort((a, b) => a - b).slice(-8);
-  chartInstances.push(new Chart(document.getElementById("chTrend"), {
-    type: "line",
+  return { haftaMap, haftalar };
+}
+function chartBase() {
+  const isDark = document.body.classList.contains("dark");
+  return {
+    isDark,
+    textColor: isDark ? "#94a3b8" : "#334155",
+    gridColor: isDark ? "#2b3a52" : "#e2e8f0",
+    labelColor: isDark ? "#cbd5e1" : "#0f172a"
+  };
+}
+function grad(ctx, area, hexFrom, hexTo) {
+  if (!area) return hexFrom;
+  const g = ctx.createLinearGradient(0, area.top, 0, area.bottom);
+  g.addColorStop(0, hexFrom);
+  g.addColorStop(1, hexTo);
+  return g;
+}
+
+function buildGenel(list) {
+  const s = computeSummary(list);
+  const { isDark, textColor, gridColor, labelColor } = chartBase();
+  const kpiBlock = `<div class="kpi-grid">
+    <div class="kpi c-primary"><div class="kpi-head">📦 Toplam Yükleme</div><div class="kpi-val">${fmtN(s.toplamAd)}</div><div class="kpi-sub">${fmtN(s.toplamM3)} m³ · ${list.length} kayıt</div></div>
+    <div class="kpi c-green"><div class="kpi-head">✅ Tamamlanan</div><div class="kpi-val">${fmtN(s.tamamAd)}</div><div class="kpi-sub">tamamlanma %${s.oran.toFixed(1)} · ${fmtN(s.toplamM3Tamam)} m³</div></div>
+    <div class="kpi c-amber"><div class="kpi-head">⏳ Kalan</div><div class="kpi-val">${fmtN(s.kalanAd)}</div><div class="kpi-sub">${fmtN(s.bekleyenAd)} bekliyor · ${fmtN(s.yukleniyorAd)} yükleniyor</div></div>
+    <div class="kpi c-red"><div class="kpi-head">⚠️ Geciken</div><div class="kpi-val">${fmtN(s.gecikenAd)}</div><div class="kpi-sub">${s.maxGecikme > 0 ? `en eski ${s.maxGecikme} gün` : "gecikme yok 🎉"} · bugün: ${fmtN(s.bugunAd)}</div></div>
+  </div>`;
+
+  const chartBlock = (typeof Chart === "undefined")
+    ? `<p class="hint">⚠️ Grafik kütüphanesi (CDN) yüklenemedi.</p>`
+    : `<div class="chart-grid">
+        <div class="chart-box"><h3>Tamamlanma durumu</h3><div class="chart-holder"><canvas id="chDonut"></canvas></div></div>
+        <div class="chart-box"><h3>Gün bazlı planlanan yükleme</h3><div class="chart-holder"><canvas id="chGun"></canvas></div></div>
+        <div class="chart-box"><h3>Sevkiyat tipi dağılımı</h3><div class="chart-holder"><canvas id="chTip"></canvas></div></div>
+        <div class="chart-box"><h3>BLM performansı</h3><div class="chart-holder"><canvas id="chBlm"></canvas></div></div>
+      </div>`;
+
+  document.getElementById("reportPaneGenel").innerHTML = kpiBlock + chartBlock;
+  if (typeof Chart === "undefined") return;
+
+  chartInstances.push(new Chart(document.getElementById("chDonut"), {
+    type: "doughnut",
     data: {
-      labels: haftalar.map(h => h + ". hf"),
+      labels: ["Tamamlanan", "Yükleniyor", "Bekliyor"],
+      datasets: [{
+        data: [s.tamamAd, s.yukleniyorAd, s.kalanAd - s.yukleniyorAd],
+        backgroundColor: ["#059669", "#d97706", "#dc2626"],
+        borderWidth: 0, hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: "72%",
+      plugins: {
+        legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, pointStyle: "circle", padding: 14, font: { size: 11 } } },
+        tooltip: { callbacks: { label: c => ` ${c.label}: ${fmtN(c.parsed)} yükleme` } },
+        datalabels: { display: false },
+        centerText: {
+          display: true,
+          text: "%" + s.oran.toFixed(0),
+          subText: "tamamlanma",
+          color: labelColor,
+          subColor: textColor
+        }
+      }
+    }
+  }));
+
+  const gunCtx = document.getElementById("chGun").getContext("2d");
+  chartInstances.push(new Chart(gunCtx, {
+    type: "bar",
+    data: { labels: GUNLER, datasets: [{
+      label: "Yükleme adedi",
+      data: s.gunAd,
+      backgroundColor: c => grad(c.chart.ctx, c.chart.chartArea, "#6366f1", "#c7d2fe"),
+      borderRadius: 6, maxBarThickness: 42
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor: "end", align: "end", offset: -2,
+          color: textColor, font: { weight: "700", size: 11 },
+          formatter: v => v > 0 ? fmtN(v) : ""
+        },
+        tooltip: { callbacks: { label: c => ` ${fmtN(c.parsed.y)} yükleme` } }
+      },
+      scales: {
+        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0, maxTicksLimit: 6 } },
+        x: { grid: { display: false }, ticks: { color: textColor } }
+      }
+    }
+  }));
+
+  const tipMap = groupStats(list, r => r.sevkiyatTipi);
+  const tipTotal = [...tipMap.values()].reduce((a, g) => a + g.ad, 0) || 1;
+  const tipCtx = document.getElementById("chTip").getContext("2d");
+  chartInstances.push(new Chart(tipCtx, {
+    type: "bar",
+    data: { labels: [...tipMap.keys()], datasets: [{
+      label: "Yükleme adedi",
+      data: [...tipMap.values()].map(g => g.ad),
+      backgroundColor: ["#0ea5e9", "#8b5cf6", "#f59e0b", "#10b981"],
+      borderRadius: 6, maxBarThickness: 30
+    }]},
+    options: {
+      indexAxis: "y", responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor: "end", align: "end", clamp: true,
+          color: textColor, font: { weight: "700", size: 10.5 },
+          formatter: v => `${fmtN(v)} · %${(v / tipTotal * 100).toFixed(0)}`
+        },
+        tooltip: { callbacks: { label: c => ` ${fmtN(c.parsed.x)} yükleme (%${(c.parsed.x / tipTotal * 100).toFixed(1)})` } }
+      },
+      scales: {
+        x: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0, maxTicksLimit: 6 }, suggestedMax: Math.max(...[...tipMap.values()].map(g => g.ad), 1) * 1.25 },
+        y: { grid: { display: false }, ticks: { color: textColor, font: { size: 11, weight: "600" } } }
+      }
+    }
+  }));
+
+  const blmMap = groupStats(list, r => r.blm);
+  const blmCtx = document.getElementById("chBlm").getContext("2d");
+  chartInstances.push(new Chart(blmCtx, {
+    type: "bar",
+    data: {
+      labels: [...blmMap.keys()],
       datasets: [
-        { label: "Toplam yükleme", data: haftalar.map(h => haftaMap.get(h).ad),
-          borderColor: "#4f46e5", backgroundColor: "rgba(79,70,229,.12)", fill: true, tension: .35, borderWidth: 2.5, pointRadius: 3.5 },
-        { label: "Tamamlanan", data: haftalar.map(h => haftaMap.get(h).tamam),
-          borderColor: "#059669", backgroundColor: "transparent", tension: .35, borderWidth: 2, borderDash: [5, 4], pointRadius: 3 }
+        { label: "Tamamlanan", data: [...blmMap.values()].map(g => g.tamam), backgroundColor: "#059669", borderRadius: { topRight: 6 }, maxBarThickness: 52 },
+        { label: "Kalan",      data: [...blmMap.values()].map(g => g.ad - g.tamam), backgroundColor: "#f59e0b", borderRadius: { topRight: 6 }, maxBarThickness: 52 }
       ]
     },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: "bottom" } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } }, x: { grid: { display: false } } } }
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, pointStyle: "circle", padding: 12, font: { size: 11 } } },
+        datalabels: {
+          color: "#fff", font: { weight: "700", size: 10.5 },
+          display: c => c.dataset.data[c.dataIndex] > 0,
+          formatter: v => fmtN(v)
+        },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fmtN(c.parsed.y)}` } }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 11, weight: "600" } } },
+        y: { stacked: true, beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0, maxTicksLimit: 6 } }
+      }
+    }
   }));
 }
-function buildReports() {
-  destroyCharts();
-  const list = filtered();
-  const c = document.getElementById("reportContent");
-  if (!list.length) { c.innerHTML = `<p class="hint">Filtrelere uyan kayıt yok.</p>`; return; }
-  const chartBlock = (typeof Chart === "undefined")
-    ? `<p class="hint">⚠️ Grafik kütüphanesi (CDN) yüklenemedi — tablolara bakın.</p>`
-    : `<div class="chart-grid">
-        <div class="chart-box"><h3>Durum dağılımı (adet)</h3><div class="chart-holder"><canvas id="chDurum"></canvas></div></div>
-        <div class="chart-box"><h3>Gün bazlı planlanan adet</h3><div class="chart-holder"><canvas id="chGun"></canvas></div></div>
-        <div class="chart-box"><h3>Sevkiyat tipi bazlı adet</h3><div class="chart-holder"><canvas id="chTip"></canvas></div></div>
-        <div class="chart-box"><h3>BLM bazlı adet</h3><div class="chart-holder"><canvas id="chBlm"></canvas></div></div>
-        <div class="chart-box wide"><h3>📈 Haftalık trend — son 8 hafta (tüm veriler, filtrelerden bağımsız)</h3><div class="chart-holder"><canvas id="chTrend"></canvas></div></div>
-        <div class="chart-box wide"><h3>Müşteri bazlı yükleme adedi</h3><div class="chart-holder tall"><canvas id="chMusteri"></canvas></div></div>
-      </div>`;
+
+function buildAnaliz(list) {
+  const { isDark, textColor, gridColor, labelColor } = chartBase();
   const az = sapmaAnalizi(list);
-  c.innerHTML = chartBlock +
-    (az ? sapmaTable(az) : `<p class="hint">🗓️ Sapma analizi için henüz tamamlanmış (gerçekleşen tarihi dolu) kayıt yok.</p>`) +
+  const chartBlock = (typeof Chart === "undefined")
+    ? `<p class="hint">⚠️ Grafik kütüphanesi (CDN) yüklenemedi.</p>`
+    : `<div class="chart-grid">
+        <div class="chart-box wide"><h3>📈 Haftalık yükleme hacmi & tamamlanma oranı (son 8 hafta)</h3><div class="chart-holder"><canvas id="chKarma"></canvas></div></div>
+        ${az ? `<div class="chart-box wide"><h3>🗓️ Müşteri bazlı ortalama plan sapması (gün)</h3><div class="chart-holder tall"><canvas id="chSapma"></canvas></div></div>` : ""}
+      </div>` +
+    (az ? sapmaTable(az) : `<p class="hint">🗓️ Sapma analizi için henüz tamamlanmış (gerçekleşen tarihi dolu) kayıt yok.</p>`);
+  document.getElementById("reportPaneAnaliz").innerHTML = chartBlock;
+  if (typeof Chart === "undefined") return;
+
+  const { haftaMap, haftalar } = haftaData();
+  const oranlar = haftalar.map(h => {
+    const g = haftaMap.get(h);
+    return g.ad ? +(g.tamam / g.ad * 100).toFixed(1) : 0;
+  });
+  const kCtx = document.getElementById("chKarma").getContext("2d");
+  chartInstances.push(new Chart(kCtx, {
+    data: {
+      labels: haftalar.map(h => h + ". hafta"),
+      datasets: [
+        {
+          type: "bar", label: "Toplam yükleme", yAxisID: "y",
+          data: haftalar.map(h => haftaMap.get(h).ad),
+          backgroundColor: c => grad(c.chart.ctx, c.chart.chartArea, "#6366f1", "#c7d2fe"),
+          borderRadius: 6, maxBarThickness: 46
+        },
+        {
+          type: "bar", label: "Tamamlanan", yAxisID: "y",
+          data: haftalar.map(h => haftaMap.get(h).tamam),
+          backgroundColor: "#059669cc", borderRadius: 6, maxBarThickness: 46
+        },
+        {
+          type: "line", label: "Tamamlanma oranı %", yAxisID: "y1",
+          data: oranlar,
+          borderColor: "#dc2626", backgroundColor: "#dc2626",
+          borderWidth: 2.5, tension: .35, pointRadius: 4, pointHoverRadius: 6,
+          pointBackgroundColor: "#fff", pointBorderColor: "#dc2626", pointBorderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, padding: 14, font: { size: 11 } } },
+        datalabels: { display: c => c.dataset.type === "line" && c.dataset.data[c.dataIndex] !== null,
+          align: "top", color: "#dc2626", font: { weight: "700", size: 10.5 },
+          formatter: v => "%" + v },
+        tooltip: { callbacks: {
+          label: c => c.dataset.yAxisID === "y1"
+            ? ` Tamamlanma: %${c.parsed.y}`
+            : ` ${c.dataset.label}: ${fmtN(c.parsed.y)} yükleme`
+        } }
+      },
+      scales: {
+        y: { beginAtZero: true, position: "left", grid: { color: gridColor },
+             ticks: { color: textColor, precision: 0, maxTicksLimit: 6 },
+             title: { display: true, text: "Yükleme adedi", color: textColor, font: { size: 10, weight: "600" } } },
+        y1: { beginAtZero: true, max: 100, position: "right", grid: { display: false },
+             ticks: { color: "#dc2626", callback: v => "%" + v, maxTicksLimit: 6 },
+             title: { display: true, text: "Tamamlanma", color: "#dc2626", font: { size: 10, weight: "600" } } },
+        x: { grid: { display: false }, ticks: { color: textColor } }
+      }
+    }
+  }));
+
+  if (az) {
+    const musArr = [...az.musteri.entries()]
+      .map(([k, g]) => ({ k, ort: +(g.toplam / g.n).toFixed(1) }))
+      .sort((a, b) => b.ort - a.ort);
+    const sCtx = document.getElementById("chSapma").getContext("2d");
+    chartInstances.push(new Chart(sCtx, {
+      type: "bar",
+      data: { labels: musArr.map(x => x.k), datasets: [{
+        label: "Ortalama sapma (gün)",
+        data: musArr.map(x => x.ort),
+        backgroundColor: musArr.map(x => x.ort > 0 ? "#dc2626" : x.ort < 0 ? "#4f46e5" : "#059669"),
+        borderRadius: 5, maxBarThickness: 26
+      }]},
+      options: {
+        indexAxis: "y", responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            anchor: c => c.dataset.data[c.dataIndex] >= 0 ? "end" : "start",
+            align: c => c.dataset.data[c.dataIndex] >= 0 ? "end" : "start",
+            clamp: true, color: textColor, font: { weight: "700", size: 10.5 },
+            formatter: v => fmtSapma(v)
+          },
+          tooltip: { callbacks: { label: c => ` Ortalama: ${fmtSapma(c.parsed.x)} gün ${c.parsed.x > 0 ? "(geç)" : c.parsed.x < 0 ? "(erken)" : "(zamanında)"}` } }
+        },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => fmtSapma(v) } },
+          y: { grid: { display: false }, ticks: { color: textColor, font: { size: 11, weight: "600" } } }
+        }
+      }
+    }));
+  }
+}
+
+function buildDetay(list) {
+  document.getElementById("reportPaneDetay").innerHTML =
     statsTable(groupStats(list, r => r.musteri), "Müşteri bazlı", "Müşteri") +
     statsTable(groupStats(list, r => r.sevkiyatTipi), "Sevkiyat tipi bazlı", "Tip") +
     statsTable(groupStats(list, r => r.blm), "BLM bazlı", "BLM") +
     statsTable(groupStats(list, r => "Hafta " + r.hafta), "Hafta bazlı", "Hafta") +
     statsTable(groupStats(list, r => r.durum), "Durum bazlı", "Durum");
-  if (typeof Chart !== "undefined") makeCharts(list);
 }
+
+function buildReports() {
+  destroyCharts();
+  const list = filtered();
+  const emptyMsg = `<p class="hint">Filtrelere uyan kayıt yok — filtreleri gevşetip tekrar dene.</p>`;
+  document.getElementById("reportPaneGenel").innerHTML = list.length ? "" : emptyMsg;
+  document.getElementById("reportPaneAnaliz").innerHTML = list.length ? "" : emptyMsg;
+  document.getElementById("reportPaneDetay").innerHTML = list.length ? "" : emptyMsg;
+  if (!list.length) return;
+  buildGenel(list);
+  buildAnaliz(list);
+  buildDetay(list);
+  switchReportTab(activeReportTab);
+}
+function switchReportTab(tab) {
+  activeReportTab = tab;
+  document.querySelectorAll(".rtab").forEach(b => b.classList.toggle("active", b.dataset.rtab === tab));
+  document.getElementById("reportPaneGenel").classList.toggle("hidden", tab !== "genel");
+  document.getElementById("reportPaneAnaliz").classList.toggle("hidden", tab !== "analiz");
+  document.getElementById("reportPaneDetay").classList.toggle("hidden", tab !== "detay");
+  destroyCharts();
+  const list = filtered();
+  if (!list.length) return;
+  if (tab === "genel") buildGenel(list);
+  else if (tab === "analiz") buildAnaliz(list);
+}
+document.querySelectorAll(".rtab").forEach(b => {
+  b.addEventListener("click", () => switchReportTab(b.dataset.rtab));
+});
 document.getElementById("btnReports").addEventListener("click", () => {
   document.getElementById("reportModal").classList.remove("hidden");
   buildReports();
@@ -1861,13 +2137,109 @@ setInterval(() => {
   if (Date.now() - lastActivity > IDLE_MS) doLogout("15 dakika işlem olmadığı için oturum kapatıldı.");
 }, 10000);
 
-/* Yedek 30 sn yenileme — SSE çalışmazsa bile veriler güncel kalır */
 setInterval(() => {
   if (document.hidden || addingInline || editingCell) return;
   if (!document.getElementById("importModal").classList.contains("hidden")) return;
   if (Date.now() - lastLocalOp < 5000) return;
   load(false);
 }, 30000);
+
+/* ============================================================
+   📱 PWA — tek dosya çözümü (inline manifest + blob SW)
+   ============================================================ */
+/* Manifest, dosya yerine data-URL ile tanıtılıyor */
+(function setupManifest() {
+  const iconSvg = encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#7c3aed"/>
+      </linearGradient></defs>
+      <rect width="512" height="512" rx="96" fill="url(#g)"/>
+      <text x="256" y="340" font-size="260" text-anchor="middle">🚢</text>
+    </svg>`);
+  const manifest = {
+    name: "Sevkiyat Planlama — İhracat",
+    short_name: "Sevkiyat",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#f1f5f9",
+    theme_color: "#4f46e5",
+    icons: [{
+      src: "data:image/svg+xml," + iconSvg,
+      sizes: "any",
+      type: "image/svg+xml",
+      purpose: "any maskable"
+    }]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+  const link = document.createElement("link");
+  link.rel = "manifest";
+  link.href = URL.createObjectURL(blob);
+  document.head.appendChild(link);
+})();
+
+/* Service worker: sayfa kabuğunu önbelleğe alır (offline açılış için) */
+(function setupSW() {
+  if (!("serviceWorker" in navigator)) return;
+  if (location.protocol !== "https:" && location.hostname !== "localhost") return;
+  const swCode = `
+    const CACHE = "sevkiyat-shell-v1";
+    self.addEventListener("install", e => {
+      self.skipWaiting();
+      e.waitUntil(caches.open(CACHE).then(c => c.add(self.registration.scope)).catch(() => {}));
+    });
+    self.addEventListener("activate", e => e.waitUntil(clients.claim()));
+    self.addEventListener("fetch", e => {
+      if (e.request.mode === "navigate") {
+        e.respondWith(
+          fetch(e.request)
+            .then(res => {
+              const copy = res.clone();
+              caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+              return res;
+            })
+            .catch(() => caches.match(e.request).then(r => r || caches.match(self.registration.scope)))
+        );
+      }
+    });
+  `;
+  try {
+    const blob = new Blob([swCode], { type: "text/javascript" });
+    const url = URL.createObjectURL(blob);
+    /* Blob SW'ler bazı tarayıcılarda kaydolmaz — sessizce geç, yedek 30sn yenileme zaten var */
+    navigator.serviceWorker.register(url).catch(() => {});
+  } catch (e) {}
+})();
+
+/* 🆕 Kurulum butonu + çevrimdışı rozeti */
+let deferredPwaPrompt = null;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPwaPrompt = e;
+  document.getElementById("btnPwaInstall").classList.remove("hidden");
+});
+document.getElementById("btnPwaInstall").addEventListener("click", async () => {
+  if (!deferredPwaPrompt) return;
+  deferredPwaPrompt.prompt();
+  try {
+    const res = await deferredPwaPrompt.userChoice;
+    if (res && res.outcome === "accepted") {
+      document.getElementById("btnPwaInstall").classList.add("hidden");
+      showToast("📲 Uygulama ana ekranına yüklendi!");
+    }
+  } catch (e) {}
+  deferredPwaPrompt = null;
+});
+window.addEventListener("appinstalled", () => {
+  document.getElementById("btnPwaInstall").classList.add("hidden");
+  showToast("📲 Uygulama yüklendi — artık ana ekrandan açabilirsin.");
+});
+function updateOfflineBadge() {
+  document.getElementById("offlineBadge").classList.toggle("hidden", navigator.onLine);
+}
+window.addEventListener("offline", updateOfflineBadge);
+window.addEventListener("online", () => { updateOfflineBadge(); load(false, false); });
+updateOfflineBadge();
 
 /* ================= Başlat ================= */
 updateUserUI();
