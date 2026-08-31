@@ -1575,8 +1575,8 @@ document.getElementById("tbody").addEventListener("change", onFieldInput);
 
 document.getElementById("tbody").addEventListener("keydown", e => {
   if (e.target.matches("[data-cid]")) {
-    if (e.key === "Enter") { e.preventDefault(); commitCell(); }
-    else if (e.key === "Escape") { e.preventDefault(); cancelCell(); }
+    if (e.key === "Enter") { e.preventDefault(); clearTimeout(cellCommitTimer); commitCell(); }
+    else if (e.key === "Escape") { e.preventDefault(); clearTimeout(cellCommitTimer); cancelCell(); }
     return;
   }
   if (e.key !== "Enter") return;
@@ -1585,22 +1585,30 @@ document.getElementById("tbody").addEventListener("keydown", e => {
 });
 document.getElementById("tbody").addEventListener("focusout", e => {
   if (!e.target.matches || !e.target.matches("[data-cid]")) return;
-  /* Tarih hücresinde odak yerel takvime gittiyse (relatedTarget yok) ve değer
-     henüz değişmemişse düzenlemeyi açık tut — kullanıcı takvimden seçtiğinde
-     change olayı kaydı yapacak. */
   const cur = editingCell;
+  /* Takvim açılırken odak kaybolduysa ve değer henüz değişmemişse dokunma —
+     kullanıcı takvimden seçtiğinde change zaten kaydı yapacak */
   if (cur && !e.relatedTarget && e.target.type === "date") {
     const inp = document.querySelector(`[data-cid="${cur.id}"][data-cfield="${cur.field}"]`);
     const row = inp ? rows.find(r => r.id === cur.id) : null;
-    if (inp && row && String(row[cur.field] ?? "") === String(inp.value ?? "")) {
-      return;
-    }
+    if (inp && row && String(row[cur.field] ?? "") === String(inp.value ?? "")) return;
   }
+  /* Odak gerçekten ayrıldı → beklemeyi atla, hemen kaydet */
+  if (e.target.type === "date") { scheduleCellCommit(0); return; }
   commitCell();
 });
-/* Tarih seçilirse beklemeden kaydet (change = değer tamamlandığında gelir) */
+/* Tarih hücrelerinde commit gecikmeli (debounce): elle yazarken ara
+   "change" olayları input'u yeniden yaratıp yazmayı kesmesin.
+   Kullanıcı 0.5 sn yazmayı bırakınca otomatik kaydedilir. */
+let cellCommitTimer = null;
+function scheduleCellCommit(delay) {
+  clearTimeout(cellCommitTimer);
+  cellCommitTimer = setTimeout(() => { cellCommitTimer = null; commitCell(); }, delay);
+}
 document.getElementById("tbody").addEventListener("change", e => {
-  if (e.target.matches && e.target.matches("[data-cid]")) commitCell();
+  if (!e.target.matches || !e.target.matches("[data-cid]")) return;
+  if (e.target.type === "date") scheduleCellCommit(500);
+  else commitCell();
 });
 
 /* Kolon sıralama: başlığa tıkla */
