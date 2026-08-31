@@ -122,7 +122,11 @@
   th {
     padding: 8px 6px; text-align: left; font-weight: 600; white-space: nowrap;
     font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #cbd5e1;
+    user-select: none;
   }
+  th[data-sort] { cursor: pointer; }
+  th[data-sort]:hover { color: #fff; }
+  .arw { font-size: 9px; margin-left: 2px; opacity: .9; }
   td { padding: 5px 6px; border-top: 1px solid var(--border); white-space: nowrap; vertical-align: middle; }
   tr.row:hover { background: var(--primary-soft); }
   tr.priority { background: var(--amber-soft); }
@@ -275,12 +279,11 @@
     animation: pop .2s ease-out;
   }
 
-  /* 🆕 PWA kurulum butonu & çevrimdışı rozeti */
-  .pwa-badge {
-    font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 999px;
-    background: var(--red-soft); color: var(--red); border: 1px solid var(--red);
-    white-space: nowrap;
-  }
+  /* Admin panel */
+  .adm-perms { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .adm-check { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+  .adm-check input { margin: 0; }
+  .you-tag { font-size: 10px; color: var(--muted); font-weight: 500; }
 
   @media (max-width: 720px) {
     header { padding: 10px 12px; padding-top: max(10px, env(safe-area-inset-top)); }
@@ -319,12 +322,17 @@
     <div class="logo">🚢</div>
     <div>
       <h1>Sevkiyat Planlama — İhracat</h1>
-      <p class="subtitle">Canlı senkron · bu hafta + gecikenler · varsayılan: kalan yüklemeler</p>
+      <p class="subtitle">Canlı senkron · tarih aralığı · kolon sıralama · admin yetki paneli</p>
     </div>
   </div>
   <div class="toolbar">
-    <input id="search" placeholder="🔍 Müşteri ara" style="min-width:130px" />
-    <select id="weekFilter"><option value="current">Bu hafta</option><option value="all">Tüm haftalar</option></select>
+    <input id="search" placeholder="🔍 Müşteri ara" style="min-width:120px" />
+    <select id="dateFilter"></select>
+    <span id="customRange" class="hidden" style="display:flex;gap:4px;align-items:center">
+      <input type="date" id="dateFrom" style="padding:5px 6px" />
+      <span style="color:var(--muted)">–</span>
+      <input type="date" id="dateTo" style="padding:5px 6px" />
+    </span>
     <select id="statusFilter">
       <option value="kalan">Kalan (tamamlanmamış)</option>
       <option value="all">Tüm durumlar</option>
@@ -338,6 +346,7 @@
     <button class="btn" id="btnPrint">🖨️ Yazdır</button>
     <button class="btn" id="btnExport">📤 Excel</button>
     <button class="btn" id="btnImportOpen">📥 Excel Yükle</button>
+    <button class="btn hidden" id="btnAdminPanel">🛡️ Admin Panel</button>
     <button class="btn" id="btnTheme">🌙</button>
     <button class="btn" id="btnReload">↻</button>
     <button class="btn" id="btnShowForm">+ Form</button>
@@ -373,15 +382,30 @@
     <table>
       <thead>
         <tr>
-          <th>Müşteri</th><th>BLM</th><th>Kategori</th><th>Sevkiyat Tipi</th><th>AD</th>
-          <th>Planlanan Tarih</th><th>Hafta</th><th>Ay</th><th>Reel Plan</th><th>Gerçekleşen</th>
-          <th>Durum</th><th>Açıklama</th><th>Aracı Geldi</th><th>Status</th><th>PRS M3</th><th>M3</th><th>Ekleyen</th><th></th>
+          <th data-sort="musteri">Müşteri<span class="arw"></span></th>
+          <th data-sort="blm">BLM<span class="arw"></span></th>
+          <th data-sort="kategori">Kategori<span class="arw"></span></th>
+          <th data-sort="sevkiyatTipi">Sevkiyat Tipi<span class="arw"></span></th>
+          <th data-sort="ad">AD<span class="arw"></span></th>
+          <th data-sort="planlananTarih">Planlanan Tarih<span class="arw"></span></th>
+          <th data-sort="hafta">Hafta<span class="arw"></span></th>
+          <th data-sort="ay">Ay<span class="arw"></span></th>
+          <th data-sort="reelPlan">Reel Plan<span class="arw"></span></th>
+          <th data-sort="gerceklesenTarih">Gerçekleşen<span class="arw"></span></th>
+          <th data-sort="durum">Durum<span class="arw"></span></th>
+          <th>Açıklama</th>
+          <th>Aracı Geldi</th>
+          <th>Status</th>
+          <th data-sort="prsM3">PRS M3<span class="arw"></span></th>
+          <th data-sort="m3">M3<span class="arw"></span></th>
+          <th data-sort="createdBy">Ekleyen<span class="arw"></span></th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Düzenleme: hücreye tıkla → değiştir → <b>Enter</b> → kaydedilir, <b>Esc</b> iptal eder. <b>⧉</b> kaydı bugüne çoğaltır. Durum filtresi varsayılan olarak <b>Kalan</b>'ı gösterir. Başkasının yaptığı değişiklikler anında ekrana düşer. Telefonda <b>"Ana ekrana ekle"</b> ile uygulama gibi kullanabilirsin.</p>
+  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → değiştir → <b>Enter</b>. <b>⧉</b> kaydı bugüne çoğaltır. <b>Başlıklara tıkla</b> → o kolona göre sırala (tekrar tıkla: ters · üçüncü: varsayılan). Filtreler ve sıralama tarayıcında hatırlanır. Silme ve Excel yükleme yetkisi Admin Panel'den atanır.</p>
 </main>
 
 <datalist id="musteri-list"></datalist>
@@ -431,16 +455,36 @@
 <div id="historyModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>🕘 Değişiklik Geçmişi</h2>
-    <p class="hint">Son 150 hareket. Kim, ne zaman, ne yaptı — tüm ekleme/düzenleme/silme/çoğaltma/Excel işlemleri kayıt altında.</p>
+    <p class="hint">Son 150 hareket — ekleme, düzenleme, silme, çoğaltma, Excel yükleme ve yetki değişiklikleri dahil.</p>
     <div id="historyContent" style="max-height:60vh;overflow-y:auto"></div>
     <div class="modal-actions"><button class="btn" id="btnCloseHistory">Kapat</button></div>
   </div>
 </div>
 
+<div id="adminModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>🛡️ Admin Paneli — Kullanıcı Yetkileri</h2>
+    <p class="hint">Panelden eklediğin kullanıcılara giriş yaptıklarında bu yetkiler uygulanır. Listede olmayan girişli kullanıcılar <b>varsayılan yetkileri</b> alır (ekleme/düzenleme/çoğaltma açık · silme/Excel kapalı). Kod içindeki <b>ADMIN_EMAILS</b> listesi her zaman tam yetkilidir ve panelden çıkarılamaz.</p>
+    <div class="form-grid" style="grid-template-columns:2fr auto;align-items:end">
+      <label><span>Yeni kullanıcı e-postası</span><input id="adminNewEmail" list="adminKnownEmails" placeholder="ornek@yatsan.com" /></label>
+      <button class="btn primary" id="btnAdminAddUser" style="padding:8px 14px">+ Kullanıcı Ekle</button>
+    </div>
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>Kullanıcı</th><th>Rol</th><th>Yetkiler</th><th></th></tr></thead>
+        <tbody id="adminUserTable"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCloseAdmin">Kapat</button></div>
+  </div>
+</div>
+
+<datalist id="adminKnownEmails"></datalist>
+
 <div id="importModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>📥 Excel'den Veri Yükle</h2>
-    <p class="hint">.xlsx / .xls / .csv · İlk satır başlık olmalı · Müşteri kolonu zorunlu · M3 boşsa tipe göre hesaplanır. <b>Admin yetkisi gerekir.</b></p>
+    <p class="hint">.xlsx / .xls / .csv · İlk satır başlık olmalı · Müşteri kolonu zorunlu · M3 boşsa tipe göre hesaplanır.</p>
     <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
     <div id="importMapping" class="hidden">
       <h3 style="font-size:13px;margin:14px 0 6px;">Kolon eşleştirme</h3>
@@ -481,22 +525,31 @@ const FIREBASE_DB_URL = "https://sevkiyat-app-default-rtdb.europe-west1.firebase
 const FIREBASE_API_KEY = "AIzaSyAagmdq0N2TG4IQ7noDFL6xQh4-ps-QrgI";
 const NODE = "sevkiyat";
 const HIST_NODE = "sevkiyat_history";
+const USERS_NODE = "sevkiyat_users"; /* ← Rules'ta yazma izni sadece admin'e açık olmalı! */
 
 /* ============================================================
-   ROLLER — BURADAN YÖNETİLİR
-   • ADMIN_EMAILS: admin'ler (silme + Excel yükleme)
-   • Diğer girişli kullanıcılar: ekleme + düzenleme + çoğaltma
-   • Giriş yapmayanlar: görüntüleme + rapor + geçmiş
+   ROLLER — ARTIK ADMİN PANELİNDEN YÖNETİLİR
+   ------------------------------------------------------------
+   • ADMIN_EMAILS: "bootstrap" admin listesi — bu e-postalar her
+     zaman tam yetkilidir ve Admin Panel'i açabilir. Panelde diğer
+     kullanıcılara "Admin" rolü verilebilir.
+   • Paneldeki kullanıcılar: rol (Kullanıcı/Admin) + 5 yetki:
+     ekleme, düzenleme, çoğaltma, silme, Excel yükleme.
+   • Listede olmayan girişli kullanıcılar DEFAULT_PERMS alır.
    ============================================================ */
 const ADMIN_EMAILS = [
-  "admin@yatsan.com" , "ozge.yigitbilek@yatsan.com", "sait.yigit@yatsan.com"
-  /* Yeni admin: , "baska@yatsan.com" */
+  "admin@yatsan.com"
+  /* Bootstrap admin eklemek için: , "baska@yatsan.com" */
 ];
-const PERMISSIONS = {
-  "inline-add": "user",  "form-add": "user",
-  "cell-edit": "user",   "save-inline": "user",  "duplicate": "user",
-  "delete": "admin",     "import": "admin",      "do-import": "admin"
+const PERM_LABELS = { add: "Ekleme", edit: "Düzenleme", duplicate: "Çoğaltma", del: "Silme", imp: "Excel Yükleme" };
+const PERM_MAP = {
+  "inline-add": "add", "form-add": "add", "save-inline": "add",
+  "cell-edit": "edit",
+  "duplicate": "duplicate",
+  "delete": "del",
+  "import": "imp", "do-import": "imp"
 };
+const DEFAULT_PERMS = { add: true, edit: true, duplicate: true, del: false, imp: false };
 const IDLE_MS = 15 * 60 * 1000;
 
 /* ================= Sabitler ================= */
@@ -508,8 +561,9 @@ const BLMS = ["EXPORT-1","EXPORT-2","EXPORT-3"];
 const TIPLER = ["KOMPLE TIR","PARSIYEL TIR","40 HC","20 DC"];
 const GELDI = ["", "GELDİ", "HAYIR"];
 const M3_CARPAN = { "KOMPLE TIR": 90, "40 HC": 70, "20 DC": 35 };
-const SORT_DESC = true;
 const DURUM_SIRA = { "Yükleniyor": 0, "Yükleme Bekliyor": 1, "Yükleme Tamamlandı": 2 };
+const SORTABLE = { musteri:1, blm:1, kategori:1, sevkiyatTipi:1, ad:1, planlananTarih:1,
+  hafta:1, ay:1, reelPlan:1, gerceklesenTarih:1, durum:1, prsM3:1, m3:1, createdBy:1 };
 
 const CELL_DEFS = {
   musteri:          { kind: "text",   w: "w-musteri", list: true },
@@ -536,7 +590,8 @@ const ACTION_META = {
   "guncelleme": { label: "Güncellendi",     dot: "edit" },
   "silme":      { label: "Silindi",         dot: "del" },
   "cogaltma":   { label: "Çoğaltıldı",      dot: "dup" },
-  "excel":      { label: "Excel yükleme",   dot: "excel" }
+  "excel":      { label: "Excel yükleme",   dot: "excel" },
+  "yetki":      { label: "Yetki değişti",   dot: "excel" }
 };
 
 /* ================= Yardımcılar ================= */
@@ -574,6 +629,9 @@ function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
+function isoFromDate(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
 function gecikmeGunu(r) {
   if (!r.planlananTarih || r.durum === "Yükleme Tamamlandı") return 0;
   const today = todayISO();
@@ -609,14 +667,14 @@ function tarihCmp(a, b) {
   if (!b) return -1;
   return a < b ? -1 : a > b ? 1 : 0;
 }
+/* Varsayılan sıralama: planlanan → reel → gerçekleşen, en yeni üstte */
 function sortList(list) {
-  const dir = SORT_DESC ? -1 : 1;
   return list.slice().sort((x, y) => {
-    let c = tarihCmp(x.planlananTarih, y.planlananTarih) * dir;
+    let c = tarihCmp(x.planlananTarih, y.planlananTarih) * -1;
     if (c) return c;
-    c = tarihCmp(x.reelPlan, y.reelPlan) * dir;
+    c = tarihCmp(x.reelPlan, y.reelPlan) * -1;
     if (c) return c;
-    c = tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih) * dir;
+    c = tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih) * -1;
     if (c) return c;
     const dx = DURUM_SIRA[x.durum] ?? 9;
     const dy = DURUM_SIRA[y.durum] ?? 9;
@@ -625,9 +683,51 @@ function sortList(list) {
   });
 }
 
+/* ================= 🆕 KOLON SIRALAMA ================= */
+let sortCol = null;
+let sortDir = "desc";
+function cmpVals(x, y, col) {
+  const vx = x[col], vy = y[col];
+  switch (col) {
+    case "ad": case "prsM3": case "m3": case "hafta":
+      return (Number(vx) || 0) - (Number(vy) || 0);
+    case "ay":
+      return AYLAR.indexOf(vx) - AYLAR.indexOf(vy);
+    case "durum":
+      return (DURUM_SIRA[vx] ?? 9) - (DURUM_SIRA[vy] ?? 9);
+    case "planlananTarih": case "reelPlan": case "gerceklesenTarih":
+      return vx < vy ? -1 : vx > vy ? 1 : 0;
+    default:
+      return String(vx || "").localeCompare(String(vy || ""), "tr");
+  }
+}
+function colEmpty(r, col) {
+  const v = r[col];
+  return v === undefined || v === null || v === "" || v === "-";
+}
+function getSortedList(list) {
+  if (!sortCol || !SORTABLE[sortCol]) return sortList(list);
+  return list.slice().sort((x, y) => {
+    const xe = colEmpty(x, sortCol), ye = colEmpty(y, sortCol);
+    if (xe && ye) return 0;
+    if (xe) return 1;   /* boş değerler her zaman en altta */
+    if (ye) return -1;
+    const c = cmpVals(x, y, sortCol);
+    return sortDir === "desc" ? -c : c;
+  });
+}
+function updateSortHeaders() {
+  document.querySelectorAll("th[data-sort]").forEach(th => {
+    const col = th.dataset.sort;
+    const arw = th.querySelector(".arw");
+    if (arw) arw.textContent = (sortCol === col) ? (sortDir === "desc" ? " ▾" : " ▴") : "";
+  });
+}
+
 /* ================= Kimlik doğrulama (Firebase Auth REST) ================= */
 const AUTH_KEY = "sevkiyat_auth";
 let currentUser = null;
+let userEntries = {}; /* email → { email, role, perms } */
 
 function getAuthState() {
   try { return JSON.parse(sessionStorage.getItem(AUTH_KEY)); } catch { return null; }
@@ -653,7 +753,7 @@ async function doTokenRefresh() {
   });
   const j = await res.json();
   if (!res.ok || !j.id_token) return null;
-  saveAuthState(j.idToken, j.refresh_token, j.expires_in, s.email);
+  saveAuthState(j.id_token, j.refresh_token, j.expires_in, s.email);
   return j.id_token;
 }
 async function ensureToken(force = false) {
@@ -700,7 +800,17 @@ function fbErrText(msg) {
   return "Giriş başarısız: " + msg;
 }
 function isAdmin() {
-  return !!currentUser && ADMIN_EMAILS.includes(String(currentUser.email).toLowerCase());
+  if (!currentUser) return false;
+  if (ADMIN_EMAILS.includes(String(currentUser.email).toLowerCase())) return true;
+  const e = userEntries[currentUser.email];
+  return !!(e && e.role === "admin");
+}
+function hasPerm(p) {
+  if (!currentUser) return false;
+  if (isAdmin()) return true;
+  const e = userEntries[currentUser.email];
+  const perms = (e && e.perms) ? e.perms : DEFAULT_PERMS;
+  return !!perms[p];
 }
 
 /* ================= Firebase REST (veritabanı) ================= */
@@ -792,17 +902,69 @@ async function apiBulkInsert(recs) {
   await check(res, "Toplu yükleme başarısız");
 }
 
+/* ---------- 🆕 Kullanıcı yetkileri (sevkiyat_users) ---------- */
+function userKey(email) { return email.replace(/\./g, ","); }
+async function loadUserEntries() {
+  try {
+    const res = await authFetch(`${FIREBASE_DB_URL}/${USERS_NODE}.json`);
+    const data = await check(res, "Kullanıcı yetkileri yüklenemedi");
+    userEntries = {};
+    if (data) {
+      Object.entries(data).forEach(([k, v]) => {
+        if (!v) return;
+        const email = v.email || k.replace(/,/g, ".");
+        userEntries[email] = { email, role: v.role || "user", perms: v.perms || DEFAULT_PERMS };
+      });
+    }
+  } catch (e) {
+    console.warn("Yetkiler yüklenemedi:", e.message);
+    userEntries = {};
+  }
+}
+
 /* ================= State ================= */
 let rows = [];
 let loading = false;
 let addingInline = false;
 let inlineData = null;
-let weekFilter = "current";
+let dateFilter = "week-current";
+let dateFrom = "";
+let dateTo = "";
 let statusFilter = "kalan";
 let pendingAction = null;
 let editingCell = null;
 let committing = false;
 let activeReportTab = "genel";
+
+/* ================= 🆕 SON FİLTRE HATIRLAMA ================= */
+const PREF_KEY = "sevkiyat_prefs";
+function savePrefs() {
+  try {
+    localStorage.setItem(PREF_KEY, JSON.stringify({
+      search: document.getElementById("search").value,
+      dateFilter, dateFrom, dateTo, statusFilter,
+      sortCol, sortDir,
+      showSummary: !document.getElementById("summary").classList.contains("hidden")
+    }));
+  } catch (e) {}
+}
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem(PREF_KEY));
+    if (!p) return;
+    dateFilter = p.dateFilter || "week-current";
+    dateFrom = p.dateFrom || "";
+    dateTo = p.dateTo || "";
+    statusFilter = p.statusFilter || "kalan";
+    sortCol = SORTABLE[p.sortCol] ? p.sortCol : null;
+    sortDir = p.sortDir === "asc" ? "asc" : "desc";
+    if (typeof p.search === "string") document.getElementById("search").value = p.search;
+    if (p.showSummary === false) {
+      document.getElementById("summary").classList.add("hidden");
+      document.getElementById("btnToggleSummary").textContent = "Özet";
+    }
+  } catch (e) {}
+}
 
 /* ================= Yükle / hata / canlı bildirim ================= */
 let lastLocalOp = 0;
@@ -876,7 +1038,30 @@ function startLiveSync() {
   } catch (e) {}
 }
 
-/* ================= Filtre & özet ================= */
+/* ================= 🆕 TARİH ARALIĞI & FİLTRE ================= */
+function monthBounds(offset) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + (offset || 0));
+  const y = d.getFullYear(), m = d.getMonth();
+  const last = new Date(y, m + 1, 0).getDate();
+  return { from: `${y}-${pad2(m + 1)}-01`, to: `${y}-${pad2(m + 1)}-${pad2(last)}` };
+}
+function lastNDays(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - (n - 1));
+  return { from: isoFromDate(d), to: todayISO() };
+}
+function dateBounds() {
+  switch (dateFilter) {
+    case "d7": return lastNDays(7);
+    case "d30": return lastNDays(30);
+    case "month": return monthBounds(0);
+    case "lastmonth": return monthBounds(-1);
+    case "custom": return { from: dateFrom || "0000-01-01", to: dateTo || "9999-12-31" };
+    default: return null;
+  }
+}
 function enriched(list) {
   return list.map(r => {
     const dt = parseLocalDate(r.planlananTarih);
@@ -887,11 +1072,19 @@ function filtered() {
   const q = document.getElementById("search").value.trim().toLowerCase();
   const thisWeek = getISOWeek(new Date());
   const today = todayISO();
+  const isWeekMode = dateFilter === "week-current" || dateFilter.startsWith("week-");
+  const weekNum = dateFilter.startsWith("week-") ? dateFilter.slice(5) : null;
+  const bounds = (!isWeekMode && dateFilter !== "all") ? dateBounds() : null;
   const result = enriched(rows).filter(r => {
-    if (weekFilter === "current") {
+    if (dateFilter === "week-current") {
       const isDelayed = r.planlananTarih && r.planlananTarih < today && r.durum !== "Yükleme Tamamlandı";
       if (!(String(r.hafta) === String(thisWeek) || isDelayed)) return false;
-    } else if (weekFilter !== "all" && String(r.hafta) !== String(weekFilter)) return false;
+    } else if (weekNum !== null) {
+      if (String(r.hafta) !== weekNum) return false;
+    } else if (bounds) {
+      if (!r.planlananTarih) return false;
+      if (r.planlananTarih < bounds.from || r.planlananTarih > bounds.to) return false;
+    }
     if (statusFilter === "kalan" && r.durum === "Yükleme Tamamlandı") return false;
     else if (statusFilter === "bekliyor" && r.durum !== "Yükleme Bekliyor") return false;
     else if (statusFilter === "yukleniyor" && r.durum !== "Yükleniyor") return false;
@@ -899,7 +1092,7 @@ function filtered() {
     if (q && !(r.musteri || "").toLowerCase().includes(q)) return false;
     return true;
   });
-  return sortList(result);
+  return getSortedList(result);
 }
 function computeSummary(list) {
   const today = todayISO();
@@ -928,7 +1121,7 @@ function computeSummary(list) {
 /* ================= Render ================= */
 function render() {
   renderDatalist();
-  renderWeekFilter();
+  renderDateFilter();
   const list = filtered();
   renderSummary(list);
   renderTable(list);
@@ -937,13 +1130,23 @@ function renderDatalist() {
   const cust = [...new Set(rows.map(r => r.musteri).filter(Boolean))];
   document.getElementById("musteri-list").innerHTML = cust.map(c => `<option value="${esc(c)}">`).join("");
 }
-function renderWeekFilter() {
-  const thisWeek = getISOWeek(new Date());
+function renderDateFilter() {
   const weeks = [...new Set(enriched(rows).map(r => r.hafta).filter(w => w !== "-"))].sort((a, b) => a - b);
-  document.getElementById("weekFilter").innerHTML =
-    `<option value="current" ${weekFilter === "current" ? "selected" : ""}>Bu hafta (${thisWeek}) + gecikenler</option>` +
-    `<option value="all" ${weekFilter === "all" ? "selected" : ""}>Tüm haftalar</option>` +
-    weeks.map(w => `<option value="${w}" ${String(w) === String(weekFilter) ? "selected" : ""}>Hafta ${w}</option>`).join("");
+  const opt = (val, label) => `<option value="${val}" ${dateFilter === val ? "selected" : ""}>${label}</option>`;
+  document.getElementById("dateFilter").innerHTML =
+    `<optgroup label="Hazır aralıklar">` +
+    opt("week-current", `Bu hafta (${getISOWeek(new Date())}) + gecikenler`) +
+    opt("all", "Tüm zamanlar") +
+    opt("d7", "Son 7 gün") +
+    opt("d30", "Son 30 gün") +
+    opt("month", "Bu ay") +
+    opt("lastmonth", "Geçen ay") +
+    opt("custom", "Özel aralık…") +
+    `</optgroup>` +
+    (weeks.length
+      ? `<optgroup label="Haftalar">` + weeks.map(w => opt("week-" + w, "Hafta " + w)).join("") + `</optgroup>`
+      : "");
+  document.getElementById("customRange").classList.toggle("hidden", dateFilter !== "custom");
 }
 function renderSummary(list) {
   const s = computeSummary(list);
@@ -1127,8 +1330,11 @@ function gate(type, param) {
     showLogin("Bu işlem için giriş yapman gerekiyor — giriş sonrası otomatik devam edecek.");
     return;
   }
-  const need = PERMISSIONS[type] || "user";
-  if (need === "admin" && !isAdmin()) { alert("Bu işlem için admin yetkisi gerekir."); return; }
+  const need = PERM_MAP[type];
+  if (need && !hasPerm(need)) {
+    alert(`Bu işlem için yetkiniz yok (${PERM_LABELS[need]}). Yöneticiniz Admin Panel'den yetki verebilir.`);
+    return;
+  }
   runAction({ type, param });
 }
 function runAction({ type, param }) {
@@ -1265,9 +1471,24 @@ document.getElementById("tbody").addEventListener("change", e => {
   if (e.target.matches && e.target.matches("select[data-cid]")) commitCell();
 });
 
-document.getElementById("search").addEventListener("input", render);
-document.getElementById("weekFilter").addEventListener("change", e => { weekFilter = e.target.value; render(); });
-document.getElementById("statusFilter").addEventListener("change", e => { statusFilter = e.target.value; render(); });
+/* Kolon sıralama: başlığa tıkla */
+document.querySelector("thead").addEventListener("click", e => {
+  const th = e.target.closest("th[data-sort]");
+  if (!th) return;
+  const col = th.dataset.sort;
+  if (sortCol !== col) { sortCol = col; sortDir = "desc"; }
+  else if (sortDir === "desc") { sortDir = "asc"; }
+  else { sortCol = null; }
+  savePrefs();
+  updateSortHeaders();
+  render();
+});
+
+document.getElementById("search").addEventListener("input", () => { savePrefs(); render(); });
+document.getElementById("dateFilter").addEventListener("change", e => { dateFilter = e.target.value; savePrefs(); render(); });
+document.getElementById("dateFrom").addEventListener("change", e => { dateFrom = e.target.value; savePrefs(); render(); });
+document.getElementById("dateTo").addEventListener("change", e => { dateTo = e.target.value; savePrefs(); render(); });
+document.getElementById("statusFilter").addEventListener("change", e => { statusFilter = e.target.value; savePrefs(); render(); });
 document.getElementById("btnReload").addEventListener("click", async () => {
   if (editingCell) await commitCell();
   load(true);
@@ -1276,12 +1497,14 @@ document.getElementById("btnToggleSummary").addEventListener("click", () => {
   const s = document.getElementById("summary");
   s.classList.toggle("hidden");
   document.getElementById("btnToggleSummary").textContent = s.classList.contains("hidden") ? "Özet" : "Özeti gizle";
+  savePrefs();
 });
 document.getElementById("btnInlineAdd").addEventListener("click", () => gate("inline-add"));
 document.getElementById("btnShowForm").addEventListener("click", () => gate("form-add"));
 document.getElementById("btnImportOpen").addEventListener("click", () => gate("import"));
 document.getElementById("btnExport").addEventListener("click", exportExcel);
 document.getElementById("btnHistory").addEventListener("click", showHistory);
+document.getElementById("btnAdminPanel").addEventListener("click", openAdminPanel);
 document.getElementById("btnPrint").addEventListener("click", () => {
   if (editingCell) commitCell();
   setTimeout(() => window.print(), 100);
@@ -1294,7 +1517,6 @@ function applyTheme(dark) {
   document.body.classList.toggle("dark", dark);
   localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
   document.getElementById("btnTheme").textContent = dark ? "☀️" : "🌙";
-  document.getElementById("btnTheme").title = dark ? "Açık temaya geç" : "Karanlık temaya geç";
 }
 function toggleTheme() {
   applyTheme(!document.body.classList.contains("dark"));
@@ -1385,8 +1607,125 @@ document.getElementById("modal").addEventListener("click", e => {
 });
 
 /* ============================================================
-   📊 PROFESYONEL RAPORLAR (sekmeli)
+   🛡️ ADMİN PANELİ
    ============================================================ */
+async function openAdminPanel() {
+  if (!isAdmin()) { alert("Bu panel sadece yöneticiler içindir."); return; }
+  document.getElementById("adminModal").classList.remove("hidden");
+  await reloadAdminTable();
+}
+async function reloadAdminTable() {
+  const tb = document.getElementById("adminUserTable");
+  tb.innerHTML = `<tr><td colspan="4" class="empty">Yükleniyor…</td></tr>`;
+  await loadUserEntries();
+  renderAdminTable();
+}
+function renderKnownEmails() {
+  const known = new Set(Object.keys(userEntries));
+  rows.forEach(r => { if (r.createdBy) known.add(r.createdBy); if (r.updatedBy) known.add(r.updatedBy); });
+  document.getElementById("adminKnownEmails").innerHTML =
+    [...known].sort().map(e => `<option value="${esc(e)}">`).join("");
+}
+function renderAdminTable() {
+  const tb = document.getElementById("adminUserTable");
+  const emails = Object.keys(userEntries).sort((a, b) => a.localeCompare(b, "tr"));
+  if (!emails.length) {
+    tb.innerHTML = `<tr><td colspan="4" class="empty">Kayıtlı kullanıcı yok — yukarıdan e-posta ekleyerek başla.</td></tr>`;
+    renderKnownEmails();
+    return;
+  }
+  tb.innerHTML = emails.map(em => {
+    const e = userEntries[em];
+    const p = e.perms || DEFAULT_PERMS;
+    const isMe = currentUser && em === currentUser.email;
+    const checks = Object.keys(PERM_LABELS).map(k =>
+      `<label class="adm-check"><input type="checkbox" data-perm="${k}" ${p[k] ? "checked" : ""}/><span>${PERM_LABELS[k]}</span></label>`
+    ).join("");
+    return `<tr data-uemail="${esc(em)}">
+      <td class="strong">${esc(em)}${isMe ? ' <span class="you-tag">(sen)</span>' : ""}</td>
+      <td><select class="cell-input" data-role>
+        <option value="user" ${e.role !== "admin" ? "selected" : ""}>Kullanıcı</option>
+        <option value="admin" ${e.role === "admin" ? "selected" : ""}>Admin</option>
+      </select></td>
+      <td><div class="adm-perms">${checks}</div></td>
+      <td class="nowrap">
+        <button class="btn primary" data-asave="${esc(em)}">Kaydet</button>
+        <button class="btn" data-adel="${esc(em)}" title="Listeden kaldır (varsayılan yetkilere döner)">Kaldır</button>
+      </td>
+    </tr>`;
+  }).join("");
+  renderKnownEmails();
+}
+async function adminSaveUser(email) {
+  const tr = document.querySelector(`tr[data-uemail="${email}"]`);
+  if (!tr) return;
+  const role = tr.querySelector("select[data-role]").value;
+  const perms = {};
+  tr.querySelectorAll("input[data-perm]").forEach(cb => { perms[cb.dataset.perm] = cb.checked; });
+  const entry = { email, role, perms };
+  try {
+    await authFetch(`${FIREBASE_DB_URL}/${USERS_NODE}/${userKey(email)}.json`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry)
+    });
+    userEntries[email] = entry;
+    showToast(`✅ ${esc(email)} yetkileri kaydedildi.`);
+    await apiLog("yetki", "", email,
+      `rol: ${role === "admin" ? "Admin" : "Kullanıcı"} · ` +
+      Object.keys(PERM_LABELS).map(k => `${PERM_LABELS[k]}: ${perms[k] ? "var" : "yok"}`).join(" · "));
+    renderAdminTable();
+  } catch (e) {
+    alert("Kaydedilemedi: " + e.message + "\n\n⚠️ Rules'ta sevkiyat_users için .write izni admin e-postanıza açık olmalı.");
+  }
+}
+async function adminAddUser() {
+  const inp = document.getElementById("adminNewEmail");
+  const email = inp.value.trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email)) { alert("Geçerli bir e-posta gir."); return; }
+  if (userEntries[email]) { alert("Bu kullanıcı zaten listede."); return; }
+  const entry = { email, role: "user", perms: { ...DEFAULT_PERMS } };
+  try {
+    await authFetch(`${FIREBASE_DB_URL}/${USERS_NODE}/${userKey(email)}.json`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry)
+    });
+    userEntries[email] = entry;
+    inp.value = "";
+    renderAdminTable();
+    showToast(`✅ ${esc(email)} eklendi (varsayılan yetkiler).`);
+    await apiLog("yetki", "", email, "yetki listesine eklendi (varsayılan yetkiler)");
+  } catch (e) {
+    alert("Eklenemedi: " + e.message);
+  }
+}
+async function adminRemoveUser(email) {
+  if (!confirm(`${email} için özel yetkiler kaldırılsın mı?\n(Kullanıcı giriş yapmaya devam eder, varsayılan yetkiler uygulanır.)`)) return;
+  try {
+    await authFetch(`${FIREBASE_DB_URL}/${USERS_NODE}/${userKey(email)}.json`, { method: "DELETE" });
+    delete userEntries[email];
+    renderAdminTable();
+    showToast("🗑️ Kaldırıldı — artık varsayılan yetkileri alır.");
+    await apiLog("yetki", "", email, "yetki listesinden kaldırıldı (varsayılan yetkilere döner)");
+  } catch (e) {
+    alert("Kaldırılamadı: " + e.message);
+  }
+}
+document.getElementById("adminUserTable").addEventListener("click", e => {
+  const saveBtn = e.target.closest("button[data-asave]");
+  if (saveBtn) { adminSaveUser(saveBtn.dataset.asave); return; }
+  const delBtn = e.target.closest("button[data-adel]");
+  if (delBtn) { adminRemoveUser(delBtn.dataset.adel); return; }
+});
+document.getElementById("btnAdminAddUser").addEventListener("click", adminAddUser);
+document.getElementById("adminNewEmail").addEventListener("keydown", e => {
+  if (e.key === "Enter") adminAddUser();
+});
+document.getElementById("btnCloseAdmin").addEventListener("click", () => {
+  document.getElementById("adminModal").classList.add("hidden");
+});
+document.getElementById("adminModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+});
+
+/* ================= RAPORLAR ================= */
 let chartInstances = [];
 function destroyCharts() {
   chartInstances.forEach(c => { try { c.destroy(); } catch (e) {} });
@@ -1522,7 +1861,7 @@ function grad(ctx, area, hexFrom, hexTo) {
 
 function buildGenel(list) {
   const s = computeSummary(list);
-  const { isDark, textColor, gridColor, labelColor } = chartBase();
+  const { textColor, gridColor, labelColor } = chartBase();
   const kpiBlock = `<div class="kpi-grid">
     <div class="kpi c-primary"><div class="kpi-head">📦 Toplam Yükleme</div><div class="kpi-val">${fmtN(s.toplamAd)}</div><div class="kpi-sub">${fmtN(s.toplamM3)} m³ · ${list.length} kayıt</div></div>
     <div class="kpi c-green"><div class="kpi-head">✅ Tamamlanan</div><div class="kpi-val">${fmtN(s.tamamAd)}</div><div class="kpi-sub">tamamlanma %${s.oran.toFixed(1)} · ${fmtN(s.toplamM3Tamam)} m³</div></div>
@@ -1656,7 +1995,7 @@ function buildGenel(list) {
 }
 
 function buildAnaliz(list) {
-  const { isDark, textColor, gridColor, labelColor } = chartBase();
+  const { textColor, gridColor } = chartBase();
   const az = sapmaAnalizi(list);
   const chartBlock = (typeof Chart === "undefined")
     ? `<p class="hint">⚠️ Grafik kütüphanesi (CDN) yüklenemedi.</p>`
@@ -2036,7 +2375,7 @@ async function doImport() {
   btn.disabled = false; btn.textContent = "Seçili satırları yükle";
 }
 document.getElementById("btnDoImport").addEventListener("click", () => {
-  if (!isAdmin()) { alert("Excel yükleme için admin yetkisi gerekir."); return; }
+  if (!hasPerm("imp")) { alert("Excel yükleme için yetkiniz yok."); return; }
   doImport();
 });
 function openImport() {
@@ -2070,6 +2409,7 @@ function hideLogin() {
 function updateUserUI() {
   const box = document.getElementById("userBox");
   document.body.classList.toggle("can-edit", !!currentUser);
+  document.getElementById("btnAdminPanel").classList.toggle("hidden", !isAdmin());
   if (currentUser) {
     const admin = isAdmin();
     box.innerHTML = `<span class="user-chip ${admin ? "is-admin" : ""}">${admin ? "🛡️" : "👤"} ${esc(shortUser(currentUser.email))}</span>
@@ -2098,8 +2438,12 @@ async function tryLogin() {
     if (!res.ok) { err.textContent = fbErrText(j.error?.message || ""); err.classList.remove("hidden"); return; }
     saveAuthState(j.idToken, j.refreshToken, j.expiresIn, j.email);
     currentUser = { email: j.email };
+    await loadUserEntries();
     updateUserUI();
     hideLogin();
+    if (!userEntries[j.email] && !ADMIN_EMAILS.includes(j.email.toLowerCase())) {
+      setGuestInfo("ℹ️ Hesabın için henüz özel yetki atanmamış — <b>varsayılan yetkiler</b> uygulandı (ekleme/düzenleme/çoğaltma açık · silme/Excel kapalı). Yöneticin Admin Panel'den yetki verebilir.");
+    }
     if (pendingAction) { const pa = pendingAction; pendingAction = null; runAction(pa); }
     else render();
   } catch (e) {
@@ -2144,10 +2488,7 @@ setInterval(() => {
   load(false);
 }, 30000);
 
-/* ============================================================
-   📱 PWA — tek dosya çözümü (inline manifest + blob SW)
-   ============================================================ */
-/* Manifest, dosya yerine data-URL ile tanıtılıyor */
+/* ================= PWA ================= */
 (function setupManifest() {
   const iconSvg = encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
@@ -2164,12 +2505,7 @@ setInterval(() => {
     display: "standalone",
     background_color: "#f1f5f9",
     theme_color: "#4f46e5",
-    icons: [{
-      src: "data:image/svg+xml," + iconSvg,
-      sizes: "any",
-      type: "image/svg+xml",
-      purpose: "any maskable"
-    }]
+    icons: [{ src: "data:image/svg+xml," + iconSvg, sizes: "any", type: "image/svg+xml", purpose: "any maskable" }]
   };
   const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
   const link = document.createElement("link");
@@ -2177,41 +2513,6 @@ setInterval(() => {
   link.href = URL.createObjectURL(blob);
   document.head.appendChild(link);
 })();
-
-/* Service worker: sayfa kabuğunu önbelleğe alır (offline açılış için) */
-(function setupSW() {
-  if (!("serviceWorker" in navigator)) return;
-  if (location.protocol !== "https:" && location.hostname !== "localhost") return;
-  const swCode = `
-    const CACHE = "sevkiyat-shell-v1";
-    self.addEventListener("install", e => {
-      self.skipWaiting();
-      e.waitUntil(caches.open(CACHE).then(c => c.add(self.registration.scope)).catch(() => {}));
-    });
-    self.addEventListener("activate", e => e.waitUntil(clients.claim()));
-    self.addEventListener("fetch", e => {
-      if (e.request.mode === "navigate") {
-        e.respondWith(
-          fetch(e.request)
-            .then(res => {
-              const copy = res.clone();
-              caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-              return res;
-            })
-            .catch(() => caches.match(e.request).then(r => r || caches.match(self.registration.scope)))
-        );
-      }
-    });
-  `;
-  try {
-    const blob = new Blob([swCode], { type: "text/javascript" });
-    const url = URL.createObjectURL(blob);
-    /* Blob SW'ler bazı tarayıcılarda kaydolmaz — sessizce geç, yedek 30sn yenileme zaten var */
-    navigator.serviceWorker.register(url).catch(() => {});
-  } catch (e) {}
-})();
-
-/* 🆕 Kurulum butonu + çevrimdışı rozeti */
 let deferredPwaPrompt = null;
 window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
@@ -2232,7 +2533,7 @@ document.getElementById("btnPwaInstall").addEventListener("click", async () => {
 });
 window.addEventListener("appinstalled", () => {
   document.getElementById("btnPwaInstall").classList.add("hidden");
-  showToast("📲 Uygulama yüklendi — artık ana ekrandan açabilirsin.");
+  showToast("📲 Uygulama yüklendi.");
 });
 function updateOfflineBadge() {
   document.getElementById("offlineBadge").classList.toggle("hidden", navigator.onLine);
@@ -2244,14 +2545,18 @@ updateOfflineBadge();
 /* ================= Başlat ================= */
 updateUserUI();
 (async () => {
+  loadPrefs();
+  updateSortHeaders();
   const s = getAuthState();
   if (s) {
     try {
       await ensureToken();
       currentUser = { email: s.email };
+      await loadUserEntries();
       updateUserUI();
     } catch (e) { /* ensureToken gerekli temizliği yaptı */ }
   }
+  render();
   await load(true);
   startLiveSync();
 })();
