@@ -39,7 +39,6 @@
   }
   .hidden { display: none !important; }
 
-  /* 🆕 Kolon gizleme: data-col ile eşleşen hücreler tamamen daralır */
   body.hide-musteri [data-col="musteri"],
   body.hide-blm [data-col="blm"],
   body.hide-kategori [data-col="kategori"],
@@ -56,6 +55,7 @@
   body.hide-status [data-col="status"],
   body.hide-prsM3 [data-col="prsM3"],
   body.hide-m3 [data-col="m3"],
+  body.hide-sure [data-col="sure"],
   body.hide-createdBy [data-col="createdBy"] { display: none !important; }
 
   header {
@@ -149,7 +149,11 @@
   td { padding: 5px 6px; border-top: 1px solid var(--border); white-space: nowrap; vertical-align: middle; }
   tr.row:hover { background: var(--primary-soft); }
   tr.priority { background: var(--amber-soft); }
+  tr.priority:hover { background: var(--amber-soft); }
+  tr.overtime { background: var(--red-soft); }
+  tr.overtime:hover { background: var(--red-soft); }
   tr.today-row { background: var(--green-soft); }
+  tr.today-row:hover { background: var(--green-soft); }
   tr.inline-row { background: var(--primary-soft); }
   td.strong { font-weight: 600; }
   td.center { text-align: center; }
@@ -162,6 +166,23 @@
     color: var(--red); font-size: 9.5px; font-weight: 700; margin-top: 1px;
     letter-spacing: .02em; white-space: nowrap;
   }
+
+  /* ⏱️ Süre kolonu: mini bar */
+  .sure-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 96px; }
+  .surebar {
+    width: 96px; height: 8px; border-radius: 999px;
+    background: var(--border); overflow: hidden;
+  }
+  .surebar-fill {
+    height: 100%; border-radius: 999px;
+    background: var(--green); transition: width .5s ease;
+  }
+  .surebar-fill.warn { background: var(--amber); }
+  .surebar-fill.over { background: var(--red); }
+  .sure-txt { font-size: 10px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .sure-txt.over { color: var(--red); }
+  .sure-txt.done-ok { color: var(--green); }
+  .sure-txt.done-over { color: var(--amber); }
 
   body.can-edit td.editable { cursor: pointer; }
   body.can-edit td.editable:hover {
@@ -196,7 +217,6 @@
   .w-date     { width: 118px; }
   .w-aciklama { width: 90px; }
 
-  /* 🆕 Kolon menüsü */
   .colmenu-wrap { position: relative; }
   .colmenu {
     position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
@@ -355,7 +375,7 @@
     <div class="logo">🚢</div>
     <div>
       <h1>Sevkiyat Planlama — İhracat</h1>
-      <p class="subtitle">Canlı senkron · kolon yönetimi · her yerde arama · akıllı sıralama</p>
+      <p class="subtitle">Canlı senkron · kolon yönetimi · yükleme süresi takibi</p>
     </div>
   </div>
   <div class="toolbar">
@@ -387,6 +407,7 @@
       <button class="btn" id="btnCols" title="Kolonları gizle/göster">▦ Kolonlar</button>
       <div id="colMenu" class="colmenu hidden"></div>
     </div>
+    <button class="btn hidden" id="btnSurePanel">⏱️ Süreler</button>
     <button class="btn hidden" id="btnAdminPanel">🛡️ Admin Panel</button>
     <button class="btn" id="btnTheme">🌙</button>
     <button class="btn" id="btnReload">↻</button>
@@ -434,6 +455,7 @@
           <th data-col="reelPlan" data-sort="reelPlan">Reel Plan<span class="arw"></span></th>
           <th data-col="gerceklesenTarih" data-sort="gerceklesenTarih">Gerçekleşen<span class="arw"></span></th>
           <th data-col="durum" data-sort="durum">Durum<span class="arw"></span></th>
+          <th data-col="sure">Süre<span class="arw"></span></th>
           <th data-col="aciklama">Açıklama</th>
           <th data-col="araciGeldi">Aracı Geldi</th>
           <th data-col="status">Status</th>
@@ -446,7 +468,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → değiştir → <b>Enter</b>. <b>⧉</b> kaydı bugüne çoğaltır. <b>Varsayılan sıralama:</b> Durum (Yükleniyor → Bekliyor → Tamamlandı), grupta tarihe göre yakın → uzak; başlığa tıklayarak değiştir (3. tık: varsayılana dön). <b>▦ Kolonlar</b> ile gereksiz sütunları gizle. Arama kapsamını <b>Her yerde</b> yapınca tüm alanlarda, boşlukla ayrılmış çoklu kelimeyle arar. Tüm tercihler hatırlanır.</p>
+  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → değiştir → <b>Enter</b>. <b>⏱️ Süre</b>: durum <b>Yükleniyor</b> olunca kronometre başlar, müşteri+tip için tanımlı standart süreye göre dolar; süre aşılırsa satır kırmızıya döner. Süreleri <b>⏱️ Süreler</b> panelinden yönet. <b>Varsayılan sıralama:</b> Durum grubu + tarih; başlığa tıklayarak değiştir (3. tık: varsayılana dön).</p>
 </main>
 
 <datalist id="musteri-list"></datalist>
@@ -505,7 +527,7 @@
 <div id="adminModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>🛡️ Admin Paneli — Kullanıcı Yetkileri</h2>
-    <p class="hint">Panelden eklediğin kullanıcılara giriş yaptıklarında bu yetkiler uygulanır. Listede olmayan girişli kullanıcılar <b>varsayılan yetkileri</b> alır (ekleme/düzenleme/çoğaltma açık · silme/Excel kapalı). Kod içindeki <b>ADMIN_EMAILS</b> listesi her zaman tam yetkilidir ve panelden çıkarılamaz.</p>
+    <p class="hint">Panelden eklediğin kullanıcılara giriş yaptıklarında bu yetkiler uygulanır. Listede olmayan girişli kullanıcılar <b>varsayılan yetkileri</b> alır (ekleme/düzenleme/çoğaltma açık · silme/Excel kapalı). Kod içindeki <b>ADMIN_EMAILS</b> listesi her zaman tam yetkilidir.</p>
     <div class="form-grid" style="grid-template-columns:2fr auto;align-items:end">
       <label><span>Yeni kullanıcı e-postası</span><input id="adminNewEmail" list="adminKnownEmails" placeholder="ornek@yatsan.com" /></label>
       <button class="btn primary" id="btnAdminAddUser" style="padding:8px 14px">+ Kullanıcı Ekle</button>
@@ -521,6 +543,36 @@
 </div>
 
 <datalist id="adminKnownEmails"></datalist>
+
+<!-- ⏱️ Süre ayarları paneli -->
+<div id="sureModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>⏱️ Yükleme Süre Ayarları</h2>
+    <p class="hint">Müşteri + sevkiyat tipi kombinasyonu için standart yükleme süresi (dakika). Durum <b>Yükleniyor</b> olunca süre işlemeye başlar, <b>Tamamlandı</b>da durur ve kayıtta saklanır. Listede olmayan kombinasyonlar <b>varsayılan</b> süreyi kullanır.</p>
+    <div class="form-grid" style="grid-template-columns:1fr auto;align-items:end">
+      <label><span>Varsayılan süre (dakika)</span><input id="sureDefault" type="number" min="1" /></label>
+      <button class="btn primary" id="btnSureDefaultSave" style="padding:8px 14px">Varsayılanı Kaydet</button>
+    </div>
+    <h3 style="font-size:13px;margin:14px 0 6px;">Kombinasyon süreleri</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Müşteri</th><th>Tip</th><th>Süre (dk)</th><th></th></tr></thead>
+        <tbody id="sureTable"></tbody>
+      </table>
+    </div>
+    <h3 style="font-size:13px;margin:14px 0 6px;">Yeni kombinasyon ekle</h3>
+    <div class="form-grid" style="grid-template-columns:2fr 1fr auto;align-items:end">
+      <label><span>Müşteri</span><input id="sureNewMusteri" list="musteri-list" /></label>
+      <label><span>Tip</span><select id="sureNewTip"></select></label>
+      <span></span>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr auto;align-items:end;margin-top:8px">
+      <label><span>Süre (dakika)</span><input id="sureNewDk" type="number" min="1" /></label>
+      <button class="btn primary" id="btnSureAdd" style="padding:8px 14px">+ Ekle</button>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCloseSure">Kapat</button></div>
+  </div>
+</div>
 
 <div id="importModal" class="modal-bg hidden">
   <div class="modal wide">
@@ -567,12 +619,10 @@ const FIREBASE_API_KEY = "AIzaSyAagmdq0N2TG4IQ7noDFL6xQh4-ps-QrgI";
 const NODE = "sevkiyat";
 const HIST_NODE = "sevkiyat_history";
 const USERS_NODE = "sevkiyat_users";
+const SURE_NODE = "sevkiyat_suresi"; /* ⏱️ süre ayarları — Rules güncellemesi gerekli! */
 
 /* ============================================================
    ROLLER — ADMİN PANELİNDEN YÖNETİLİR
-   • ADMIN_EMAILS: bootstrap admin listesi — her zaman tam yetkili.
-   • Paneldeki kullanıcılar: rol (Kullanıcı/Admin) + 5 yetki.
-   • Listede olmayan girişli kullanıcılar DEFAULT_PERMS alır.
    ============================================================ */
 const ADMIN_EMAILS = [
   "admin@yatsan.com"
@@ -602,11 +652,11 @@ const DURUM_SIRA = { "Yükleniyor": 0, "Yükleme Bekliyor": 1, "Yükleme Tamamla
 const SORTABLE = { musteri:1, blm:1, kategori:1, sevkiyatTipi:1, ad:1, planlananTarih:1,
   hafta:1, ay:1, reelPlan:1, gerceklesenTarih:1, durum:1, prsM3:1, m3:1, createdBy:1 };
 
-/* 🆕 Kolon tanımları (gizle/göster menüsü için) */
 const ALL_COLS = [
   ["musteri","Müşteri"],["blm","BLM"],["kategori","Kategori"],["sevkiyatTipi","Sevkiyat Tipi"],
   ["ad","AD"],["planlananTarih","Planlanan Tarih"],["hafta","Hafta"],["ay","Ay"],
   ["reelPlan","Reel Plan"],["gerceklesenTarih","Gerçekleşen"],["durum","Durum"],
+  ["sure","Süre"],
   ["aciklama","Açıklama"],["araciGeldi","Aracı Geldi"],["status","Status"],
   ["prsM3","PRS M3"],["m3","M3"],["createdBy","Ekleyen"]
 ];
@@ -655,6 +705,11 @@ function fmtDateTime(ts) {
   return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 function fmtSapma(n) { return (n > 0 ? "+" : "") + (Math.round(n * 10) / 10).toLocaleString("tr-TR"); }
+function fmtSure(ms) {
+  const dk = Math.floor(ms / 60000);
+  const h = Math.floor(dk / 60), m = dk % 60;
+  return h > 0 ? `${h}s ${m}dk` : `${m}dk`;
+}
 function getISOWeek(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -715,7 +770,7 @@ function tarihCmp(a, b) {
 }
 /* Varsayılan sıralama:
    1) Durum: Yükleniyor (en üst) → Yükleme Bekliyor (orta) → Yükleme Tamamlandı (en alt)
-   2) Her grubun içinde planlanan tarih: en yakın → en uzak */
+   2) Grup içinde planlanan tarih: en yakın → en uzak */
 function sortList(list) {
   return list.slice().sort((x, y) => {
     const dx = DURUM_SIRA[x.durum] ?? 9;
@@ -801,7 +856,7 @@ async function doTokenRefresh() {
   });
   const j = await res.json();
   if (!res.ok || !j.id_token) return null;
-  saveAuthState(j.idToken, j.refresh_token, j.expires_in, s.email);
+  saveAuthState(j.id_token, j.refresh_token, j.expires_in, s.email);
   return j.id_token;
 }
 async function ensureToken(force = false) {
@@ -884,6 +939,8 @@ function toDb(r) {
     prsM3: (r.prsM3 === "" || r.prsM3 == null) ? null : Number(r.prsM3),
     m3: (r.m3 === "" || r.m3 == null) ? null : Number(r.m3),
     oncelikli: !!r.oncelikli,
+    loadingStartedAt: (r.loadingStartedAt == null) ? null : Number(r.loadingStartedAt),
+    loadingEndedAt: (r.loadingEndedAt == null) ? null : Number(r.loadingEndedAt),
     createdBy: r.createdBy || (currentUser ? currentUser.email : ""),
     updatedBy: currentUser ? currentUser.email : ""
   };
@@ -969,6 +1026,47 @@ async function loadUserEntries() {
   }
 }
 
+/* ================= ⏱️ Süre ayarları (müşteri+tip → dakika) ================= */
+let sureAyarlari = {};   /* comboKey → { musteri, sevkiyatTipi, sureDk } */
+let sureVarsayilan = 120;
+function comboKey(m, t) {
+  return String(m || "").replace(/[.#$\[\]\/]/g, "_") + "~~" + String(t || "").replace(/\s+/g, "_");
+}
+async function loadSureAyarlari() {
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/${SURE_NODE}.json`);
+    const data = await check(res, "Süre ayarları yüklenemedi");
+    sureAyarlari = {};
+    if (data) {
+      Object.entries(data).forEach(([k, v]) => {
+        if (!v) return;
+        if (k === "__varsayilan__") { sureVarsayilan = Number(v.sureDk) || 120; return; }
+        sureAyarlari[k] = { musteri: v.musteri || k, sevkiyatTipi: v.sevkiyatTipi || "", sureDk: Number(v.sureDk) || 120 };
+      });
+    }
+  } catch (e) {
+    console.warn("Süre ayarları yüklenemedi:", e.message);
+  }
+}
+function getSureDk(r) {
+  const hit = sureAyarlari[comboKey(r.musteri, r.sevkiyatTipi)];
+  return hit ? hit.sureDk : sureVarsayilan;
+}
+/* Durum değişiminde kronometre alanlarını uygula (basit sürüm: durdurma=sıfırlama) */
+function applyDurumSideEffects(rec) {
+  const d = rec.durum;
+  if (d === "Yükleniyor") {
+    if (!rec.loadingStartedAt) rec.loadingStartedAt = Date.now();
+    rec.loadingEndedAt = null;
+  } else if (d === "Yükleme Bekliyor") {
+    rec.loadingStartedAt = null;
+    rec.loadingEndedAt = null;
+  } else if (d === "Yükleme Tamamlandı") {
+    if (rec.loadingStartedAt && !rec.loadingEndedAt) rec.loadingEndedAt = Date.now();
+  }
+  return rec;
+}
+
 /* ================= State ================= */
 let rows = [];
 let loading = false;
@@ -982,7 +1080,7 @@ let pendingAction = null;
 let editingCell = null;
 let committing = false;
 let activeReportTab = "genel";
-const hiddenCols = new Set(); /* 🆕 gizli kolon anahtarları */
+const hiddenCols = new Set();
 
 /* ================= Son filtre hatırlama ================= */
 const PREF_KEY = "sevkiyat_prefs";
@@ -1125,7 +1223,6 @@ function enriched(list) {
     return { ...r, hafta: dt ? getISOWeek(dt) : "-", ay: dt ? AYLAR[dt.getMonth()] : "-" };
   });
 }
-/* 🆕 Genişletilmiş arama: tüm alanlarda, çok kelimeli (AND) */
 function searchHay(r) {
   return [r.musteri, r.blm, r.kategori, r.sevkiyatTipi, r.aciklama, r.araciGeldi,
           r.durum, r.createdBy, r.ad, r.prsM3, r.m3,
@@ -1187,6 +1284,63 @@ function computeSummary(list) {
   return { toplamAd, tamamAd, kalanAd: toplamAd - tamamAd, yukleniyorAd,
            bekleyenAd: toplamAd - tamamAd - yukleniyorAd,
            bugunAd, gecikenAd, maxGecikme, toplamM3, toplamM3Tamam, oran, gunAd };
+}
+
+/* ================= ⏱️ Süre hücresi ================= */
+function sureBilgi(r) {
+  const sureDk = getSureDk(r);
+  const hedefMs = sureDk * 60000;
+  if (r.durum === "Yükleniyor" && r.loadingStartedAt) {
+    const gecen = Math.max(0, Date.now() - r.loadingStartedAt);
+    const yuzde = Math.min(100, Math.round(gecen / hedefMs * 100));
+    const asim = gecen - hedefMs;
+    return { durum: "live", yuzde, gecenMs: gecen, sureDk, asimDk: Math.max(0, Math.round(asim / 60000)), asim: asim > 0 };
+  }
+  if (r.durum === "Yükleme Tamamlandı" && r.loadingStartedAt && r.loadingEndedAt) {
+    const gecen = Math.max(0, r.loadingEndedAt - r.loadingStartedAt);
+    const yuzde = Math.min(100, Math.round(gecen / hedefMs * 100));
+    return { durum: "done", yuzde, gecenMs: gecen, sureDk, asimDk: Math.max(0, Math.round((gecen - hedefMs) / 60000)), asim: gecen > hedefMs };
+  }
+  return { durum: "none" };
+}
+function sureCellHtml(r) {
+  const b = sureBilgi(r);
+  if (b.durum === "none") return `<span class="sure-txt">-</span>`;
+  if (b.durum === "live") {
+    const cls = b.yuzde >= 100 ? "over" : b.yuzde >= 70 ? "warn" : "";
+    const txt = b.asim
+      ? `⚠ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşıldı`
+      : `${fmtSure(b.gecenMs)} / ${b.sureDk}dk · %${b.yuzde}`;
+    return `<div class="sure-wrap">
+      <div class="surebar"><div class="surebar-fill ${cls}" style="width:${b.yuzde}%"></div></div>
+      <span class="sure-txt ${b.asim ? "over" : ""}">${txt}</span>
+    </div>`;
+  }
+  /* done — donmuş bar */
+  const cls = b.asim ? "warn" : "";
+  const txt = b.asim
+    ? `✔ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşım`
+    : `✔ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk`;
+  return `<div class="sure-wrap">
+    <div class="surebar"><div class="surebar-fill ${cls}" style="width:${b.yuzde}%"></div></div>
+    <span class="sure-txt ${b.asim ? "done-over" : "done-ok"}">${txt}</span>
+  </div>`;
+}
+/* Aktif kronometreleri 15 sn'de bir canlı güncelle (tam render olmadan) */
+function updateSureCells() {
+  rows.forEach(r => {
+    if (r.durum !== "Yükleniyor" || !r.loadingStartedAt) return;
+    const tr = document.querySelector(`#tbody tr[data-rowid="${r.id}"]`);
+    if (!tr) return;
+    const td = tr.querySelector('td[data-col="sure"]');
+    if (td) td.innerHTML = sureCellHtml(r);
+    /* aşım başladıysa satır rengini güncelle */
+    const b = sureBilgi(r);
+    const isOver = b.asim;
+    const hasCls = tr.classList.contains("overtime");
+    if (isOver && !hasCls && !r.oncelikli) tr.classList.add("overtime");
+    else if (!isOver && hasCls) tr.classList.remove("overtime");
+  });
 }
 
 /* ================= Render ================= */
@@ -1280,6 +1434,7 @@ function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
     <td data-col="reelPlan">${fInput(d, scope, "reelPlan", "date", "w-date")}</td>
     <td data-col="gerceklesenTarih">${fInput(d, scope, "gerceklesenTarih", "date", "w-date")}</td>
     <td data-col="durum">${fSelect(d, scope, "durum", DURUMLAR)}</td>
+    <td data-col="sure" class="center"><span class="sure-txt">-</span></td>
     <td data-col="aciklama">${fInput(d, scope, "aciklama", "text", "w-aciklama")}</td>
     <td data-col="araciGeldi">${fSelect(d, scope, "araciGeldi", GELDI)}</td>
     <td data-col="status" class="center st-cell">${durumIcon(d.durum)}</td>
@@ -1295,7 +1450,8 @@ function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
 function rowHtml(r) {
   const dt = parseLocalDate(r.planlananTarih);
   const isToday = r.planlananTarih === todayISO();
-  const rowCls = r.oncelikli ? "priority" : (isToday ? "today-row" : "");
+  const isOvertime = r.durum === "Yükleniyor" && sureBilgi(r).asim;
+  const rowCls = r.oncelikli ? "priority" : (isOvertime ? "overtime" : (isToday ? "today-row" : ""));
   return `<tr class="row ${rowCls}" data-rowid="${r.id}">
     ${tdHtml(r, "musteri", "strong", x => esc(x.musteri))}
     ${tdHtml(r, "blm", "", x => esc(x.blm))}
@@ -1308,6 +1464,7 @@ function rowHtml(r) {
     ${tdHtml(r, "reelPlan", "", x => formatDate(x.reelPlan))}
     ${tdHtml(r, "gerceklesenTarih", "", x => formatDate(x.gerceklesenTarih))}
     ${tdHtml(r, "durum", "", x => `<span class="badge ${durumClass(x.durum)}">${esc(x.durum)}</span>`)}
+    <td data-col="sure" class="center">${sureCellHtml(r)}</td>
     ${tdHtml(r, "aciklama", "truncate", x => `<span title="${esc(x.aciklama)}">${esc(x.aciklama) || "-"}</span>`)}
     ${tdHtml(r, "araciGeldi", "", x => esc(x.araciGeldi) || "-")}
     <td data-col="status" class="center">${durumIcon(r.durum)}</td>
@@ -1322,7 +1479,7 @@ function rowHtml(r) {
 }
 function renderTable(list) {
   const tbody = document.getElementById("tbody");
-  const cc = 18 - hiddenCols.size; /* görünür kolon sayısı (aksiyon dahil) */
+  const cc = 19 - hiddenCols.size; /* Süre kolonuyla toplam 19 */
   let html = "";
   if (loading) html += `<tr><td colspan="${cc}" class="empty">Yükleniyor…</td></tr>`;
   if (addingInline) html += formRowHtml(inlineData, "inline", "inline-row", "save-inline", "cancel-inline");
@@ -1418,6 +1575,8 @@ async function commitCell() {
     const m3 = hesaplaM3(updated.sevkiyatTipi, updated.ad, updated.prsM3);
     if (m3 !== null) updated.m3 = m3;
   }
+  /* ⏱️ Durum değiştiyse kronometre alanlarını uygula */
+  if (field === "durum") applyDurumSideEffects(updated);
   try {
     const saved = await apiUpdate(id, updated);
     rows = rows.map(r => r.id === id ? saved : r);
@@ -1425,6 +1584,10 @@ async function commitCell() {
     const parts = [`${FIELD_LABELS[field] || field}: "${dispVal(field, row[field])}" → "${dispVal(field, val)}"`];
     if (String(updated.m3 ?? "") !== String(row.m3 ?? "")) {
       parts.push(`${FIELD_LABELS.m3}: "${dispVal("m3", row.m3)}" → "${dispVal("m3", updated.m3)}"`);
+    }
+    /* Tamamlanınca gerçekleşen süreyi geçmişe işle */
+    if (field === "durum" && val === "Yükleme Tamamlandı" && updated.loadingStartedAt && updated.loadingEndedAt) {
+      parts.push(`yüklenme süresi: ${fmtSure(updated.loadingEndedAt - updated.loadingStartedAt)}`);
     }
     await apiLog("guncelleme", id, updated.musteri, parts.join(" · "));
   } catch (e) { setSaveError(e.message); }
@@ -1467,7 +1630,6 @@ function runAction({ type, param }) {
 
 /* ================= İşlemler ================= */
 function doInlineAdd() {
-  /* Müşteri kolonu gizliyse hızlı ekleme yapılamaz — otomatik göster */
   if (hiddenCols.has("musteri")) {
     hiddenCols.delete("musteri");
     savePrefs();
@@ -1480,6 +1642,7 @@ function doInlineAdd() {
 async function saveInline() {
   if (!(inlineData.musteri || "").trim()) { alert("Müşteri adı zorunlu."); return; }
   try {
+    applyDurumSideEffects(inlineData);
     const rec = await apiInsert(inlineData);
     addingInline = false; inlineData = null;
     rows = [rec, ...rows];
@@ -1573,6 +1736,18 @@ function onFieldInput(e) {
 document.getElementById("tbody").addEventListener("input", onFieldInput);
 document.getElementById("tbody").addEventListener("change", onFieldInput);
 
+/* Tarih hücrelerinde commit gecikmeli (debounce): elle yazarken input kesilmesin */
+let cellCommitTimer = null;
+function scheduleCellCommit(delay) {
+  clearTimeout(cellCommitTimer);
+  cellCommitTimer = setTimeout(() => { cellCommitTimer = null; commitCell(); }, delay);
+}
+document.getElementById("tbody").addEventListener("change", e => {
+  if (!e.target.matches || !e.target.matches("[data-cid]")) return;
+  if (e.target.type === "date") scheduleCellCommit(500);
+  else commitCell();
+});
+
 document.getElementById("tbody").addEventListener("keydown", e => {
   if (e.target.matches("[data-cid]")) {
     if (e.key === "Enter") { e.preventDefault(); clearTimeout(cellCommitTimer); commitCell(); }
@@ -1586,32 +1761,19 @@ document.getElementById("tbody").addEventListener("keydown", e => {
 document.getElementById("tbody").addEventListener("focusout", e => {
   if (!e.target.matches || !e.target.matches("[data-cid]")) return;
   const cur = editingCell;
-  /* Takvim açılırken odak kaybolduysa ve değer henüz değişmemişse dokunma —
-     kullanıcı takvimden seçtiğinde change zaten kaydı yapacak */
   if (cur && !e.relatedTarget && e.target.type === "date") {
     const inp = document.querySelector(`[data-cid="${cur.id}"][data-cfield="${cur.field}"]`);
     const row = inp ? rows.find(r => r.id === cur.id) : null;
     if (inp && row && String(row[cur.field] ?? "") === String(inp.value ?? "")) return;
   }
-  /* Odak gerçekten ayrıldı → beklemeyi atla, hemen kaydet */
   if (e.target.type === "date") { scheduleCellCommit(0); return; }
   commitCell();
 });
-/* Tarih hücrelerinde commit gecikmeli (debounce): elle yazarken ara
-   "change" olayları input'u yeniden yaratıp yazmayı kesmesin.
-   Kullanıcı 0.5 sn yazmayı bırakınca otomatik kaydedilir. */
-let cellCommitTimer = null;
-function scheduleCellCommit(delay) {
-  clearTimeout(cellCommitTimer);
-  cellCommitTimer = setTimeout(() => { cellCommitTimer = null; commitCell(); }, delay);
-}
 document.getElementById("tbody").addEventListener("change", e => {
-  if (!e.target.matches || !e.target.matches("[data-cid]")) return;
-  if (e.target.type === "date") scheduleCellCommit(900);
-  else commitCell();
+  if (e.target.matches && e.target.matches("select[data-cid]")) commitCell();
 });
 
-/* Kolon sıralama: başlığa tıkla */
+/* Kolon sıralama */
 document.querySelector("thead").addEventListener("click", e => {
   const th = e.target.closest("th[data-sort]");
   if (!th) return;
@@ -1652,6 +1814,7 @@ document.getElementById("btnImportOpen").addEventListener("click", () => gate("i
 document.getElementById("btnExport").addEventListener("click", exportExcel);
 document.getElementById("btnHistory").addEventListener("click", showHistory);
 document.getElementById("btnAdminPanel").addEventListener("click", openAdminPanel);
+document.getElementById("btnSurePanel").addEventListener("click", openSurePanel);
 document.getElementById("btnPrint").addEventListener("click", () => {
   if (editingCell) commitCell();
   setTimeout(() => window.print(), 100);
@@ -1682,6 +1845,7 @@ fillSelect("f-blm", BLMS);
 fillSelect("f-sevkiyatTipi", TIPLER);
 fillSelect("f-durum", DURUMLAR);
 fillSelect("f-araciGeldi", GELDI);
+fillSelect("sureNewTip", TIPLER);
 
 function openModal() {
   const rec = emptyRecord();
@@ -1740,6 +1904,7 @@ document.getElementById("btnSaveForm").addEventListener("click", async () => {
   rec.m3 = getVal("f-m3");
   rec.aciklama = getVal("f-aciklama");
   rec.oncelikli = document.getElementById("f-oncelikli").checked;
+  applyDurumSideEffects(rec);
   try {
     const saved = await apiInsert(rec);
     rows = [saved, ...rows];
@@ -1751,6 +1916,122 @@ document.getElementById("btnSaveForm").addEventListener("click", async () => {
 });
 document.getElementById("modal").addEventListener("click", e => {
   if (e.target === e.currentTarget) closeModal();
+});
+
+/* ============================================================
+   ⏱️ SÜRE AYARLARI PANELİ
+   ============================================================ */
+function openSurePanel() {
+  if (!isAdmin()) { alert("Bu panel sadece yöneticiler içindir."); return; }
+  document.getElementById("sureModal").classList.remove("hidden");
+  renderSureTable();
+}
+function renderSureTable() {
+  const tb = document.getElementById("sureTable");
+  const entries = Object.entries(sureAyarlari)
+    .sort((a, b) => String(a[1].musteri).localeCompare(String(b[1].musteri), "tr"));
+  if (!entries.length) {
+    tb.innerHTML = `<tr><td colspan="4" class="empty">Henüz kombinasyon eklenmemiş — tümü varsayılan (${sureVarsayilan} dk) kullanıyor.</td></tr>`;
+  } else {
+    tb.innerHTML = entries.map(([k, v]) => `
+      <tr data-skey="${esc(k)}">
+        <td class="strong">${esc(v.musteri)}</td>
+        <td>${esc(v.sevkiyatTipi)}</td>
+        <td><input type="number" min="1" class="cell-input w-num" data-suredk value="${v.sureDk}" /></td>
+        <td class="nowrap">
+          <button class="btn primary" data-ssave="${esc(k)}">Kaydet</button>
+          <button class="btn" data-sdel="${esc(k)}" title="Sil (varsayılana döner)">Sil</button>
+        </td>
+      </tr>`).join("");
+  }
+  document.getElementById("sureDefault").value = sureVarsayilan;
+}
+async function sureSaveDefault() {
+  const dk = Number(document.getElementById("sureDefault").value);
+  if (!dk || dk < 1) { alert("Geçerli bir dakika gir."); return; }
+  try {
+    await authFetch(`${FIREBASE_DB_URL}/${SURE_NODE}/__varsayilan__.json`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sureDk: dk })
+    });
+    sureVarsayilan = dk;
+    showToast(`✅ Varsayılan süre ${dk} dk olarak kaydedildi.`);
+    await apiLog("yetki", "", "", `varsayılan yükleme süresi ${dk} dk olarak ayarlandı`);
+  } catch (e) {
+    alert("Kaydedilemedi: " + e.message + "\n\n⚠️ Rules'ta sevkiyat_suresi .write izni admin e-postanıza açık olmalı.");
+  }
+}
+async function sureSaveCombo(key) {
+  const tr = document.querySelector(`tr[data-skey="${key}"]`);
+  if (!tr) return;
+  const dk = Number(tr.querySelector("input[data-suredk]").value);
+  if (!dk || dk < 1) { alert("Geçerli bir dakika gir."); return; }
+  const v = sureAyarlari[key];
+  const entry = { musteri: v.musteri, sevkiyatTipi: v.sevkiyatTipi, sureDk: dk };
+  try {
+    await authFetch(`${FIREBASE_DB_URL}/${SURE_NODE}/${key}.json`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry)
+    });
+    sureAyarlari[key] = entry;
+    showToast(`✅ ${esc(v.musteri)} · ${esc(v.sevkiyatTipi)} → ${dk} dk kaydedildi.`);
+    await apiLog("yetki", "", v.musteri, `${v.sevkiyatTipi} standart yükleme süresi ${dk} dk olarak ayarlandı`);
+    renderSureTable();
+    render();
+  } catch (e) {
+    alert("Kaydedilemedi: " + e.message);
+  }
+}
+async function sureDeleteCombo(key) {
+  const v = sureAyarlari[key];
+  if (!confirm(`${v.musteri} · ${v.sevkiyatTipi} süresi silinsin mi? (varsayılan süreyi kullanır)`)) return;
+  try {
+    await authFetch(`${FIREBASE_DB_URL}/${SURE_NODE}/${key}.json`, { method: "DELETE" });
+    delete sureAyarlari[key];
+    renderSureTable();
+    render();
+    showToast("🗑️ Silindi — artık varsayılan süre kullanılacak.");
+  } catch (e) {
+    alert("Silinemedi: " + e.message);
+  }
+}
+async function sureAddCombo() {
+  const m = document.getElementById("sureNewMusteri").value.trim();
+  const t = document.getElementById("sureNewTip").value;
+  const dk = Number(document.getElementById("sureNewDk").value);
+  if (!m) { alert("Müşteri adı gir."); return; }
+  if (!dk || dk < 1) { alert("Geçerli bir dakika gir."); return; }
+  const key = comboKey(m, t);
+  const entry = { musteri: m, sevkiyatTipi: t, sureDk: dk };
+  try {
+    await authFetch(`${FIREBASE_DB_URL}/${SURE_NODE}/${key}.json`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry)
+    });
+    sureAyarlari[key] = entry;
+    document.getElementById("sureNewMusteri").value = "";
+    document.getElementById("sureNewDk").value = "";
+    renderSureTable();
+    render();
+    showToast(`✅ ${esc(m)} · ${esc(t)} → ${dk} dk eklendi.`);
+    await apiLog("yetki", "", m, `${t} standart yükleme süresi ${dk} dk olarak eklendi`);
+  } catch (e) {
+    alert("Eklenemedi: " + e.message);
+  }
+}
+document.getElementById("btnSureDefaultSave").addEventListener("click", sureSaveDefault);
+document.getElementById("btnSureAdd").addEventListener("click", sureAddCombo);
+document.getElementById("sureNewMusteri").addEventListener("keydown", e => { if (e.key === "Enter") sureAddCombo(); });
+document.getElementById("sureNewDk").addEventListener("keydown", e => { if (e.key === "Enter") sureAddCombo(); });
+document.getElementById("sureTable").addEventListener("click", e => {
+  const sb = e.target.closest("button[data-ssave]");
+  if (sb) { sureSaveCombo(sb.dataset.ssave); return; }
+  const sd = e.target.closest("button[data-sdel]");
+  if (sd) { sureDeleteCombo(sd.dataset.sdel); return; }
+});
+document.getElementById("btnCloseSure").addEventListener("click", () => {
+  document.getElementById("sureModal").classList.add("hidden");
+});
+document.getElementById("sureModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
 });
 
 /* ============================================================
@@ -2326,31 +2607,36 @@ document.getElementById("historyModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
 });
 
-/* ================= EXCEL DIŞA AKTARMA (her zaman tüm kolonlar) ================= */
+/* ================= EXCEL DIŞA AKTARMA ================= */
 function exportExcel() {
   if (typeof XLSX === "undefined") { alert("Excel kütüphanesi (CDN) yüklenemedi."); return; }
   const list = filtered();
   if (!list.length) { alert("Aktarılacak kayıt yok."); return; }
-  const data = list.map(r => ({
-    "Müşteri": r.musteri,
-    "BLM": r.blm,
-    "Kategori": r.kategori,
-    "Sevkiyat Tipi": r.sevkiyatTipi,
-    "AD": Number(r.ad) || 0,
-    "Planlanan Tarih": r.planlananTarih ? formatDate(r.planlananTarih) : "",
-    "Reel Plan": r.reelPlan ? formatDate(r.reelPlan) : "",
-    "Gerçekleşen Tarih": r.gerceklesenTarih ? formatDate(r.gerceklesenTarih) : "",
-    "Durum": r.durum,
-    "Gecikme (gün)": gecikmeGunu(r) > 0 ? gecikmeGunu(r) : "",
-    "Açıklama": r.aciklama || "",
-    "Aracı Geldi": r.araciGeldi || "",
-    "PRS M3": r.prsM3 ?? "",
-    "M3": r.m3 ?? "",
-    "Öncelikli": r.oncelikli ? "Evet" : "",
-    "Ekleyen": r.createdBy || ""
-  }));
+  const data = list.map(r => {
+    const b = sureBilgi(r);
+    return {
+      "Müşteri": r.musteri,
+      "BLM": r.blm,
+      "Kategori": r.kategori,
+      "Sevkiyat Tipi": r.sevkiyatTipi,
+      "AD": Number(r.ad) || 0,
+      "Planlanan Tarih": r.planlananTarih ? formatDate(r.planlananTarih) : "",
+      "Reel Plan": r.reelPlan ? formatDate(r.reelPlan) : "",
+      "Gerçekleşen Tarih": r.gerceklesenTarih ? formatDate(r.gerceklesenTarih) : "",
+      "Durum": r.durum,
+      "Gecikme (gün)": gecikmeGunu(r) > 0 ? gecikmeGunu(r) : "",
+      "Yükleme Süresi": b.durum !== "none" ? fmtSure(b.gecenMs) : "",
+      "Süre Aşımı (dk)": (b.durum !== "none" && b.asim) ? b.asimDk : "",
+      "Açıklama": r.aciklama || "",
+      "Aracı Geldi": r.araciGeldi || "",
+      "PRS M3": r.prsM3 ?? "",
+      "M3": r.m3 ?? "",
+      "Öncelikli": r.oncelikli ? "Evet" : "",
+      "Ekleyen": r.createdBy || ""
+    };
+  });
   const ws = XLSX.utils.json_to_sheet(data);
-  ws["!cols"] = [{wch:24},{wch:10},{wch:10},{wch:14},{wch:6},{wch:15},{wch:15},{wch:16},{wch:26},{wch:12},{wch:11},{wch:8},{wch:8},{wch:10},{wch:10},{wch:22}];
+  ws["!cols"] = [{wch:24},{wch:10},{wch:10},{wch:14},{wch:6},{wch:15},{wch:15},{wch:16},{wch:26},{wch:12},{wch:14},{wch:14},{wch:11},{wch:8},{wch:8},{wch:10},{wch:10},{wch:22}];
   try {
     const range = XLSX.utils.decode_range(ws["!ref"]);
     ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: range.e.r, c: range.e.c } }) };
@@ -2559,6 +2845,7 @@ function updateUserUI() {
   const box = document.getElementById("userBox");
   document.body.classList.toggle("can-edit", !!currentUser);
   document.getElementById("btnAdminPanel").classList.toggle("hidden", !isAdmin());
+  document.getElementById("btnSurePanel").classList.toggle("hidden", !isAdmin());
   if (currentUser) {
     const admin = isAdmin();
     box.innerHTML = `<span class="user-chip ${admin ? "is-admin" : ""}">${admin ? "🛡️" : "👤"} ${esc(shortUser(currentUser.email))}</span>
@@ -2637,6 +2924,12 @@ setInterval(() => {
   load(false);
 }, 30000);
 
+/* ⏱️ Kronometre tick: aktif yükleme barlarını 15 sn'de bir canlı güncelle */
+setInterval(() => {
+  if (document.hidden || addingInline || editingCell) return;
+  if (rows.some(r => r.durum === "Yükleniyor" && r.loadingStartedAt)) updateSureCells();
+}, 15000);
+
 /* ================= PWA ================= */
 (function setupManifest() {
   const iconSvg = encodeURIComponent(
@@ -2696,6 +2989,7 @@ updateUserUI();
 (async () => {
   loadPrefs();
   updateSortHeaders();
+  await loadSureAyarlari();
   const s = getAuthState();
   if (s) {
     try {
