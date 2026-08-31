@@ -405,7 +405,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → değiştir → <b>Enter</b>. <b>⧉</b> kaydı bugüne çoğaltır. <b>Varsayılan sıralama:</b> Planlanan tarih (eski → yeni) + Durum. <b>Başlıklara tıkla</b> → o kolona göre sırala (tekrar tıkla: ters · üçüncü: varsayılana dön). Filtreler ve sıralama tarayıcında hatırlanır. Silme ve Excel yükleme yetkisi Admin Panel'den atanır.</p>
+  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → değiştir → <b>Enter</b>. <b>⧉</b> kaydı bugüne çoğaltır. <b>Varsayılan sıralama:</b> Durum (Yükleniyor → Bekliyor → Tamamlandı), her grupta tarihe göre en yakından uzağa. <b>Başlıklara tıkla</b> → o kolona göre sırala (üçüncü tık: varsayılana dön)</p>
 </main>
 
 <datalist id="musteri-list"></datalist>
@@ -667,17 +667,18 @@ function tarihCmp(a, b) {
   if (!b) return -1;
   return a < b ? -1 : a > b ? 1 : 0;
 }
-/* Varsayılan sıralama: planlanan → reel → gerçekleşen, en yeni üstte */
-/* Varsayılan sıralama: 1) Planlanan tarih eski→yeni  2) Durum  3) Reel  4) Gerçekleşen  5) Müşteri */
+/* Varsayılan sıralama:
+   1) Durum: Yükleniyor (en üst) → Yükleme Bekliyor (orta) → Yükleme Tamamlandı (en alt)
+   2) Her grubun içinde planlanan tarih: en yakın (geçmiş/bugün) → en uzak gelecek */
 function sortList(list) {
   return list.slice().sort((x, y) => {
-    /* 1) Planlanan tarih: eskiden yeniye (gecikenler otomatik en üstte) */
-    let c = tarihCmp(x.planlananTarih, y.planlananTarih);
-    if (c) return c;
-    /* 2) Aynı tarihte durum sırası: Yükleniyor → Bekliyor → Tamamlandı */
+    /* 1) Durum grupları — sabit sıra */
     const dx = DURUM_SIRA[x.durum] ?? 9;
     const dy = DURUM_SIRA[y.durum] ?? 9;
     if (dx !== dy) return dx - dy;
+    /* 2) Grup içi tarih: kronolojik artan → geciken üstte, uzak gelecek altta */
+    let c = tarihCmp(x.planlananTarih, y.planlananTarih);
+    if (c) return c;
     /* 3) Bağlayıcı kriterler */
     c = tarihCmp(x.reelPlan, y.reelPlan);
     if (c) return c;
