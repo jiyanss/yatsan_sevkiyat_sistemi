@@ -167,7 +167,6 @@
     letter-spacing: .02em; white-space: nowrap;
   }
 
-  /* ⏱️ Süre kolonu: mini bar */
   .sure-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 96px; }
   .surebar {
     width: 96px; height: 8px; border-radius: 999px;
@@ -375,7 +374,7 @@
     <div class="logo">🚢</div>
     <div>
       <h1>Sevkiyat Planlama — İhracat</h1>
-      <p class="subtitle">Canlı senkron · kolon yönetimi · yükleme süresi takibi</p>
+      <p class="subtitle">Canlı senkron · yükleme süresi takibi · ekip kapasite analizi</p>
     </div>
   </div>
   <div class="toolbar">
@@ -455,7 +454,7 @@
           <th data-col="reelPlan" data-sort="reelPlan">Reel Plan<span class="arw"></span></th>
           <th data-col="gerceklesenTarih" data-sort="gerceklesenTarih">Gerçekleşen<span class="arw"></span></th>
           <th data-col="durum" data-sort="durum">Durum<span class="arw"></span></th>
-          <th data-col="sure">Süre<span class="arw"></span></th>
+          <th data-col="sure">Süre</th>
           <th data-col="aciklama">Açıklama</th>
           <th data-col="araciGeldi">Aracı Geldi</th>
           <th data-col="status">Status</th>
@@ -468,7 +467,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → değiştir → <b>Enter</b>. <b>⏱️ Süre</b>: durum <b>Yükleniyor</b> olunca kronometre başlar, müşteri+tip için tanımlı standart süreye göre dolar; süre aşılırsa satır kırmızıya döner. Süreleri <b>⏱️ Süreler</b> panelinden yönet. <b>Varsayılan sıralama:</b> Durum grubu + tarih; başlığa tıklayarak değiştir (3. tık: varsayılana dön).</p>
+  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → değiştir → <b>Enter</b>. <b>⏱️ Süre</b>: durum <b>Yükleniyor</b> olunca kronometre başlar, müşteri+tip için tanımlı standart süreye göre dolar; aşılırsa satır kırmızıya döner. Süreleri <b>⏱️ Süreler</b>, yetkileri <b>🛡️ Admin Panel</b>'den yönet. Kapasite analizi: <b>📊 Raporlar → 👷 Kapasite</b>. <b>Varsayılan sıralama:</b> Durum (Yükleniyor → Bekliyor → Tamamlandı), grupta tarihe göre yakın → uzak; başlığa tıklayarak değiştir (3. tık: varsayılana dön). Tüm tercihler hatırlanır.</p>
 </main>
 
 <datalist id="musteri-list"></datalist>
@@ -506,10 +505,12 @@
     <div class="rtabs">
       <button class="rtab active" data-rtab="genel">📊 Genel Bakış</button>
       <button class="rtab" data-rtab="analiz">📈 Trend & Analiz</button>
+      <button class="rtab" data-rtab="kapasite">👷 Kapasite</button>
       <button class="rtab" data-rtab="detay">📋 Detay Tablolar</button>
     </div>
     <div id="reportPaneGenel" class="rpane"></div>
     <div id="reportPaneAnaliz" class="rpane hidden"></div>
+    <div id="reportPaneKapasite" class="rpane hidden"></div>
     <div id="reportPaneDetay" class="rpane hidden"></div>
     <div class="modal-actions"><button class="btn" id="btnCloseReport">Kapat</button></div>
   </div>
@@ -544,11 +545,10 @@
 
 <datalist id="adminKnownEmails"></datalist>
 
-<!-- ⏱️ Süre ayarları paneli -->
 <div id="sureModal" class="modal-bg hidden">
   <div class="modal">
     <h2>⏱️ Yükleme Süre Ayarları</h2>
-    <p class="hint">Müşteri + sevkiyat tipi kombinasyonu için standart yükleme süresi (dakika). Durum <b>Yükleniyor</b> olunca süre işlemeye başlar, <b>Tamamlandı</b>da durur ve kayıtta saklanır. Listede olmayan kombinasyonlar <b>varsayılan</b> süreyi kullanır.</p>
+    <p class="hint">Müşteri + sevkiyat tipi kombinasyonu için standart yükleme süresi (dakika). Durum <b>Yükleniyor</b> olunca süre işlemeye başlar, <b>Tamamlandı</b>da durur ve kayıtta saklanır. Bu süreler <b>👷 Kapasite</b> raporunda ekip ihtiyacı hesabında da kullanılır. Listede olmayan kombinasyonlar <b>varsayılan</b> süreyi kullanır.</p>
     <div class="form-grid" style="grid-template-columns:1fr auto;align-items:end">
       <label><span>Varsayılan süre (dakika)</span><input id="sureDefault" type="number" min="1" /></label>
       <button class="btn primary" id="btnSureDefaultSave" style="padding:8px 14px">Varsayılanı Kaydet</button>
@@ -561,10 +561,9 @@
       </table>
     </div>
     <h3 style="font-size:13px;margin:14px 0 6px;">Yeni kombinasyon ekle</h3>
-    <div class="form-grid" style="grid-template-columns:2fr 1fr auto;align-items:end">
+    <div class="form-grid" style="grid-template-columns:2fr 1fr;align-items:end">
       <label><span>Müşteri</span><input id="sureNewMusteri" list="musteri-list" /></label>
       <label><span>Tip</span><select id="sureNewTip"></select></label>
-      <span></span>
     </div>
     <div class="form-grid" style="grid-template-columns:1fr auto;align-items:end;margin-top:8px">
       <label><span>Süre (dakika)</span><input id="sureNewDk" type="number" min="1" /></label>
@@ -619,10 +618,13 @@ const FIREBASE_API_KEY = "AIzaSyAagmdq0N2TG4IQ7noDFL6xQh4-ps-QrgI";
 const NODE = "sevkiyat";
 const HIST_NODE = "sevkiyat_history";
 const USERS_NODE = "sevkiyat_users";
-const SURE_NODE = "sevkiyat_suresi"; /* ⏱️ süre ayarları — Rules güncellemesi gerekli! */
+const SURE_NODE = "sevkiyat_suresi";
 
 /* ============================================================
    ROLLER — ADMİN PANELİNDEN YÖNETİLİR
+   • ADMIN_EMAILS: bootstrap admin listesi — her zaman tam yetkili.
+   • Paneldeki kullanıcılar: rol (Kullanıcı/Admin) + 5 yetki.
+   • Listede olmayan girişli kullanıcılar DEFAULT_PERMS alır.
    ============================================================ */
 const ADMIN_EMAILS = [
   "admin@yatsan.com"
@@ -1027,7 +1029,7 @@ async function loadUserEntries() {
 }
 
 /* ================= ⏱️ Süre ayarları (müşteri+tip → dakika) ================= */
-let sureAyarlari = {};   /* comboKey → { musteri, sevkiyatTipi, sureDk } */
+let sureAyarlari = {};
 let sureVarsayilan = 120;
 function comboKey(m, t) {
   return String(m || "").replace(/[.#$\[\]\/]/g, "_") + "~~" + String(t || "").replace(/\s+/g, "_");
@@ -1052,7 +1054,6 @@ function getSureDk(r) {
   const hit = sureAyarlari[comboKey(r.musteri, r.sevkiyatTipi)];
   return hit ? hit.sureDk : sureVarsayilan;
 }
-/* Durum değişiminde kronometre alanlarını uygula (basit sürüm: durdurma=sıfırlama) */
 function applyDurumSideEffects(rec) {
   const d = rec.durum;
   if (d === "Yükleniyor") {
@@ -1065,6 +1066,23 @@ function applyDurumSideEffects(rec) {
     if (rec.loadingStartedAt && !rec.loadingEndedAt) rec.loadingEndedAt = Date.now();
   }
   return rec;
+}
+
+/* ================= 👷 Kapasite ayarları ================= */
+const KAPASITE_KEY = "sevkiyat_kapasite";
+let kapasiteSaat = 9;   /* ekip günlük çalışma saati */
+let kapasiteEkip = 3;   /* mevcut ekip sayısı */
+function loadKapasitePrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem(KAPASITE_KEY));
+    if (p) {
+      if (Number(p.saat) > 0) kapasiteSaat = Number(p.saat);
+      if (Number(p.ekip) > 0) kapasiteEkip = Number(p.ekip);
+    }
+  } catch (e) {}
+}
+function saveKapasitePrefs() {
+  try { localStorage.setItem(KAPASITE_KEY, JSON.stringify({ saat: kapasiteSaat, ekip: kapasiteEkip })); } catch (e) {}
 }
 
 /* ================= State ================= */
@@ -1316,7 +1334,6 @@ function sureCellHtml(r) {
       <span class="sure-txt ${b.asim ? "over" : ""}">${txt}</span>
     </div>`;
   }
-  /* done — donmuş bar */
   const cls = b.asim ? "warn" : "";
   const txt = b.asim
     ? `✔ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşım`
@@ -1326,7 +1343,6 @@ function sureCellHtml(r) {
     <span class="sure-txt ${b.asim ? "done-over" : "done-ok"}">${txt}</span>
   </div>`;
 }
-/* Aktif kronometreleri 15 sn'de bir canlı güncelle (tam render olmadan) */
 function updateSureCells() {
   rows.forEach(r => {
     if (r.durum !== "Yükleniyor" || !r.loadingStartedAt) return;
@@ -1334,7 +1350,6 @@ function updateSureCells() {
     if (!tr) return;
     const td = tr.querySelector('td[data-col="sure"]');
     if (td) td.innerHTML = sureCellHtml(r);
-    /* aşım başladıysa satır rengini güncelle */
     const b = sureBilgi(r);
     const isOver = b.asim;
     const hasCls = tr.classList.contains("overtime");
@@ -1479,7 +1494,7 @@ function rowHtml(r) {
 }
 function renderTable(list) {
   const tbody = document.getElementById("tbody");
-  const cc = 19 - hiddenCols.size; /* Süre kolonuyla toplam 19 */
+  const cc = 19 - hiddenCols.size;
   let html = "";
   if (loading) html += `<tr><td colspan="${cc}" class="empty">Yükleniyor…</td></tr>`;
   if (addingInline) html += formRowHtml(inlineData, "inline", "inline-row", "save-inline", "cancel-inline");
@@ -1501,7 +1516,7 @@ function renderTable(list) {
   }
 }
 
-/* ================= 🆕 Kolon gizle/göster ================= */
+/* ================= Kolon gizle/göster ================= */
 function applyHiddenCols() {
   ALL_COLS.forEach(([k]) => document.body.classList.toggle("hide-" + k, hiddenCols.has(k)));
 }
@@ -1575,7 +1590,6 @@ async function commitCell() {
     const m3 = hesaplaM3(updated.sevkiyatTipi, updated.ad, updated.prsM3);
     if (m3 !== null) updated.m3 = m3;
   }
-  /* ⏱️ Durum değiştiyse kronometre alanlarını uygula */
   if (field === "durum") applyDurumSideEffects(updated);
   try {
     const saved = await apiUpdate(id, updated);
@@ -1585,7 +1599,6 @@ async function commitCell() {
     if (String(updated.m3 ?? "") !== String(row.m3 ?? "")) {
       parts.push(`${FIELD_LABELS.m3}: "${dispVal("m3", row.m3)}" → "${dispVal("m3", updated.m3)}"`);
     }
-    /* Tamamlanınca gerçekleşen süreyi geçmişe işle */
     if (field === "durum" && val === "Yükleme Tamamlandı" && updated.loadingStartedAt && updated.loadingEndedAt) {
       parts.push(`yüklenme süresi: ${fmtSure(updated.loadingEndedAt - updated.loadingStartedAt)}`);
     }
@@ -2527,6 +2540,148 @@ function buildAnaliz(list) {
   }
 }
 
+/* ============================================================
+   👷 KAPASİTE ANALİZİ
+   Bugün ve sonrası, tamamlanmamış kayıtlar; filtrelerden bağımsız.
+   İş saati = standart süre(dk) × AD / 60. Gerekli ekip = ⌈saat / günlük saat⌉
+   ============================================================ */
+function kapasiteData() {
+  const today = todayISO();
+  const list = enriched(rows).filter(r =>
+    r.planlananTarih && r.planlananTarih >= today &&
+    r.durum !== "Yükleme Tamamlandı"
+  );
+  const m = new Map();
+  list.forEach(r => {
+    const g = m.get(r.planlananTarih) || { yukleme: 0, saat: 0, tanimsiz: 0 };
+    g.yukleme += adet(r);
+    g.saat += (getSureDk(r) * adet(r)) / 60;
+    if (!sureAyarlari[comboKey(r.musteri, r.sevkiyatTipi)]) g.tanimsiz += adet(r);
+    m.set(r.planlananTarih, g);
+  });
+  return [...m.entries()]
+    .sort((a, b) => a[0] < b[0] ? -1 : 1)
+    .map(([tarih, g]) => {
+      const gerekliEkip = Math.max(1, Math.ceil(g.saat / kapasiteSaat));
+      const kapasite = kapasiteEkip * kapasiteSaat;
+      return { tarih, ...g, gerekliEkip, kapasite, fark: kapasite - g.saat };
+    });
+}
+function gunEtiketi(iso) {
+  const dt = parseLocalDate(iso);
+  if (!dt) return iso;
+  const idx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[dt.getDay()];
+  return `${GUNLER[idx] || ""} ${dt.getDate()} ${AYLAR[dt.getMonth()]}`;
+}
+function buildKapasite() {
+  const c = document.getElementById("reportPaneKapasite");
+  const gunler = kapasiteData();
+  if (!gunler.length) {
+    c.innerHTML = `<p class="hint">Bugün ve sonrasında planlanmış (tamamlanmamış) yükleme yok — kapasite analizi için gelecek tarihe kayıt ekle.</p>`;
+    return;
+  }
+  const toplamSaat = gunler.reduce((s, g) => s + g.saat, 0);
+  const enKritik = [...gunler].sort((a, b) => b.gerekliEkip - a.gerekliEkip)[0];
+  const yetmeyen = gunler.filter(g => g.fark < 0).length;
+  const toplamEkipGun = gunler.reduce((s, g) => s + g.saat, 0) / kapasiteSaat;
+  const tanimsizToplam = gunler.reduce((s, g) => s + g.tanimsiz, 0);
+
+  const ayarHtml = `<div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:12px">
+    <div class="kpi c-primary"><div class="kpi-head">⏰ Ekip günlük çalışma saati</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+        <input type="number" id="kapSaat" min="1" max="24" value="${kapasiteSaat}" class="cell-input w-num" />
+        <span class="kpi-sub" style="margin:0">saat/gün</span>
+      </div></div>
+    <div class="kpi c-amber"><div class="kpi-head">👷 Mevcut ekip sayısı</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+        <input type="number" id="kapEkip" min="1" max="50" value="${kapasiteEkip}" class="cell-input w-num" />
+        <span class="kpi-sub" style="margin:0">ekip (ekstra günlerde artırabilirsin)</span>
+      </div></div>
+  </div>`;
+
+  const kpiBlock = `<div class="kpi-grid">
+    <div class="kpi c-red"><div class="kpi-head">🔥 En kritik gün</div><div class="kpi-val" style="font-size:18px">${esc(gunEtiketi(enKritik.tarih))}</div><div class="kpi-sub">${enKritik.gerekliEkip} ekip gerekli · ${fmtN(enKritik.saat)} saat iş</div></div>
+    <div class="kpi c-primary"><div class="kpi-head">🧮 Toplam iş saati</div><div class="kpi-val">${fmtN(toplamSaat)}s</div><div class="kpi-sub">${gunler.length} gün · ${fmtN(toplamEkipGun)} ekip-gün ihtiyaç</div></div>
+    <div class="kpi c-amber"><div class="kpi-head">⚠️ Yetersiz gün</div><div class="kpi-val">${yetmeyen}</div><div class="kpi-sub">${gunler.length} günün ${yetmeyen ? yetmeyen : "hiçbirinde"} mevcut ekip yetmiyor</div></div>
+    <div class="kpi ${tanimsizToplam ? "c-amber" : "c-green"}"><div class="kpi-head">❔ Süresiz kombinasyon</div><div class="kpi-val">${tanimsizToplam || 0}</div><div class="kpi-sub">${tanimsizToplam ? "yükleme varsayılan süreyle hesaplandı — ⏱️ Süreler panelinden tanımla" : "tüm kombinasyonlar tanımlı 🎉"}</div></div>
+  </div>`;
+
+  const chartBlock = (typeof Chart === "undefined")
+    ? ``
+    : `<div class="chart-box wide" style="margin-bottom:16px"><h3>📊 Gün bazlı gerekli ekip vs mevcut ekip (${kapasiteSaat}s/gün)</h3><div class="chart-holder"><canvas id="chKapasite"></canvas></div></div>`;
+
+  let rowsHtml = "";
+  gunler.forEach(g => {
+    const yeterli = g.fark >= 0;
+    const durum = yeterli
+      ? `<span class="badge done">✅ Yetiyor · ${fmtN(g.fark)}s yedek</span>`
+      : `<span class="badge waiting">🔴 ${fmtN(-g.fark)}s eksik · +${g.gerekliEkip - kapasiteEkip} ekip lazım</span>`;
+    const renk = yeterli ? "color:var(--green);font-weight:700" : "color:var(--red);font-weight:700";
+    rowsHtml += `<tr>
+      <td class="strong">${esc(gunEtiketi(g.tarih))}</td>
+      <td class="center">${fmtN(g.yukleme)}</td>
+      <td class="center">${fmtN(g.saat)}s</td>
+      <td class="center" style="${renk}">${g.gerekliEkip}</td>
+      <td class="center">${durum}</td>
+    </tr>`;
+  });
+
+  c.innerHTML = ayarHtml + kpiBlock + chartBlock + `<div class="rpt"><h3>📅 Gün bazlı kapasite planı (bugün + gelecek · tamamlanmışlar hariç · filtrelerden bağımsız)</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Gün</th><th>Yükleme (adet)</th><th>Gereken iş saati</th><th>Gerekli ekip</th><th>Mevcut ${kapasiteEkip} ekiple</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div></div>`;
+
+  const saatInp = document.getElementById("kapSaat");
+  const ekipInp = document.getElementById("kapEkip");
+  const rebuild = () => {
+    const s = Number(saatInp.value) || kapasiteSaat;
+    const e = Number(ekipInp.value) || kapasiteEkip;
+    if (s === kapasiteSaat && e === kapasiteEkip) return;
+    kapasiteSaat = s; kapasiteEkip = e;
+    saveKapasitePrefs();
+    buildKapasite();
+  };
+  saatInp.addEventListener("change", rebuild);
+  ekipInp.addEventListener("change", rebuild);
+
+  if (typeof Chart !== "undefined") {
+    const { textColor, gridColor } = chartBase();
+    chartInstances.push(new Chart(document.getElementById("chKapasite").getContext("2d"), {
+      data: {
+        labels: gunler.map(g => gunEtiketi(g.tarih)),
+        datasets: [
+          { type: "bar", label: "Gerekli ekip", yAxisID: "y",
+            data: gunler.map(g => g.gerekliEkip),
+            backgroundColor: gunler.map(g => g.fark < 0 ? "#dc2626cc" : "#059669cc"),
+            borderRadius: 6, maxBarThickness: 44 },
+          { type: "line", label: `Mevcut ekip (${kapasiteEkip})`, yAxisID: "y",
+            data: gunler.map(() => kapasiteEkip),
+            borderColor: "#4f46e5", borderWidth: 2.5, borderDash: [6, 4],
+            pointRadius: 0, fill: false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, padding: 14, font: { size: 11 } } },
+          datalabels: { display: c => c.dataset.type === "bar", anchor: "end", align: "end",
+            color: textColor, font: { weight: "700", size: 10.5 }, formatter: v => v },
+          tooltip: { callbacks: { label: c => c.dataset.type === "bar"
+            ? ` Gerekli: ${c.parsed.y} ekip (${fmtN(gunler[c.dataIndex].saat)} saat iş)`
+            : ` Mevcut: ${kapasiteEkip} ekip (${fmtN(kapasiteEkip * kapasiteSaat)} saat kapasite)` } }
+        },
+        scales: {
+          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0, stepSize: 1 },
+               title: { display: true, text: "Ekip sayısı", color: textColor, font: { size: 10, weight: "600" } } },
+          x: { grid: { display: false }, ticks: { color: textColor } }
+        }
+      }
+    }));
+  }
+}
+
 function buildDetay(list) {
   document.getElementById("reportPaneDetay").innerHTML =
     statsTable(groupStats(list, r => r.musteri), "Müşteri bazlı", "Müşteri") +
@@ -2543,6 +2698,7 @@ function buildReports() {
   document.getElementById("reportPaneGenel").innerHTML = list.length ? "" : emptyMsg;
   document.getElementById("reportPaneAnaliz").innerHTML = list.length ? "" : emptyMsg;
   document.getElementById("reportPaneDetay").innerHTML = list.length ? "" : emptyMsg;
+  document.getElementById("reportPaneKapasite").innerHTML = "";
   if (!list.length) return;
   buildGenel(list);
   buildAnaliz(list);
@@ -2554,8 +2710,10 @@ function switchReportTab(tab) {
   document.querySelectorAll(".rtab").forEach(b => b.classList.toggle("active", b.dataset.rtab === tab));
   document.getElementById("reportPaneGenel").classList.toggle("hidden", tab !== "genel");
   document.getElementById("reportPaneAnaliz").classList.toggle("hidden", tab !== "analiz");
+  document.getElementById("reportPaneKapasite").classList.toggle("hidden", tab !== "kapasite");
   document.getElementById("reportPaneDetay").classList.toggle("hidden", tab !== "detay");
   destroyCharts();
+  if (tab === "kapasite") { buildKapasite(); return; }
   const list = filtered();
   if (!list.length) return;
   if (tab === "genel") buildGenel(list);
@@ -2988,6 +3146,7 @@ updateOfflineBadge();
 updateUserUI();
 (async () => {
   loadPrefs();
+  loadKapasitePrefs();
   updateSortHeaders();
   await loadSureAyarlari();
   const s = getAuthState();
