@@ -405,7 +405,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → değiştir → <b>Enter</b>. <b>⧉</b> kaydı bugüne çoğaltır. <b>Başlıklara tıkla</b> → o kolona göre sırala (tekrar tıkla: ters · üçüncü: varsayılan). Filtreler ve sıralama tarayıcında hatırlanır. Silme ve Excel yükleme yetkisi Admin Panel'den atanır.</p>
+  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → değiştir → <b>Enter</b>. <b>⧉</b> kaydı bugüne çoğaltır. <b>Varsayılan sıralama:</b> Planlanan tarih (eski → yeni) + Durum. <b>Başlıklara tıkla</b> → o kolona göre sırala (tekrar tıkla: ters · üçüncü: varsayılana dön). Filtreler ve sıralama tarayıcında hatırlanır. Silme ve Excel yükleme yetkisi Admin Panel'den atanır.</p>
 </main>
 
 <datalist id="musteri-list"></datalist>
@@ -668,17 +668,21 @@ function tarihCmp(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 /* Varsayılan sıralama: planlanan → reel → gerçekleşen, en yeni üstte */
+/* Varsayılan sıralama: 1) Planlanan tarih eski→yeni  2) Durum  3) Reel  4) Gerçekleşen  5) Müşteri */
 function sortList(list) {
   return list.slice().sort((x, y) => {
-    let c = tarihCmp(x.planlananTarih, y.planlananTarih) * -1;
+    /* 1) Planlanan tarih: eskiden yeniye (gecikenler otomatik en üstte) */
+    let c = tarihCmp(x.planlananTarih, y.planlananTarih);
     if (c) return c;
-    c = tarihCmp(x.reelPlan, y.reelPlan) * -1;
-    if (c) return c;
-    c = tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih) * -1;
-    if (c) return c;
+    /* 2) Aynı tarihte durum sırası: Yükleniyor → Bekliyor → Tamamlandı */
     const dx = DURUM_SIRA[x.durum] ?? 9;
     const dy = DURUM_SIRA[y.durum] ?? 9;
     if (dx !== dy) return dx - dy;
+    /* 3) Bağlayıcı kriterler */
+    c = tarihCmp(x.reelPlan, y.reelPlan);
+    if (c) return c;
+    c = tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih);
+    if (c) return c;
     return String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
   });
 }
