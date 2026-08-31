@@ -1607,7 +1607,7 @@ function scheduleCellCommit(delay) {
 }
 document.getElementById("tbody").addEventListener("change", e => {
   if (!e.target.matches || !e.target.matches("[data-cid]")) return;
-  if (e.target.type === "date") scheduleCellCommit(500);
+  if (e.target.type === "date") scheduleCellCommit(900);
   else commitCell();
 });
 
