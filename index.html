@@ -1584,10 +1584,23 @@ document.getElementById("tbody").addEventListener("keydown", e => {
   if (scope === "inline") gate("save-inline");
 });
 document.getElementById("tbody").addEventListener("focusout", e => {
-  if (e.target.matches && e.target.matches("[data-cid]")) commitCell();
+  if (!e.target.matches || !e.target.matches("[data-cid]")) return;
+  /* Tarih hücresinde odak yerel takvime gittiyse (relatedTarget yok) ve değer
+     henüz değişmemişse düzenlemeyi açık tut — kullanıcı takvimden seçtiğinde
+     change olayı kaydı yapacak. */
+  const cur = editingCell;
+  if (cur && !e.relatedTarget && e.target.type === "date") {
+    const inp = document.querySelector(`[data-cid="${cur.id}"][data-cfield="${cur.field}"]`);
+    const row = inp ? rows.find(r => r.id === cur.id) : null;
+    if (inp && row && String(row[cur.field] ?? "") === String(inp.value ?? "")) {
+      return;
+    }
+  }
+  commitCell();
 });
+/* Tarih seçilirse beklemeden kaydet (change = değer tamamlandığında gelir) */
 document.getElementById("tbody").addEventListener("change", e => {
-  if (e.target.matches && e.target.matches("select[data-cid]")) commitCell();
+  if (e.target.matches && e.target.matches("[data-cid]")) commitCell();
 });
 
 /* Kolon sıralama: başlığa tıkla */
