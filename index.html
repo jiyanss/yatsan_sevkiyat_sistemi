@@ -402,6 +402,31 @@
   .depo-item.d-amber { border-left: 6px solid #fbbf24; }
   .depo-item.d-blue { border-left: 6px solid #818cf8; }
   .depo-empty { font-size: 16px; color: #8aa0b8; font-style: italic; }
+    .depo-note {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 700; color: #fbbf24;
+    background: #2d2410; border: 1px solid #fbbf24;
+    border-radius: 999px; padding: 2px 10px; margin-left: 8px;
+    max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    vertical-align: middle;
+  }
+  .depo-week-day {
+    background: #151f31; border: 1px solid #2b3a52; border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 10px;
+  }
+  .depo-week-day h4 {
+    margin: 0 0 8px; font-size: 15px; font-weight: 800; color: #8aa0b8;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .depo-week-day h4 span { color: #e2e8f0; }
+  .depo-week-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 6px 0; border-top: 1px solid #2b3a52;
+    font-size: 15px;
+  }
+  .depo-week-row .w-m { font-weight: 700; }
+  .depo-week-row .w-m .w-cmt { color: #fbbf24; margin-left: 6px; font-size: 12px; }
+  .depo-week-row .w-r { color: #8aa0b8; font-weight: 600; white-space: nowrap; }
 
   /* 💬 Yorumlar */
   .cmt-list { max-height: 46vh; overflow-y: auto; margin-bottom: 12px; }
@@ -2222,16 +2247,66 @@ function renderDepoContent() {
   const yukleniyor = list.filter(r => r.durum === "Yükleniyor").sort((a, b) => (a.loadingStartedAt || 0) - (b.loadingStartedAt || 0));
   const bugun = list.filter(r => r.planlananTarih === today && r.durum === "Yükleme Bekliyor")
     .sort((a, b) => (oncelikVal(a) - oncelikVal(b)));
+
+  /* 💬 Yorum rozeti: son yorumun kısa metniyle */
+  const cmtBadge = (r) => {
+    const list2 = Array.isArray(r.comments) ? r.comments : [];
+    if (!list2.length) return "";
+    const son = [...list2].sort((a, b) => b.ts - a.ts)[0];
+    const kisa = son.text.length > 46 ? son.text.slice(0, 46) + "…" : son.text;
+    return `<span class="depo-note" title="${esc(son.text)} — ${esc(shortUser(son.user))}">💬 ${list2.length} · ${esc(kisa)}</span>`;
+  };
+
   const item = (r, cls, extra) => {
     const b = sureBilgi(r);
     const sureTxt = b.durum !== "none"
       ? (b.asim ? `<span style="color:#f87171">⚠ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşıldı</span>` : `⏱️ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk · %${b.yuzde}`)
       : "";
     return `<div class="depo-item ${cls}">
-      <div><div class="d-musteri">${esc(r.musteri)}</div><div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div></div>
+      <div><div class="d-musteri">${esc(r.musteri)}${cmtBadge(r)}</div><div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div></div>
       <div class="d-right">${esc(r.sevkiyatTipi)} · <span style="font-size:24px;color:#e2e8f0">${esc(r.ad)} yükleme</span><br>${extra}${sureTxt ? " · " + sureTxt : ""}</div>
     </div>`;
   };
+
+  /* 📅 Haftanın diğer günleri: bugün hariç, bugünden itibaren 7 gün */
+  const from = parseLocalDate(today);
+  const haftaGunleri = [];
+  for (let i = 1; i <= 7; i++) {
+    const dd = new Date(from);
+    dd.setDate(dd.getDate() + i);
+    haftaGunleri.push(isoFromDate(dd));
+  }
+  const haftaHtml = haftaGunleri.map(iso => {
+    const gList = list.filter(r => r.planlananTarih === iso)
+      .sort((a, b) => (oncelikVal(a) - oncelikVal(b)) || (String(a.musteri).localeCompare(String(b.musteri), "tr")));
+    if (!gList.length) return "";
+    const idx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[parseLocalDate(iso).getDay()];
+    const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
+    const yuklemeSayisi = gList.length;
+    const satirlar = gList.map(r => {
+      const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
+      return `<div class="depo-week-row">
+        <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtN ? `<span class="w-cmt">💬${cmtN}</span>` : ""}</div>
+        <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.durum === "Yükleniyor" ? " · 🟠 yükleniyor" : r.durum === "Yükleme Tamamlandı" ? " · ✅ tamam" : ""}</div>
+      </div>`;
+    }).join("");
+    return `<div class="depo-week-day">
+      <h4>${GUNLER[idx]} <span>· ${formatDate(iso)}</span> — ${yuklemeSayisi} kayıt / ${toplamAd} yükleme</h4>
+      ${satirlar}
+    </div>`;
+  }).join("");
+
+  let html = "";
+  html += `<div class="depo-sec-title" style="color:#fbbf24">🟠 ŞİMDİ YÜKLENİYOR (${yukleniyor.length})</div>`;
+  html += yukleniyor.length ? yukleniyor.map(r => item(r, "d-amber", formatDate(r.planlananTarih))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
+  html += `<div class="depo-sec-title" style="color:#f87171">🔴 GECİKEN (${geciken.reduce((s, r) => s + adet(r), 0)})</div>`;
+  html += geciken.length ? geciken.map(r => item(r, "d-red", `${formatDate(r.planlananTarih)} · ⚠ ${gecikmeGunu(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
+  html += `<div class="depo-sec-title" style="color:#818cf8">🔵 BUGÜN BEKLİYOR (${bugun.reduce((s, r) => s + adet(r), 0)})</div>`;
+  html += bugun.length ? bugun.map(r => item(r, "d-blue", "bugün")).join("") : `<div class="depo-empty">Bugün için bekleyen yükleme yok.</div>`;
+  html += `<div class="depo-sec-title" style="color:#34d399">📅 HAFTANIN DİĞER GÜNLERİ</div>`;
+  html += haftaHtml || `<div class="depo-empty">Gelecek 7 günde planlanmış yükleme yok.</div>`;
+  document.getElementById("depoContent").innerHTML = html;
+};
   let html = "";
   html += `<div class="depo-sec-title" style="color:#fbbf24">🟠 ŞİMDİ YÜKLENİYOR (${yukleniyor.length})</div>`;
   html += yukleniyor.length ? yukleniyor.map(r => item(r, "d-amber", formatDate(r.planlananTarih))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
