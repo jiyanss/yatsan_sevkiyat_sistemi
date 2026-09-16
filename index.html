@@ -190,7 +190,6 @@
     box-shadow: inset 0 0 0 1.5px var(--primary);
   }
 
-  /* 🆕 Yüzen hücre düzenleme katmanı — tablo kaydırmasıyla kaçmaz */
   #cellEditor {
     position: absolute; z-index: 45;
     background: var(--surface); border: 2px solid var(--primary);
@@ -230,7 +229,7 @@
   .w-aciklama { width: 110px; }
 
   .colmenu-wrap { position: relative; }
-    .colmenu {
+  .colmenu {
     position: fixed; z-index: 60;
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0,0,0,.18); padding: 10px 12px; min-width: 190px;
@@ -350,7 +349,6 @@
   .adm-check input { margin: 0; }
   .you-tag { font-size: 10px; color: var(--muted); font-weight: 500; }
 
-  /* 📅 Takvim — düzeltilmiş okunabilir düzen */
   .kal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .kal-head h3 { font-size: 15px; margin: 0; }
   .kal-nav { display: flex; gap: 6px; }
@@ -381,14 +379,21 @@
   .kal-item.kal-done { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); }
   body:not(.can-edit) .kal-item { cursor: default; }
 
-  /* 🖥️ Depo modu */
   .depo-overlay {
     position: fixed; inset: 0; z-index: 90; background: #0b1220; color: #e2e8f0;
     overflow-y: auto; padding: 24px;
   }
-  .depo-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .depo-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
   .depo-clock { font-size: 44px; font-weight: 800; letter-spacing: -0.02em; color: #818cf8; }
   .depo-date { font-size: 16px; color: #8aa0b8; margin-top: -4px; }
+  .depo-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .depo-tab {
+    border: 1px solid #2b3a52; background: #151f31; color: #8aa0b8;
+    border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .depo-tab:hover { color: #e2e8f0; border-color: #818cf8; }
+  .depo-tab.active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
   .depo-sec-title { font-size: 22px; font-weight: 800; margin: 22px 0 10px; }
   .depo-item {
     display: flex; justify-content: space-between; align-items: center; gap: 16px;
@@ -397,19 +402,16 @@
   }
   .depo-item .d-musteri { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
   .depo-item .d-sub { font-size: 14px; color: #8aa0b8; margin-top: 2px; }
+  .depo-item .d-cmt {
+    font-size: 12.5px; color: #fbbf24; margin-top: 6px; line-height: 1.45;
+    max-width: 560px; overflow-wrap: break-word;
+  }
   .depo-item .d-right { text-align: right; font-size: 15px; font-weight: 700; }
   .depo-item.d-red { border-left: 6px solid #f87171; }
   .depo-item.d-amber { border-left: 6px solid #fbbf24; }
   .depo-item.d-blue { border-left: 6px solid #818cf8; }
+  .depo-item.d-green { border-left: 6px solid #34d399; }
   .depo-empty { font-size: 16px; color: #8aa0b8; font-style: italic; }
-    .depo-note {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 12px; font-weight: 700; color: #fbbf24;
-    background: #2d2410; border: 1px solid #fbbf24;
-    border-radius: 999px; padding: 2px 10px; margin-left: 8px;
-    max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    vertical-align: middle;
-  }
   .depo-week-day {
     background: #151f31; border: 1px solid #2b3a52; border-radius: 12px;
     padding: 12px 16px; margin-bottom: 10px;
@@ -421,14 +423,12 @@
   .depo-week-day h4 span { color: #e2e8f0; }
   .depo-week-row {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding: 6px 0; border-top: 1px solid #2b3a52;
-    font-size: 15px;
+    padding: 7px 0; border-top: 1px solid #2b3a52; font-size: 15px;
   }
   .depo-week-row .w-m { font-weight: 700; }
   .depo-week-row .w-m .w-cmt { color: #fbbf24; margin-left: 6px; font-size: 12px; }
   .depo-week-row .w-r { color: #8aa0b8; font-weight: 600; white-space: nowrap; }
 
-  /* 💬 Yorumlar */
   .cmt-list { max-height: 46vh; overflow-y: auto; margin-bottom: 12px; }
   .cmt-item { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
   .cmt-meta { font-size: 10.5px; color: var(--muted); margin-bottom: 2px; }
@@ -451,6 +451,8 @@
     .btn { padding: 8px 10px; }
     .kal-grid { grid-template-columns: repeat(7, minmax(120px, 1fr)); }
     .kal-cell { min-height: 120px; }
+    .depo-item { flex-direction: column; align-items: flex-start; }
+    .depo-item .d-right { text-align: left; }
     .depo-item .d-musteri { font-size: 22px; }
     .depo-clock { font-size: 32px; }
   }
@@ -578,7 +580,6 @@
   <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → <b>yerinde açılan</b> kutuda değiştir → <b>Enter</b> (veya dışarı tıkla) → kaydedilir; <b>Esc</b> iptal. <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt (bitiş girersen kayıt Tamamlandı olur). <b>⭐ Önc.</b> kolonuna 1-2-3 yaz → o kayıtlar varsayılan sıralamada en üste dizilir. <b>💬</b> yorum butonu satırın sağında. <b>📅 Takvim</b>'de çipleri sürükleyip tarih değiştir.</p>
 </main>
 
-<!-- 🆕 Yüzen hücre düzenleme katmanı -->
 <div id="cellEditor" class="hidden"></div>
 
 <datalist id="musteri-list"></datalist>
@@ -791,6 +792,11 @@
     </div>
     <button class="btn" id="btnDepoClose" style="font-size:15px;padding:10px 18px">✖ Kapat (ESC)</button>
   </div>
+  <div class="depo-tabs">
+    <button class="depo-tab active" data-dtab="anlik">⚡ Anlık Durum</button>
+    <button class="depo-tab" data-dtab="kalan">📅 Kalan Yüklemeler</button>
+    <button class="depo-tab" data-dtab="bitmis">✅ Bitmiş Yüklemeler</button>
+  </div>
   <div id="depoContent"></div>
 </div>
 
@@ -959,6 +965,12 @@ function tarihCmp(a, b) {
   if (!a) return 1;
   if (!b) return -1;
   return a < b ? -1 : a > b ? 1 : 0;
+}
+/* Hücre değerini log/metin gösterimine uygun formatla */
+function dispVal(field, val) {
+  const def = CELL_DEFS[field];
+  if (def && def.kind === "date") return formatDate(val);
+  return String(val ?? "") || "-";
 }
 function oncelikVal(r) {
   return (r.oncelikNo === "" || r.oncelikNo == null) ? Infinity : Number(r.oncelikNo);
@@ -1307,12 +1319,13 @@ let dateFrom = "";
 let dateTo = "";
 let statusFilter = "kalan";
 let pendingAction = null;
-let editingCell = null;   /* { id, field, td } — yüzen katman için td referansı da tutulur */
+let editingCell = null;
 let committing = false;
 let activeReportTab = "genel";
 let currentCommentId = null;
 let currentSureId = null;
 let kalY = 0, kalM = 0;
+let depoTab = "anlik";
 const hiddenCols = new Set();
 
 /* ================= Son filtre hatırlama ================= */
@@ -1728,15 +1741,7 @@ function renderTable(list) {
 
 /* ============================================================
    🆕 YÜZEN HÜCRE DÜZENLEME KATMANI
-   Tablo kaydırılmışsa bile input, hücrenin üstünde görünür kalır.
-   Enter kaydeder · Esc iptal · dışarı tık kaydeder.
    ============================================================ */
-  /* Hücre değerini log/metin gösterimine uygun formatla */
-function dispVal(field, val) {
-  const def = CELL_DEFS[field];
-  if (def && def.kind === "date") return formatDate(val);
-  return String(val ?? "") || "-";
-}
 function openCellEditor(td, id, field) {
   closeCellEditor();
   const row = rows.find(r => r.id === id);
@@ -1747,7 +1752,6 @@ function openCellEditor(td, id, field) {
   const ed = document.getElementById("cellEditor");
   ed.innerHTML = cellInputHtml(row, field);
   ed.classList.remove("hidden");
-  /* Hücrenin konumunu görünür alana yerleştir */
   const wrap = td.closest(".table-wrap");
   const wrapRect = wrap.getBoundingClientRect();
   const tdRect = td.getBoundingClientRect();
@@ -1755,7 +1759,6 @@ function openCellEditor(td, id, field) {
   let left = tdRect.left + window.scrollX - 2;
   ed.style.top = top + "px";
   ed.style.left = "0px";
-  /* Genişliği hücreye göre ayarla, ekranın dışına taşmasın */
   ed.style.visibility = "hidden";
   ed.style.display = "block";
   requestAnimationFrame(() => {
@@ -1845,7 +1848,6 @@ document.getElementById("btnCols").addEventListener("click", e => {
   const btn = document.getElementById("btnCols");
   menu.classList.toggle("hidden");
   if (!menu.classList.contains("hidden")) {
-    /* Menüyü butona hizala ama ekranın dışına taşma */
     menu.style.visibility = "hidden";
     menu.style.display = "block";
     requestAnimationFrame(() => {
@@ -1856,7 +1858,6 @@ document.getElementById("btnCols").addEventListener("click", e => {
       left = Math.max(8, left);
       let top = r.bottom + 6;
       if (top + mh > window.innerHeight - 8) {
-        /* Altta yer yoksa yukarı aç */
         top = Math.max(8, r.top - mh - 6);
       }
       menu.style.left = left + "px";
@@ -1885,7 +1886,6 @@ document.getElementById("colMenu").addEventListener("change", e => {
   render();
 });
 document.addEventListener("click", e => {
-  /* Kolon menüsü dışına tık → menüyü kapat (modal/overlay etkileşimleri hariç) */
   if (!e.target.closest(".colmenu-wrap")) {
     document.getElementById("colMenu").classList.add("hidden");
   }
@@ -2028,8 +2028,6 @@ async function commentAdd() {
     ta.value = "";
     ta.focus();
     renderCommentList();
-    /* Yorum modali açıkken ana tabloyu yeniden çizmiyoruz (odak korunur);
-       sadece buton sayacını canlı güncelle */
     const btn = document.querySelector(`#tbody button[data-action="comments"][data-id="${row.id}"]`);
     if (btn) btn.innerHTML = `💬<span class="cmt-n">${comments.length}</span>`;
     await apiLog("yorum", row.id, row.musteri, text.length > 80 ? text.slice(0, 80) + "…" : text);
@@ -2224,8 +2222,12 @@ async function changeDate(id, tarih) {
   } catch (e) { setSaveError(e.message); }
 }
 
-/* ================= 🖥️ Depo ekran modu ================= */
+/* ============================================================
+   🖥️ DEPO EKRAN MODU — 3 sekme: Anlık / Kalan / Bitmiş
+   ============================================================ */
 function openDepo() {
+  depoTab = "anlik";
+  document.querySelectorAll(".depo-tab").forEach(x => x.classList.toggle("active", x.dataset.dtab === "anlik"));
   document.getElementById("depoOverlay").classList.remove("hidden");
   renderDepoContent();
 }
@@ -2236,6 +2238,40 @@ document.getElementById("btnDepoClose").addEventListener("click", closeDepo);
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !document.getElementById("depoOverlay").classList.contains("hidden")) closeDepo();
 });
+document.querySelectorAll(".depo-tab").forEach(b => {
+  b.addEventListener("click", () => {
+    depoTab = b.dataset.dtab;
+    document.querySelectorAll(".depo-tab").forEach(x => x.classList.toggle("active", x.dataset.dtab === depoTab));
+    renderDepoContent();
+  });
+});
+/* 💬 Son 5 yorumu virgülle ayırıp satıra ekle */
+function depoCmtLine(r) {
+  const l = Array.isArray(r.comments) ? r.comments : [];
+  if (!l.length) return "";
+  const son5 = l.slice(-5);
+  return `<div class="d-cmt">💬 ${son5.map(c => esc(c.text)).join(", ")}</div>`;
+}
+function depoItem(r, cls, extra) {
+  const b = sureBilgi(r);
+  const sureTxt = b.durum !== "none"
+    ? (b.asim ? `<span style="color:#f87171">⚠ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşıldı</span>` : `⏱️ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk · %${b.yuzde}`)
+    : "";
+  return `<div class="depo-item ${cls}">
+    <div>
+      <div class="d-musteri">${esc(r.musteri)}</div>
+      <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div>
+      ${depoCmtLine(r)}
+    </div>
+    <div class="d-right">${esc(r.sevkiyatTipi)} · <span style="font-size:24px;color:#e2e8f0">${esc(r.ad)} yükleme</span><br>${extra}${sureTxt ? " · " + sureTxt : ""}</div>
+  </div>`;
+}
+function gunEtiketi(iso) {
+  const dt = parseLocalDate(iso);
+  if (!dt) return iso;
+  const idx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[dt.getDay()];
+  return `${GUNLER[idx] || ""} ${dt.getDate()} ${AYLAR[dt.getMonth()]}`;
+}
 function renderDepoContent() {
   const today = todayISO();
   const d = new Date();
@@ -2243,79 +2279,106 @@ function renderDepoContent() {
   document.getElementById("depoDate").textContent =
     `${GUNLER[{ 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[d.getDay()]]} · ${d.getDate()} ${AYLAR[d.getMonth()]} ${d.getFullYear()}`;
   const list = enriched(rows);
+  const c = document.getElementById("depoContent");
+
+  if (depoTab === "kalan") {
+    /* 📅 Kalan: bugün+gelecek, tamamlanmamış — güne göre gruplu */
+    const kalan = list.filter(r => r.planlananTarih && r.planlananTarih >= today && r.durum !== "Yükleme Tamamlandı");
+    const byDate = new Map();
+    kalan.forEach(r => {
+      if (!byDate.has(r.planlananTarih)) byDate.set(r.planlananTarih, []);
+      byDate.get(r.planlananTarih).push(r);
+    });
+    const gunler = [...byDate.keys()].sort();
+    let html = `<div class="depo-sec-title" style="color:#34d399">📅 KALAN YÜKLEMELER (${kalan.reduce((s, r) => s + adet(r), 0)} yükleme · ${gunler.length} gün)</div>`;
+    if (!gunler.length) {
+      html += `<div class="depo-empty">Kalan yükleme yok 🎉</div>`;
+    } else {
+      gunler.forEach(iso => {
+        const gList = byDate.get(iso).sort((a, b) => (oncelikVal(a) - oncelikVal(b)) || (String(a.musteri).localeCompare(String(b.musteri), "tr")));
+        const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
+        const satirlar = gList.map(r => {
+          const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
+          const cmtTxt = cmtN ? (() => {
+            const son5 = r.comments.slice(-5);
+            return `<span class="w-cmt">💬 ${son5.map(x => esc(x.text)).join(", ")}</span>`;
+          })() : "";
+          return `<div class="depo-week-row">
+            <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtTxt}</div>
+            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.durum === "Yükleniyor" ? " · 🟠 yükleniyor" : ""}</div>
+          </div>`;
+        }).join("");
+        html += `<div class="depo-week-day">
+          <h4>${gunEtiketi(iso)} <span>· ${formatDate(iso)}</span> — ${gList.length} kayıt / ${toplamAd} yükleme</h4>
+          ${satirlar}
+        </div>`;
+      });
+    }
+    c.innerHTML = html;
+    return;
+  }
+
+  if (depoTab === "bitmis") {
+    /* ✅ Bitmiş: tamamlanmışlar — en yeni gün üstte */
+    const bitmis = list.filter(r => r.durum === "Yükleme Tamamlandı");
+    const byDate = new Map();
+    bitmis.forEach(r => {
+      const key = r.gerceklesenTarih || r.planlananTarih || "tarihsiz";
+      if (!byDate.has(key)) byDate.set(key, []);
+      byDate.get(key).push(r);
+    });
+    const gunler = [...byDate.keys()].sort((a, b) => a < b ? 1 : -1);
+    let html = `<div class="depo-sec-title" style="color:#34d399">✅ BİTMİŞ YÜKLEMELER (${bitmis.reduce((s, r) => s + adet(r), 0)} yükleme)</div>`;
+    if (!gunler.length) {
+      html += `<div class="depo-empty">Henüz tamamlanmış yükleme yok.</div>`;
+    } else {
+      gunler.forEach(iso => {
+        const gList = byDate.get(iso).sort((a, b) => String(a.musteri).localeCompare(String(b.musteri), "tr"));
+        const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
+        const satirlar = gList.map(r => {
+          const b = sureBilgi(r);
+          const sureTxt = b.durum === "done"
+            ? (b.asim ? `<span style="color:#fbbf24">⏱️ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşım</span>` : `<span style="color:#34d399">⏱️ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk</span>`)
+            : "";
+          return `<div class="depo-week-row">
+            <div class="w-m">${esc(r.musteri)}${depoCmtLine(r).replace('class="d-cmt"', 'style="font-size:12px;color:#fbbf24;margin-top:2px" class="d-cmt"')}</div>
+            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""}</div>
+          </div>`;
+        }).join("");
+        html += `<div class="depo-week-day">
+          <h4>${iso === "tarihsiz" ? "Tarihsiz" : gunEtiketi(iso)} <span>· ${iso === "tarihsiz" ? "-" : formatDate(iso)}</span> — ${gList.length} kayıt / ${toplamAd} yükleme</h4>
+          ${satirlar}
+        </div>`;
+      });
+    }
+    c.innerHTML = html;
+    return;
+  }
+
+  /* ⚡ Anlık Durum (varsayılan) */
   const geciken = list.filter(r => gecikmeGunu(r) > 0).sort((a, b) => a.planlananTarih < b.planlananTarih ? -1 : 1);
   const yukleniyor = list.filter(r => r.durum === "Yükleniyor").sort((a, b) => (a.loadingStartedAt || 0) - (b.loadingStartedAt || 0));
   const bugun = list.filter(r => r.planlananTarih === today && r.durum === "Yükleme Bekliyor")
     .sort((a, b) => (oncelikVal(a) - oncelikVal(b)));
-
-  const cmtBadge = (r) => {
-    const list2 = Array.isArray(r.comments) ? r.comments : [];
-    if (!list2.length) return "";
-    const son = [...list2].sort((a, b) => b.ts - a.ts)[0];
-    const kisa = son.text.length > 46 ? son.text.slice(0, 46) + "…" : son.text;
-    return `<span class="depo-note" title="${esc(son.text)} — ${esc(shortUser(son.user))}">💬 ${list2.length} · ${esc(kisa)}</span>`;
-  };
-
-  const item = (r, cls, extra) => {
-    const b = sureBilgi(r);
-    const sureTxt = b.durum !== "none"
-      ? (b.asim ? `<span style="color:#f87171">⚠ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşıldı</span>` : `⏱️ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk · %${b.yuzde}`)
-      : "";
-    return `<div class="depo-item ${cls}">
-      <div><div class="d-musteri">${esc(r.musteri)}${cmtBadge(r)}</div><div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div></div>
-      <div class="d-right">${esc(r.sevkiyatTipi)} · <span style="font-size:24px;color:#e2e8f0">${esc(r.ad)} yükleme</span><br>${extra}${sureTxt ? " · " + sureTxt : ""}</div>
-    </div>`;
-  };
-
-  const from = parseLocalDate(today);
-  const haftaGunleri = [];
-  for (let i = 1; i <= 7; i++) {
-    const dd = new Date(from);
-    dd.setDate(dd.getDate() + i);
-    haftaGunleri.push(isoFromDate(dd));
-  }
-  const haftaHtml = haftaGunleri.map(iso => {
-    const gList = list.filter(r => r.planlananTarih === iso)
-      .sort((a, b) => (oncelikVal(a) - oncelikVal(b)) || (String(a.musteri).localeCompare(String(b.musteri), "tr")));
-    if (!gList.length) return "";
-    const idx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[parseLocalDate(iso).getDay()];
-    const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
-    const yuklemeSayisi = gList.length;
-    const satirlar = gList.map(r => {
-      const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
-      return `<div class="depo-week-row">
-        <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtN ? `<span class="w-cmt">💬${cmtN}</span>` : ""}</div>
-        <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.durum === "Yükleniyor" ? " · 🟠 yükleniyor" : r.durum === "Yükleme Tamamlandı" ? " · ✅ tamam" : ""}</div>
-      </div>`;
-    }).join("");
-    return `<div class="depo-week-day">
-      <h4>${GUNLER[idx]} <span>· ${formatDate(iso)}</span> — ${yuklemeSayisi} kayıt / ${toplamAd} yükleme</h4>
-      ${satirlar}
-    </div>`;
-  }).join("");
-
   let html = "";
   html += `<div class="depo-sec-title" style="color:#fbbf24">🟠 ŞİMDİ YÜKLENİYOR (${yukleniyor.length})</div>`;
-  html += yukleniyor.length ? yukleniyor.map(r => item(r, "d-amber", formatDate(r.planlananTarih))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
+  html += yukleniyor.length ? yukleniyor.map(r => depoItem(r, "d-amber", formatDate(r.planlananTarih))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
   html += `<div class="depo-sec-title" style="color:#f87171">🔴 GECİKEN (${geciken.reduce((s, r) => s + adet(r), 0)})</div>`;
-  html += geciken.length ? geciken.map(r => item(r, "d-red", `${formatDate(r.planlananTarih)} · ⚠ ${gecikmeGunu(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
+  html += geciken.length ? geciken.map(r => depoItem(r, "d-red", `${formatDate(r.planlananTarih)} · ⚠ ${gecikmeGunu(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
   html += `<div class="depo-sec-title" style="color:#818cf8">🔵 BUGÜN BEKLİYOR (${bugun.reduce((s, r) => s + adet(r), 0)})</div>`;
-  html += bugun.length ? bugun.map(r => item(r, "d-blue", "bugün")).join("") : `<div class="depo-empty">Bugün için bekleyen yükleme yok.</div>`;
-  html += `<div class="depo-sec-title" style="color:#34d399">📅 HAFTANIN DİĞER GÜNLERİ</div>`;
-  html += haftaHtml || `<div class="depo-empty">Gelecek 7 günde planlanmış yükleme yok.</div>`;
-  document.getElementById("depoContent").innerHTML = html;
+  html += bugun.length ? bugun.map(r => depoItem(r, "d-blue", "bugün")).join("") : `<div class="depo-empty">Bugün için bekleyen yükleme yok.</div>`;
+  c.innerHTML = html;
 }
-
 setInterval(() => {
   if (document.getElementById("depoOverlay").classList.contains("hidden")) return;
   const d = new Date();
   document.getElementById("depoClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }, 1000);
-
 setInterval(() => {
   if (document.getElementById("depoOverlay").classList.contains("hidden") || document.hidden) return;
   renderDepoContent();
 }, 30000);
+
 /* ================= 💾 Yedekle / Geri Yükle ================= */
 function openBackup() {
   if (!isAdmin()) { alert("Yedekleme sadece yöneticiler içindir."); return; }
@@ -2434,6 +2497,19 @@ function onFieldInput(e) {
 document.getElementById("tbody").addEventListener("input", onFieldInput);
 document.getElementById("tbody").addEventListener("change", onFieldInput);
 
+/* Tarih hücrelerinde debounce (satır içi ekleme formu için) */
+let cellCommitTimer = null;
+function scheduleCellCommit(delay) {
+  clearTimeout(cellCommitTimer);
+  cellCommitTimer = setTimeout(() => { cellCommitTimer = null; commitCell(); }, delay);
+}
+
+document.getElementById("tbody").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const scope = e.target.dataset.scope;
+  if (scope === "inline") gate("save-inline");
+});
+
 /* Yüzen düzenleyici: klavye + odak yönetimi */
 document.getElementById("cellEditor").addEventListener("keydown", e => {
   const inp = e.target.closest("[data-cid]");
@@ -2449,7 +2525,6 @@ document.getElementById("cellEditor").addEventListener("change", e => {
 });
 document.getElementById("cellEditor").addEventListener("focusout", e => {
   if (!e.target.matches || !e.target.matches("[data-cid]")) return;
-  /* Odak hâlâ düzenleyicinin içindeyse (tarih takvimine geçiş) dokunma */
   if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest("#cellEditor")) return;
   const cur = editingCell;
   if (cur && !e.relatedTarget && e.target.type === "date") {
@@ -2459,19 +2534,6 @@ document.getElementById("cellEditor").addEventListener("focusout", e => {
   }
   if (e.target.type === "date") { scheduleCellCommit(0); return; }
   commitCell();
-});
-
-/* Tarih debounce (satır içi ekleme formu için) */
-let cellCommitTimer = null;
-function scheduleCellCommit(delay) {
-  clearTimeout(cellCommitTimer);
-  cellCommitTimer = setTimeout(() => { cellCommitTimer = null; commitCell(); }, delay);
-}
-
-document.getElementById("tbody").addEventListener("keydown", e => {
-  if (e.key !== "Enter") return;
-  const scope = e.target.dataset.scope;
-  if (scope === "inline") gate("save-inline");
 });
 
 /* Kolon sıralama */
@@ -3257,12 +3319,6 @@ function kapasiteData() {
       return { tarih, ...g, gerekliEkip, kapasite, fark: kapasite - g.saatDk };
     });
 }
-function gunEtiketi(iso) {
-  const dt = parseLocalDate(iso);
-  if (!dt) return iso;
-  const idx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[dt.getDay()];
-  return `${GUNLER[idx] || ""} ${dt.getDate()} ${AYLAR[dt.getMonth()]}`;
-}
 function buildKapasite() {
   const c = document.getElementById("reportPaneKapasite");
   const gunler = kapasiteData();
@@ -3355,7 +3411,7 @@ function buildKapasite() {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         plugins: {
-          legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, pointStyle: "circle", padding: 14, font: { size: 11 } } },
+          legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, padding: 14, font: { size: 11 } } },
           datalabels: { display: c => c.dataset.type === "bar", anchor: "end", align: "end",
             color: textColor, font: { weight: "700", size: 10.5 }, formatter: v => v },
           tooltip: { callbacks: { label: c => c.dataset.type === "bar"
