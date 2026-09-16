@@ -184,11 +184,23 @@
   .sure-txt.done-ok { color: var(--green); }
   .sure-txt.done-over { color: var(--amber); }
 
-  body.can-edit td.editable, body.can-edit td[data-col="sure"] { cursor: pointer; }
-  body.can-edit td.editable:hover, body.can-edit td[data-col="sure"]:hover {
+  body.can-edit td.editable { cursor: pointer; }
+  body.can-edit td.editable:hover {
     background: var(--primary-soft);
     box-shadow: inset 0 0 0 1.5px var(--primary);
   }
+
+  /* 🆕 Yüzen hücre düzenleme katmanı — tablo kaydırmasıyla kaçmaz */
+  #cellEditor {
+    position: absolute; z-index: 45;
+    background: var(--surface); border: 2px solid var(--primary);
+    border-radius: 8px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  #cellEditor input, #cellEditor select {
+    font-size: 12.5px; padding: 5px 7px; border: none; outline: none;
+    background: transparent; color: var(--text); box-shadow: none; border-radius: 0;
+  }
+  #cellEditor input:focus, #cellEditor select:focus { outline: none; box-shadow: none; }
 
   .badge { padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 600; }
   .badge.done    { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); }
@@ -211,14 +223,11 @@
   .icon-btn .cmt-n { font-size: 9px; font-weight: 700; color: var(--primary); margin-left: 1px; }
 
   .cell-input { font-size: 11.5px; padding: 3px 4px; border: 1px solid var(--border); border-radius: 6px; max-width: 100%; background: var(--surface); color: var(--text); }
-  .cell-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99,102,241,.2); }
-  .cell-input[readonly] { background: var(--bg); color: var(--muted); cursor: not-allowed; }
-  .w-musteri  { width: 100px; }
-  .w-kategori { width: 70px; }
-  .w-num      { width: 52px; }
-  .w-date     { width: 118px; }
-  .w-aciklama { width: 90px; }
-  .w-dt       { width: 190px; }
+  .w-musteri  { width: 110px; }
+  .w-kategori { width: 80px; }
+  .w-num      { width: 60px; }
+  .w-date     { width: 130px; }
+  .w-aciklama { width: 110px; }
 
   .colmenu-wrap { position: relative; }
   .colmenu {
@@ -341,34 +350,36 @@
   .adm-check input { margin: 0; }
   .you-tag { font-size: 10px; color: var(--muted); font-weight: 500; }
 
-  /* 📅 Takvim */
+  /* 📅 Takvim — düzeltilmiş okunabilir düzen */
   .kal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .kal-head h3 { font-size: 15px; margin: 0; }
   .kal-nav { display: flex; gap: 6px; }
-  .kal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .kal-scroll { overflow-x: auto; }
+  .kal-grid { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); gap: 6px; }
   .kal-dow { text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); padding: 4px 0; }
   .kal-cell {
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-    min-height: 92px; padding: 4px 5px; font-size: 10.5px;
-    display: flex; flex-direction: column; gap: 2px;
+    min-height: 150px; padding: 5px 6px; font-size: 10.5px;
+    display: flex; flex-direction: column; gap: 3px;
   }
   .kal-cell.kal-blank { background: transparent; border-color: transparent; }
-  .kal-cell.kal-today { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); }
+  .kal-cell.kal-today { border-color: var(--green); box-shadow: 0 0 0 1.5px var(--green); }
   .kal-cell.kal-over { border-color: var(--primary); background: var(--primary-soft); }
-  .kal-date { font-weight: 700; font-size: 10px; color: var(--muted); display: flex; justify-content: space-between; }
-  .kal-date b { color: var(--primary); }
-  .kal-items { overflow-y: auto; max-height: 88px; display: flex; flex-direction: column; gap: 2px; }
+  .kal-date { font-weight: 700; font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+  .kal-date b { color: var(--primary); font-size: 10.5px; }
+  .kal-items { flex: 1; overflow-y: auto; max-height: 145px; display: flex; flex-direction: column; gap: 3px; }
   .kal-item {
-    border-radius: 5px; padding: 2px 5px; cursor: grab;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-size: 10px; font-weight: 600; line-height: 1.5;
+    border-radius: 6px; padding: 3px 6px; cursor: grab;
+    font-size: 10.5px; font-weight: 600; line-height: 1.45;
+    white-space: normal; overflow-wrap: break-word;
+    display: flex; justify-content: space-between; gap: 4px; align-items: center;
   }
   .kal-item:active { cursor: grabbing; }
+  .kal-item .k-ad { white-space: nowrap; opacity: .85; font-size: 9.5px; }
   .kal-item.kal-wait { background: var(--red-soft); color: var(--red); border: 1px solid var(--red); }
   .kal-item.kal-load { background: var(--amber-soft); color: var(--amber); border: 1px solid var(--amber); }
   .kal-item.kal-done { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); }
   body:not(.can-edit) .kal-item { cursor: default; }
-  .kal-hint { font-size: 10.5px; }
 
   /* 🖥️ Depo modu */
   .depo-overlay {
@@ -413,13 +424,14 @@
     .chart-grid { grid-template-columns: 1fr; }
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .btn { padding: 8px 10px; }
-    .kal-cell { min-height: 70px; }
+    .kal-grid { grid-template-columns: repeat(7, minmax(120px, 1fr)); }
+    .kal-cell { min-height: 120px; }
     .depo-item .d-musteri { font-size: 22px; }
     .depo-clock { font-size: 32px; }
   }
 
   @media print {
-    header .toolbar, #saveError, #guestInfo, .hint, .modal-bg, .toast { display: none !important; }
+    header .toolbar, #saveError, #guestInfo, .hint, .modal-bg, .toast, #cellEditor { display: none !important; }
     body {
       --bg: #fff; --surface: #fff; --border: #ccc; --text: #111; --muted: #666;
       --primary-soft: #eef2ff; --green-soft: #ecfdf5; --amber-soft: #fffbeb; --red-soft: #fef2f2;
@@ -525,7 +537,7 @@
           <th data-col="gerceklesenTarih" data-sort="gerceklesenTarih">Gerçekleşen<span class="arw"></span></th>
           <th data-col="durum" data-sort="durum">Durum<span class="arw"></span></th>
           <th data-col="sure">Süre</th>
-          <th data-col="oncelikNo" data-sort="oncelikNo">Önc.<span class="arw"></span></th>
+          <th data-col="oncelikNo" data-sort="oncelikNo" title="Öncelik no: 1-2-3… bu kayıtları varsayılan sıralamada en üste taşır">⭐ Önc.<span class="arw"></span></th>
           <th data-col="aciklama">Açıklama</th>
           <th data-col="araciGeldi">Aracı Geldi</th>
           <th data-col="status">Status</th>
@@ -538,8 +550,11 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → değiştir → <b>Enter</b>. <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt (bitiş girersen kayıt Tamamlandı olur). <b>💬</b> yorum, <b>Önc.</b> kolonu sıralamayı elle öne çeker. <b>📅 Takvim</b>'de kayıtları sürükleyip tarih değiştir. <b>🖥️ Depo</b> büyük ekran modu. Yineleme uyarısı: aynı müşteri+tarih+tip varsa sorar.</p>
+  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → <b>yerinde açılan</b> kutuda değiştir → <b>Enter</b> (veya dışarı tıkla) → kaydedilir; <b>Esc</b> iptal. <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt (bitiş girersen kayıt Tamamlandı olur). <b>⭐ Önc.</b> kolonuna 1-2-3 yaz → o kayıtlar varsayılan sıralamada en üste dizilir. <b>💬</b> yorum butonu satırın sağında. <b>📅 Takvim</b>'de çipleri sürükleyip tarih değiştir.</p>
 </main>
+
+<!-- 🆕 Yüzen hücre düzenleme katmanı -->
+<div id="cellEditor" class="hidden"></div>
 
 <datalist id="musteri-list"></datalist>
 
@@ -590,7 +605,7 @@
 <div id="takvimModal" class="modal-bg hidden">
   <div class="modal wide">
     <h2>📅 Takvim Görünümü</h2>
-    <p class="hint" id="takvimHint">Kayıtları bir günden diğerine <b>sürükleyip bırak</b> — planlanan tarih güncellenir. Renkler: kırmızı bekliyor · turuncu yükleniyor · yeşil tamamlandı.</p>
+    <p class="hint">Kayıtları bir günden diğerine <b>sürükleyip bırak</b> — planlanan tarih güncellenir. Renkler: kırmızı bekliyor · turuncu yükleniyor · yeşil tamamlandı. Sağdaki sayı gün toplamı.</p>
     <div class="kal-head">
       <h3 id="takvimLabel">—</h3>
       <div class="kal-nav">
@@ -599,8 +614,10 @@
         <button class="btn" id="kalNext">›</button>
       </div>
     </div>
-    <div class="kal-grid" id="takvimDow"></div>
-    <div class="kal-grid" id="takvimGrid"></div>
+    <div class="kal-scroll">
+      <div class="kal-grid" id="takvimDow"></div>
+      <div class="kal-grid" id="takvimGrid"></div>
+    </div>
     <div class="modal-actions"><button class="btn" id="btnCloseTakvim">Kapat</button></div>
   </div>
 </div>
@@ -765,9 +782,6 @@ const SURE_NODE = "sevkiyat_suresi";
 
 /* ============================================================
    ROLLER — ADMİN PANELİNDEN YÖNETİLİR
-   • ADMIN_EMAILS: bootstrap admin listesi — her zaman tam yetkili.
-   • Paneldeki kullanıcılar: rol (Kullanıcı/Admin) + 5 yetki.
-   • Listede olmayan girişli kullanıcılar DEFAULT_PERMS alır.
    ============================================================ */
 const ADMIN_EMAILS = [
   "admin@yatsan.com"
@@ -801,7 +815,7 @@ const ALL_COLS = [
   ["musteri","Müşteri"],["blm","BLM"],["kategori","Kategori"],["sevkiyatTipi","Sevkiyat Tipi"],
   ["ad","AD"],["planlananTarih","Planlanan Tarih"],["hafta","Hafta"],["ay","Ay"],
   ["reelPlan","Reel Plan"],["gerceklesenTarih","Gerçekleşen"],["durum","Durum"],
-  ["sure","Süre"],["oncelikNo","Önc."],
+  ["sure","Süre"],["oncelikNo","⭐ Önc."],
   ["aciklama","Açıklama"],["araciGeldi","Aracı Geldi"],["status","Status"],
   ["prsM3","PRS M3"],["m3","M3"],["createdBy","Ekleyen"]
 ];
@@ -825,7 +839,7 @@ const FIELD_LABELS = {
   musteri: "Müşteri", blm: "BLM", kategori: "Kategori", sevkiyatTipi: "Tip",
   ad: "AD", planlananTarih: "Planlanan", reelPlan: "Reel Plan",
   gerceklesenTarih: "Gerçekleşen", durum: "Durum", aciklama: "Açıklama",
-  araciGeldi: "Aracı", prsM3: "PRS M3", m3: "M3", oncelikli: "Öncelikli", oncelikNo: "Önc. No"
+  araciGeldi: "Aracı", prsM3: "PRS M3", m3: "M3", oncelikli: "Öncelikli", oncelikNo: "Öncelik No"
 };
 const ACTION_META = {
   "ekleme":     { label: "Kayıt eklendi",   dot: "add" },
@@ -921,13 +935,13 @@ function tarihCmp(a, b) {
   if (!b) return -1;
   return a < b ? -1 : a > b ? 1 : 0;
 }
-/* Varsayılan sıralama:
-   0) Öncelik numarası olanlar en üste (1,2,3… küçükten büyüğe; boş olanlar normal akışta)
-   1) Durum: Yükleniyor (en üst) → Yükleme Bekliyor (orta) → Yükleme Tamamlandı (en alt)
-   2) Grup içinde planlanan tarih: en yakın → en uzak */
 function oncelikVal(r) {
   return (r.oncelikNo === "" || r.oncelikNo == null) ? Infinity : Number(r.oncelikNo);
 }
+/* Varsayılan sıralama:
+   0) Öncelik numarası olanlar en üste (1,2,3…)
+   1) Durum: Yükleniyor → Bekliyor → Tamamlandı
+   2) Grup içinde planlanan tarih: yakın → uzak */
 function sortList(list) {
   return list.slice().sort((x, y) => {
     const px = oncelikVal(x), py = oncelikVal(y);
@@ -944,7 +958,7 @@ function sortList(list) {
     return String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
   });
 }
-/* ⚠️ Yinelenen kayıt kontrolü: aynı müşteri + planlanan tarih + tip */
+/* ⚠️ Yinelenen kayıt kontrolü */
 function isDuplicate(rec, excludeId) {
   const m = (rec.musteri || "").trim().toLowerCase();
   if (!m) return false;
@@ -1268,12 +1282,12 @@ let dateFrom = "";
 let dateTo = "";
 let statusFilter = "kalan";
 let pendingAction = null;
-let editingCell = null;
+let editingCell = null;   /* { id, field, td } — yüzen katman için td referansı da tutulur */
 let committing = false;
 let activeReportTab = "genel";
 let currentCommentId = null;
 let currentSureId = null;
-let kalY = 0, kalM = 0; /* takvim yıl/ay */
+let kalY = 0, kalM = 0;
 const hiddenCols = new Set();
 
 /* ================= Son filtre hatırlama ================= */
@@ -1594,18 +1608,17 @@ function fSelect(data, scope, field, options) {
 function cellInputHtml(r, field) {
   const def = CELL_DEFS[field];
   if (def.kind === "select") {
-    return `<select class="cell-input" data-cid="${r.id}" data-cfield="${field}">
+    return `<select data-cid="${r.id}" data-cfield="${field}">
       ${def.options.map(o => `<option value="${esc(o)}" ${String(r[field]) === o ? "selected" : ""}>${o === "" ? "-" : esc(o)}</option>`).join("")}
     </select>`;
   }
   const t = def.kind === "date" ? "date" : def.kind === "number" ? "number" : "text";
-  return `<input type="${t}" class="cell-input ${def.w || ""}" data-cid="${r.id}" data-cfield="${field}"
+  return `<input type="${t}" class="${def.w || ""}" data-cid="${r.id}" data-cfield="${field}"
     value="${esc(String(r[field] ?? ""))}" ${def.list ? 'list="musteri-list"' : ""} />`;
 }
 function tdHtml(r, field, extraCls, viewFn) {
   const def = CELL_DEFS[field];
-  const editing = editingCell && editingCell.id === r.id && editingCell.field === field;
-  const content = editing ? cellInputHtml(r, field) : viewFn(r);
+  const content = viewFn(r);
   return `<td data-col="${field}" class="${extraCls || ""}${def ? " editable" : ""}"${def ? ` data-field="${field}"` : ""}>${content}</td>`;
 }
 function planlananView(x) {
@@ -1675,6 +1688,7 @@ function rowHtml(r) {
   </tr>`;
 }
 function renderTable(list) {
+  closeCellEditor();
   const tbody = document.getElementById("tbody");
   const cc = 20 - hiddenCols.size;
   let html = "";
@@ -1685,17 +1699,101 @@ function renderTable(list) {
   }
   list.forEach(r => { html += rowHtml(r); });
   tbody.innerHTML = html;
-  if (addingInline) {
-    const first = tbody.querySelector('input[data-field="musteri"]');
-    if (first) first.focus();
-  }
-  if (editingCell) {
-    const inp = tbody.querySelector(`[data-cid="${editingCell.id}"][data-cfield="${editingCell.field}"]`);
+}
+
+/* ============================================================
+   🆕 YÜZEN HÜCRE DÜZENLEME KATMANI
+   Tablo kaydırılmışsa bile input, hücrenin üstünde görünür kalır.
+   Enter kaydeder · Esc iptal · dışarı tık kaydeder.
+   ============================================================ */
+function openCellEditor(td, id, field) {
+  closeCellEditor();
+  const row = rows.find(r => r.id === id);
+  if (!row) return;
+  const def = CELL_DEFS[field];
+  if (!def) return;
+  editingCell = { id, field };
+  const ed = document.getElementById("cellEditor");
+  ed.innerHTML = cellInputHtml(row, field);
+  ed.classList.remove("hidden");
+  /* Hücrenin konumunu görünür alana yerleştir */
+  const wrap = td.closest(".table-wrap");
+  const wrapRect = wrap.getBoundingClientRect();
+  const tdRect = td.getBoundingClientRect();
+  const top = tdRect.top + window.scrollY;
+  let left = tdRect.left + window.scrollX - 2;
+  ed.style.top = top + "px";
+  ed.style.left = "0px";
+  /* Genişliği hücreye göre ayarla, ekranın dışına taşmasın */
+  ed.style.visibility = "hidden";
+  ed.style.display = "block";
+  requestAnimationFrame(() => {
+    const edW = ed.offsetWidth;
+    const maxX = wrapRect.right + window.scrollX - edW - 4;
+    ed.style.left = Math.min(left, Math.max(wrapRect.left + window.scrollX + 2, maxX)) + "px";
+    ed.style.visibility = "visible";
+    const inp = ed.querySelector("input, select");
     if (inp) {
       inp.focus();
       if (inp.type === "text") { try { inp.select(); } catch (e) {} }
     }
+  });
+}
+function closeCellEditor() {
+  const ed = document.getElementById("cellEditor");
+  if (!ed.classList.contains("hidden")) {
+    ed.classList.add("hidden");
+    ed.innerHTML = "";
   }
+}
+async function commitCell() {
+  const cur = editingCell;
+  if (!cur || committing) return;
+  committing = true;
+  editingCell = null;
+  const { id, field } = cur;
+  const inp = document.querySelector("#cellEditor [data-cid]");
+  const row = rows.find(r => r.id === id);
+  if (!inp || !row) { committing = false; closeCellEditor(); return; }
+  let val = inp.value;
+  if (field === "musteri") val = val.trim();
+  if (field === "ad") val = Number(val) || 1;
+  if (field === "prsM3") val = val === "" ? null : Number(val);
+  if (field === "oncelikNo") val = val === "" ? null : Number(val);
+  const changed = String(row[field] ?? "") !== String(val ?? "");
+  if (!changed) { committing = false; closeCellEditor(); render(); return; }
+  if (field === "musteri" || field === "planlananTarih" || field === "sevkiyatTipi") {
+    const probe = { ...row, [field]: val };
+    if (isDuplicate(probe, id) && !confirm(dupMsg(probe) + "\n(Güncelleme yine de yapılabilir)")) {
+      committing = false; closeCellEditor(); render(); return;
+    }
+  }
+  const updated = { ...row, [field]: val };
+  if (["sevkiyatTipi", "ad", "prsM3"].includes(field)) {
+    const m3 = hesaplaM3(updated.sevkiyatTipi, updated.ad, updated.prsM3);
+    if (m3 !== null) updated.m3 = m3;
+  }
+  if (field === "durum") applyDurumSideEffects(updated);
+  closeCellEditor();
+  try {
+    const saved = await apiUpdate(id, updated);
+    rows = rows.map(r => r.id === id ? saved : r);
+    setSaveError("");
+    const parts = [`${FIELD_LABELS[field] || field}: "${dispVal(field, row[field])}" → "${dispVal(field, val)}"`];
+    if (String(updated.m3 ?? "") !== String(row.m3 ?? "")) {
+      parts.push(`${FIELD_LABELS.m3}: "${dispVal("m3", row.m3)}" → "${dispVal("m3", updated.m3)}"`);
+    }
+    if (field === "durum" && val === "Yükleme Tamamlandı" && updated.loadingStartedAt && updated.loadingEndedAt) {
+      parts.push(`yüklenme süresi: ${fmtSure(updated.loadingEndedAt - updated.loadingStartedAt)}`);
+    }
+    await apiLog("guncelleme", id, updated.musteri, parts.join(" · "));
+  } catch (e) { setSaveError(e.message); }
+  committing = false;
+  render();
+}
+function cancelCell() {
+  editingCell = null;
+  closeCellEditor();
 }
 
 /* ================= Kolon gizle/göster ================= */
@@ -1734,72 +1832,11 @@ document.getElementById("colMenu").addEventListener("change", e => {
   render();
 });
 document.addEventListener("click", e => {
+  /* Kolon menüsü dışına tık → menüyü kapat (modal/overlay etkileşimleri hariç) */
   if (!e.target.closest(".colmenu-wrap")) {
     document.getElementById("colMenu").classList.add("hidden");
   }
 });
-
-/* ================= Hücre düzenleme ================= */
-function dispVal(field, val) {
-  const def = CELL_DEFS[field];
-  if (def && def.kind === "date") return formatDate(val);
-  return String(val ?? "") || "-";
-}
-function startCellEdit(id, field) {
-  if (editingCell && (editingCell.id !== id || editingCell.field !== field)) {
-    commitCell();
-  }
-  editingCell = { id, field };
-  render();
-}
-async function commitCell() {
-  const cur = editingCell;
-  if (!cur || committing) return;
-  committing = true;
-  editingCell = null;
-  const { id, field } = cur;
-  const inp = document.querySelector(`[data-cid="${id}"][data-cfield="${field}"]`);
-  const row = rows.find(r => r.id === id);
-  if (!inp || !row) { committing = false; render(); return; }
-  let val = inp.value;
-  if (field === "musteri") val = val.trim();
-  if (field === "ad") val = Number(val) || 1;
-  if (field === "prsM3") val = val === "" ? null : Number(val);
-  if (field === "oncelikNo") val = val === "" ? null : Number(val);
-  const changed = String(row[field] ?? "") !== String(val ?? "");
-  if (!changed) { committing = false; render(); return; }
-  if (field === "musteri" || field === "planlananTarih" || field === "sevkiyatTipi") {
-    const probe = { ...row, [field]: val };
-    if (isDuplicate(probe, id) && !confirm(dupMsg(probe) + "\n(Güncelleme yine de yapılabilir)")) {
-      committing = false; render(); return;
-    }
-  }
-  const updated = { ...row, [field]: val };
-  if (["sevkiyatTipi", "ad", "prsM3"].includes(field)) {
-    const m3 = hesaplaM3(updated.sevkiyatTipi, updated.ad, updated.prsM3);
-    if (m3 !== null) updated.m3 = m3;
-  }
-  if (field === "durum") applyDurumSideEffects(updated);
-  try {
-    const saved = await apiUpdate(id, updated);
-    rows = rows.map(r => r.id === id ? saved : r);
-    setSaveError("");
-    const parts = [`${FIELD_LABELS[field] || field}: "${dispVal(field, row[field])}" → "${dispVal(field, val)}"`];
-    if (String(updated.m3 ?? "") !== String(row.m3 ?? "")) {
-      parts.push(`${FIELD_LABELS.m3}: "${dispVal("m3", row.m3)}" → "${dispVal("m3", updated.m3)}"`);
-    }
-    if (field === "durum" && val === "Yükleme Tamamlandı" && updated.loadingStartedAt && updated.loadingEndedAt) {
-      parts.push(`yüklenme süresi: ${fmtSure(updated.loadingEndedAt - updated.loadingStartedAt)}`);
-    }
-    await apiLog("guncelleme", id, updated.musteri, parts.join(" · "));
-  } catch (e) { setSaveError(e.message); }
-  committing = false;
-  render();
-}
-function cancelCell() {
-  editingCell = null;
-  render();
-}
 
 /* ================= Yetki kapısı ================= */
 function gate(type, param) {
@@ -1822,7 +1859,7 @@ function runAction({ type, param }) {
     case "import":      openImport(); break;
     case "save-inline": saveInline(); break;
     case "do-import":   doImport(); break;
-    case "cell-edit":   startCellEdit(param.id, param.field); break;
+    case "cell-edit":   openCellEditor(param.td, param.id, param.field); break;
     case "duplicate":   duplicateRow(param); break;
     case "comments":    openComments(param); break;
     case "sure-edit":   openSureEdit(param); break;
@@ -1908,7 +1945,7 @@ function openComments(id) {
   renderCommentList();
   document.getElementById("cmtText").value = "";
   document.getElementById("commentModal").classList.remove("hidden");
-  document.getElementById("cmtText").focus();
+  setTimeout(() => document.getElementById("cmtText").focus(), 50);
 }
 function renderCommentList() {
   const row = rows.find(r => r.id === currentCommentId);
@@ -1936,8 +1973,12 @@ async function commentAdd() {
     const saved = await apiUpdate(row.id, { ...row, comments });
     rows = rows.map(r => r.id === row.id ? saved : r);
     ta.value = "";
+    ta.focus();
     renderCommentList();
-    render();
+    /* Yorum modali açıkken ana tabloyu yeniden çizmiyoruz (odak korunur);
+       sadece buton sayacını canlı güncelle */
+    const btn = document.querySelector(`#tbody button[data-action="comments"][data-id="${row.id}"]`);
+    if (btn) btn.innerHTML = `💬<span class="cmt-n">${comments.length}</span>`;
     await apiLog("yorum", row.id, row.musteri, text.length > 80 ? text.slice(0, 80) + "…" : text);
   } catch (e) { setSaveError(e.message); }
 }
@@ -2049,7 +2090,7 @@ function renderTakvim() {
   document.getElementById("takvimDow").innerHTML =
     GUN_KISA.map(g => `<div class="kal-dow">${g}</div>`).join("");
   const first = new Date(kalY, kalM, 1);
-  const offset = (first.getDay() + 6) % 7; /* Pazartesi=0 */
+  const offset = (first.getDay() + 6) % 7;
   const daysInMonth = new Date(kalY, kalM + 1, 0).getDate();
   const today = todayISO();
   const byDate = new Map();
@@ -2062,14 +2103,19 @@ function renderTakvim() {
   for (let i = 0; i < offset; i++) cells += `<div class="kal-cell kal-blank"></div>`;
   for (let day = 1; day <= daysInMonth; day++) {
     const iso = `${kalY}-${pad2(kalM + 1)}-${pad2(day)}`;
-    const list = (byDate.get(iso) || []).sort((a, b) => a.durum !== b.durum ? (DURUM_SIRA[a.durum] ?? 9) - (DURUM_SIRA[b.durum] ?? 9) : 0);
+    const list = (byDate.get(iso) || []).sort((a, b) =>
+      (DURUM_SIRA[a.durum] ?? 9) - (DURUM_SIRA[b.durum] ?? 9));
     const toplamAd = list.reduce((s, r) => s + adet(r), 0);
     const items = list.map(r => {
       const cls = r.durum === "Yükleme Tamamlandı" ? "kal-done" : r.durum === "Yükleniyor" ? "kal-load" : "kal-wait";
-      return `<div class="kal-item ${cls}" draggable="true" data-kid="${r.id}" title="${esc(r.musteri)} · ${esc(r.sevkiyatTipi)} · AD ${esc(r.ad)}${r.durum === "Yükleniyor" ? " · ⏱️" : ""}">${esc(r.musteri)} <b>×${esc(r.ad)}</b></div>`;
+      return `<div class="kal-item ${cls}" draggable="true" data-kid="${r.id}"
+        title="${esc(r.musteri)} · ${esc(r.sevkiyatTipi)} · AD ${esc(r.ad)} · ${esc(r.durum)}${r.oncelikNo ? " · ⭐" + esc(r.oncelikNo) : ""}">
+        <span style="overflow:hidden;text-overflow:ellipsis">${esc(r.musteri)}</span>
+        <span class="k-ad">×${esc(r.ad)}</span>
+      </div>`;
     }).join("");
     cells += `<div class="kal-cell ${iso === today ? "kal-today" : ""}" data-kdate="${iso}">
-      <div class="kal-date"><span>${day}</span>${toplamAd ? `<b>${toplamAd}</b>` : ""}</div>
+      <div class="kal-date"><span>${day}</span>${toplamAd ? `<b>${toplamAd} yükleme</b>` : ""}</div>
       <div class="kal-items">${items}</div>
     </div>`;
   }
@@ -2087,7 +2133,6 @@ document.getElementById("btnCloseTakvim").addEventListener("click", () => {
 document.getElementById("takvimModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
 });
-/* Sürükle-bırak */
 const takvimGrid = document.getElementById("takvimGrid");
 takvimGrid.addEventListener("dragstart", e => {
   const chip = e.target.closest(".kal-item[data-kid]");
@@ -2148,7 +2193,7 @@ function renderDepoContent() {
   const geciken = list.filter(r => gecikmeGunu(r) > 0).sort((a, b) => a.planlananTarih < b.planlananTarih ? -1 : 1);
   const yukleniyor = list.filter(r => r.durum === "Yükleniyor").sort((a, b) => (a.loadingStartedAt || 0) - (b.loadingStartedAt || 0));
   const bugun = list.filter(r => r.planlananTarih === today && r.durum === "Yükleme Bekliyor")
-    .sort((a, b) => a.planlananTarih < b.planlananTarih ? -1 : 1);
+    .sort((a, b) => (oncelikVal(a) - oncelikVal(b)));
   const item = (r, cls, extra) => {
     const b = sureBilgi(r);
     const sureTxt = b.durum !== "none"
@@ -2257,7 +2302,7 @@ document.getElementById("tbody").addEventListener("click", e => {
       case "cancel-inline": addingInline = false; inlineData = null; render(); break;
       case "duplicate":     gate("duplicate", id); break;
       case "delete":        gate("delete", id); break;
-      case "comments":      gate("comment", id); break;
+      case "comments":      gate("comments", id); break;
     }
     return;
   }
@@ -2269,7 +2314,7 @@ document.getElementById("tbody").addEventListener("click", e => {
   if (!td) return;
   const trow = td.closest("tr[data-rowid]");
   if (!trow) return;
-  gate("cell-edit", { id: trow.dataset.rowid, field: td.dataset.field });
+  gate("cell-edit", { td, id: trow.dataset.rowid, field: td.dataset.field });
 });
 function onFieldInput(e) {
   const el = e.target;
@@ -2296,41 +2341,44 @@ function onFieldInput(e) {
 document.getElementById("tbody").addEventListener("input", onFieldInput);
 document.getElementById("tbody").addEventListener("change", onFieldInput);
 
-/* Tarih hücrelerinde commit gecikmeli (debounce): elle yazarken input kesilmesin */
-let cellCommitTimer = null;
-function scheduleCellCommit(delay) {
-  clearTimeout(cellCommitTimer);
-  cellCommitTimer = setTimeout(() => { cellCommitTimer = null; commitCell(); }, delay);
-}
-document.getElementById("tbody").addEventListener("change", e => {
-  if (!e.target.matches || !e.target.matches("[data-cid]")) return;
-  if (e.target.type === "date") scheduleCellCommit(500);
-  else commitCell();
+/* Yüzen düzenleyici: klavye + odak yönetimi */
+document.getElementById("cellEditor").addEventListener("keydown", e => {
+  const inp = e.target.closest("[data-cid]");
+  if (!inp) return;
+  if (e.key === "Enter") { e.preventDefault(); clearTimeout(cellCommitTimer); commitCell(); }
+  else if (e.key === "Escape") { e.preventDefault(); clearTimeout(cellCommitTimer); cancelCell(); }
 });
-
-document.getElementById("tbody").addEventListener("keydown", e => {
+document.getElementById("cellEditor").addEventListener("change", e => {
   if (e.target.matches("[data-cid]")) {
-    if (e.key === "Enter") { e.preventDefault(); clearTimeout(cellCommitTimer); commitCell(); }
-    else if (e.key === "Escape") { e.preventDefault(); clearTimeout(cellCommitTimer); cancelCell(); }
-    return;
+    if (e.target.tagName === "SELECT") commitCell();
+    else if (e.target.type === "date") scheduleCellCommit(500);
   }
-  if (e.key !== "Enter") return;
-  const scope = e.target.dataset.scope;
-  if (scope === "inline") gate("save-inline");
 });
-document.getElementById("tbody").addEventListener("focusout", e => {
+document.getElementById("cellEditor").addEventListener("focusout", e => {
   if (!e.target.matches || !e.target.matches("[data-cid]")) return;
+  /* Odak hâlâ düzenleyicinin içindeyse (tarih takvimine geçiş) dokunma */
+  if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest("#cellEditor")) return;
   const cur = editingCell;
   if (cur && !e.relatedTarget && e.target.type === "date") {
-    const inp = document.querySelector(`[data-cid="${cur.id}"][data-cfield="${cur.field}"]`);
+    const inp = document.querySelector("#cellEditor [data-cid]");
     const row = inp ? rows.find(r => r.id === cur.id) : null;
     if (inp && row && String(row[cur.field] ?? "") === String(inp.value ?? "")) return;
   }
   if (e.target.type === "date") { scheduleCellCommit(0); return; }
   commitCell();
 });
-document.getElementById("tbody").addEventListener("change", e => {
-  if (e.target.matches && e.target.matches("select[data-cid]")) commitCell();
+
+/* Tarih debounce (satır içi ekleme formu için) */
+let cellCommitTimer = null;
+function scheduleCellCommit(delay) {
+  clearTimeout(cellCommitTimer);
+  cellCommitTimer = setTimeout(() => { cellCommitTimer = null; commitCell(); }, delay);
+}
+
+document.getElementById("tbody").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const scope = e.target.dataset.scope;
+  if (scope === "inline") gate("save-inline");
 });
 
 /* Kolon sıralama */
@@ -3214,7 +3262,7 @@ function buildKapasite() {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         plugins: {
-          legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, padding: 14, font: { size: 11 } } },
+          legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, pointStyle: "circle", padding: 14, font: { size: 11 } } },
           datalabels: { display: c => c.dataset.type === "bar", anchor: "end", align: "end",
             color: textColor, font: { weight: "700", size: 10.5 }, formatter: v => v },
           tooltip: { callbacks: { label: c => c.dataset.type === "bar"
@@ -3603,6 +3651,7 @@ function doLogout(msg) {
   clearAuthState();
   addingInline = false; inlineData = null;
   editingCell = null;
+  closeCellEditor();
   render();
   if (msg) setGuestInfo("ℹ️ " + esc(msg) + " — verileri görüntülemeye devam edebilirsin.");
 }
