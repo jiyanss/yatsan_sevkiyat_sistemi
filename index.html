@@ -2248,7 +2248,6 @@ function renderDepoContent() {
   const bugun = list.filter(r => r.planlananTarih === today && r.durum === "Yükleme Bekliyor")
     .sort((a, b) => (oncelikVal(a) - oncelikVal(b)));
 
-  /* 💬 Yorum rozeti: son yorumun kısa metniyle */
   const cmtBadge = (r) => {
     const list2 = Array.isArray(r.comments) ? r.comments : [];
     if (!list2.length) return "";
@@ -2268,7 +2267,6 @@ function renderDepoContent() {
     </div>`;
   };
 
-  /* 📅 Haftanın diğer günleri: bugün hariç, bugünden itibaren 7 gün */
   const from = parseLocalDate(today);
   const haftaGunleri = [];
   for (let i = 1; i <= 7; i++) {
@@ -2306,26 +2304,18 @@ function renderDepoContent() {
   html += `<div class="depo-sec-title" style="color:#34d399">📅 HAFTANIN DİĞER GÜNLERİ</div>`;
   html += haftaHtml || `<div class="depo-empty">Gelecek 7 günde planlanmış yükleme yok.</div>`;
   document.getElementById("depoContent").innerHTML = html;
-};
-  let html = "";
-  html += `<div class="depo-sec-title" style="color:#fbbf24">🟠 ŞİMDİ YÜKLENİYOR (${yukleniyor.length})</div>`;
-  html += yukleniyor.length ? yukleniyor.map(r => item(r, "d-amber", formatDate(r.planlananTarih))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
-  html += `<div class="depo-sec-title" style="color:#f87171">🔴 GECİKEN (${geciken.reduce((s, r) => s + adet(r), 0)})</div>`;
-  html += geciken.length ? geciken.map(r => item(r, "d-red", `${formatDate(r.planlananTarih)} · ⚠ ${gecikmeGunu(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
-  html += `<div class="depo-sec-title" style="color:#818cf8">🔵 BUGÜN BEKLİYOR (${bugun.reduce((s, r) => s + adet(r), 0)})</div>`;
-  html += bugun.length ? bugun.map(r => item(r, "d-blue", "bugün")).join("") : `<div class="depo-empty">Bugün için bekleyen yükleme yok.</div>`;
-  document.getElementById("depoContent").innerHTML = html;
 }
+
 setInterval(() => {
   if (document.getElementById("depoOverlay").classList.contains("hidden")) return;
   const d = new Date();
   document.getElementById("depoClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }, 1000);
+
 setInterval(() => {
   if (document.getElementById("depoOverlay").classList.contains("hidden") || document.hidden) return;
   renderDepoContent();
 }, 30000);
-
 /* ================= 💾 Yedekle / Geri Yükle ================= */
 function openBackup() {
   if (!isAdmin()) { alert("Yedekleme sadece yöneticiler içindir."); return; }
