@@ -230,8 +230,8 @@
   .w-aciklama { width: 110px; }
 
   .colmenu-wrap { position: relative; }
-  .colmenu {
-    position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+    .colmenu {
+    position: fixed; z-index: 60;
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0,0,0,.18); padding: 10px 12px; min-width: 190px;
     max-height: 70vh; overflow-y: auto;
@@ -1810,7 +1810,29 @@ function renderColMenu() {
 document.getElementById("btnCols").addEventListener("click", e => {
   e.stopPropagation();
   renderColMenu();
-  document.getElementById("colMenu").classList.toggle("hidden");
+  const menu = document.getElementById("colMenu");
+  const btn = document.getElementById("btnCols");
+  menu.classList.toggle("hidden");
+  if (!menu.classList.contains("hidden")) {
+    /* Menüyü butona hizala ama ekranın dışına taşma */
+    menu.style.visibility = "hidden";
+    menu.style.display = "block";
+    requestAnimationFrame(() => {
+      const r = btn.getBoundingClientRect();
+      const mw = menu.offsetWidth;
+      const mh = menu.offsetHeight;
+      let left = Math.min(r.right, window.innerWidth - mw - 8);
+      left = Math.max(8, left);
+      let top = r.bottom + 6;
+      if (top + mh > window.innerHeight - 8) {
+        /* Altta yer yoksa yukarı aç */
+        top = Math.max(8, r.top - mh - 6);
+      }
+      menu.style.left = left + "px";
+      menu.style.top = top + "px";
+      menu.style.visibility = "visible";
+    });
+  }
 });
 document.getElementById("colMenu").addEventListener("click", e => {
   e.stopPropagation();
