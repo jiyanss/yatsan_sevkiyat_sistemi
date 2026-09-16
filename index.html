@@ -2319,18 +2319,25 @@ function renderDepoContent() {
   }
 
   if (depoTab === "bitmis") {
-    /* ✅ Bitmiş: tamamlanmışlar — en yeni gün üstte */
-    const bitmis = list.filter(r => r.durum === "Yükleme Tamamlandı");
+    /* ✅ Bitmiş: yalnızca güncel haftanın tamamlanmışları — en yeni gün üstte */
+    const thisWeek = getISOWeek(new Date());
+    const bitmis = list.filter(r => {
+      if (r.durum !== "Yükleme Tamamlandı") return false;
+      const key = r.gerceklesenTarih || r.planlananTarih;
+      if (!key) return false;
+      const dt = parseLocalDate(key);
+      return dt && getISOWeek(dt) === thisWeek;
+    });
     const byDate = new Map();
     bitmis.forEach(r => {
-      const key = r.gerceklesenTarih || r.planlananTarih || "tarihsiz";
+      const key = r.gerceklesenTarih || r.planlananTarih;
       if (!byDate.has(key)) byDate.set(key, []);
       byDate.get(key).push(r);
     });
     const gunler = [...byDate.keys()].sort((a, b) => a < b ? 1 : -1);
-    let html = `<div class="depo-sec-title" style="color:#34d399">✅ BİTMİŞ YÜKLEMELER (${bitmis.reduce((s, r) => s + adet(r), 0)} yükleme)</div>`;
+    let html = `<div class="depo-sec-title" style="color:#34d399">✅ BİTMİŞ YÜKLEMELER — BU HAFTA (${bitmis.reduce((s, r) => s + adet(r), 0)} yükleme · Hafta ${thisWeek})</div>`;
     if (!gunler.length) {
-      html += `<div class="depo-empty">Henüz tamamlanmış yükleme yok.</div>`;
+      html += `<div class="depo-empty">Bu haftada tamamlanmış yükleme yok.</div>`;
     } else {
       gunler.forEach(iso => {
         const gList = byDate.get(iso).sort((a, b) => String(a.musteri).localeCompare(String(b.musteri), "tr"));
@@ -2340,13 +2347,15 @@ function renderDepoContent() {
           const sureTxt = b.durum === "done"
             ? (b.asim ? `<span style="color:#fbbf24">⏱️ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşım</span>` : `<span style="color:#34d399">⏱️ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk</span>`)
             : "";
+          const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
+          const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
           return `<div class="depo-week-row">
-            <div class="w-m">${esc(r.musteri)}${depoCmtLine(r).replace('class="d-cmt"', 'style="font-size:12px;color:#fbbf24;margin-top:2px" class="d-cmt"')}</div>
+            <div class="w-m">${esc(r.musteri)}${cmtTxt}</div>
             <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""}</div>
           </div>`;
         }).join("");
         html += `<div class="depo-week-day">
-          <h4>${iso === "tarihsiz" ? "Tarihsiz" : gunEtiketi(iso)} <span>· ${iso === "tarihsiz" ? "-" : formatDate(iso)}</span> — ${gList.length} kayıt / ${toplamAd} yükleme</h4>
+          <h4>${gunEtiketi(iso)} <span>· ${formatDate(iso)}</span> — ${gList.length} kayıt / ${toplamAd} yükleme</h4>
           ${satirlar}
         </div>`;
       });
