@@ -1706,6 +1706,12 @@ function renderTable(list) {
    Tablo kaydırılmışsa bile input, hücrenin üstünde görünür kalır.
    Enter kaydeder · Esc iptal · dışarı tık kaydeder.
    ============================================================ */
+  /* Hücre değerini log/metin gösterimine uygun formatla */
+function dispVal(field, val) {
+  const def = CELL_DEFS[field];
+  if (def && def.kind === "date") return formatDate(val);
+  return String(val ?? "") || "-";
+}
 function openCellEditor(td, id, field) {
   closeCellEditor();
   const row = rows.find(r => r.id === id);
