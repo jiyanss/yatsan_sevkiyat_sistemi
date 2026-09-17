@@ -984,23 +984,25 @@ function oncelikVal(r) {
   return (r.oncelikNo === "" || r.oncelikNo == null) ? Infinity : Number(r.oncelikNo);
 }
 /* Varsayılan sıralama:
-   0) Öncelik numarası olanlar en üste (1,2,3…)
-   1) Durum: Yükleniyor → Bekliyor → Tamamlandı
-   2) Grup içinde planlanan tarih: yakın → uzak */
+   1) Reel Plan: eskiden yeniye (boşlar en sona)
+   2) Müşteri adı: alfabetik
+   3) Planlanan tarih: eskiden yeniye (boşlar en sona)
+   4) Müşteri adı tekrar (tie-breaker)
+   5) ⭐ Öncelik no (verilmişse öne alır)
+   6) Gerçekleşen tarih (tie-breaker) */
 function sortList(list) {
   return list.slice().sort((x, y) => {
+    let c = tarihCmp(x.reelPlan, y.reelPlan);
+    if (c) return c;
+    c = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
+    if (c) return c;
+    c = tarihCmp(x.planlananTarih, y.planlananTarih);
+    if (c) return c;
+    c = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
+    if (c) return c;
     const px = oncelikVal(x), py = oncelikVal(y);
     if (px !== py) return px - py;
-    const dx = DURUM_SIRA[x.durum] ?? 9;
-    const dy = DURUM_SIRA[y.durum] ?? 9;
-    if (dx !== dy) return dx - dy;
-    let c = tarihCmp(x.planlananTarih, y.planlananTarih);
-    if (c) return c;
-    c = tarihCmp(x.reelPlan, y.reelPlan);
-    if (c) return c;
-    c = tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih);
-    if (c) return c;
-    return String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
+    return tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih);
   });
 }
 /* ⚠️ Yinelenen kayıt kontrolü */
