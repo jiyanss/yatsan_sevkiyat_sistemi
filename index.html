@@ -437,7 +437,6 @@
   .cmt-input { display: flex; flex-direction: column; gap: 8px; }
   .cmt-input textarea { width: 100%; resize: vertical; min-height: 64px; }
 
-  /* 🆕 Toplu düzenleme seçim */
   .selbox { width: 15px; height: 15px; cursor: pointer; }
   .bulkbar {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
@@ -566,29 +565,7 @@
   <div class="table-wrap">
     <table>
       <thead>
-        <tr>
-          <th class="selbox-th" title="Toplu düzenleme için seç"><input type="checkbox" id="selAll" class="selbox" /></th>
-          <th data-col="musteri" data-sort="musteri">Müşteri<span class="arw"></span></th>
-          <th data-col="blm" data-sort="blm">BLM<span class="arw"></span></th>
-          <th data-col="kategori" data-sort="kategori">Kategori<span class="arw"></span></th>
-          <th data-col="sevkiyatTipi" data-sort="sevkiyatTipi">Sevkiyat Tipi<span class="arw"></span></th>
-          <th data-col="ad" data-sort="ad">AD<span class="arw"></span></th>
-          <th data-col="planlananTarih" data-sort="planlananTarih">Planlanan Tarih<span class="arw"></span></th>
-          <th data-col="hafta" data-sort="hafta">Hafta<span class="arw"></span></th>
-          <th data-col="ay" data-sort="ay">Ay<span class="arw"></span></th>
-          <th data-col="reelPlan" data-sort="reelPlan">Reel Plan<span class="arw"></span></th>
-          <th data-col="gerceklesenTarih" title="Durum 'Yükleme Tamamlandı' olunca otomatik yazılır">Gerçekleşen<span class="arw"></span></th>
-          <th data-col="durum" data-sort="durum">Durum<span class="arw"></span></th>
-          <th data-col="sure">Süre</th>
-          <th data-col="oncelikNo" data-sort="oncelikNo" title="Öncelik no: 1-2-3… bu kayıtları varsayılan sıralamada en üste taşır">⭐ Önc.<span class="arw"></span></th>
-          <th data-col="aciklama">Açıklama</th>
-          <th data-col="araciGeldi">Aracı Geldi</th>
-          <th data-col="status">Status</th>
-          <th data-col="prsM3" data-sort="prsM3">PRS M3<span class="arw"></span></th>
-          <th data-col="m3" data-sort="m3">M3<span class="arw"></span></th>
-          <th data-col="createdBy" data-sort="createdBy">Ekleyen<span class="arw"></span></th>
-          <th></th>
-        </tr>
+        <tr id="theadRow"></tr>
       </thead>
       <tbody id="tbody"></tbody>
     </table>
@@ -872,6 +849,7 @@ const DURUM_SIRA = { "Yükleniyor": 0, "Yükleme Bekliyor": 1, "Yükleme Tamamla
 const SORTABLE = { musteri:1, blm:1, kategori:1, sevkiyatTipi:1, ad:1, planlananTarih:1,
   hafta:1, ay:1, reelPlan:1, gerceklesenTarih:1, durum:1, oncelikNo:1, prsM3:1, m3:1, createdBy:1 };
 
+/* Tablo kolonları — BAŞLIK ve SATIRLAR bu tek kaynaktan üretilir (hizalama garantisi) */
 const ALL_COLS = [
   ["musteri","Müşteri"],["blm","BLM"],["kategori","Kategori"],["sevkiyatTipi","Sevkiyat Tipi"],
   ["ad","AD"],["planlananTarih","Planlanan Tarih"],["hafta","Hafta"],["ay","Ay"],
@@ -889,7 +867,7 @@ const CELL_DEFS = {
   ad:               { kind: "number", w: "w-num" },
   planlananTarih:   { kind: "date",   w: "w-date" },
   reelPlan:         { kind: "date",   w: "w-date" },
-  /* gerceklesenTarih artık elle düzenlenmez — durum değişince otomatik yazılır */
+  /* gerceklesenTarih elle düzenlenmez — durum değişince otomatik yazılır */
   durum:            { kind: "select", options: DURUMLAR },
   oncelikNo:        { kind: "number", w: "w-num" },
   aciklama:         { kind: "text",   w: "w-aciklama" },
@@ -996,6 +974,7 @@ function tarihCmp(a, b) {
   if (!b) return -1;
   return a < b ? -1 : a > b ? 1 : 0;
 }
+/* Hücre değerini log/metin gösterimine uygun formatla */
 function dispVal(field, val) {
   const def = CELL_DEFS[field];
   if (def && def.kind === "date") return formatDate(val);
@@ -1221,11 +1200,23 @@ async function apiListHistory(limit = 150) {
     .sort((a, b) => (b.ts || 0) - (a.ts || 0))
     .slice(0, limit);
 }
+/* 🆕 Listeleme sırasında eksik alanlar varsayılanla doldurulur —
+   eski/elle girilen kayıtlarda tip/kategori boş görünmez, hesaplar doğru olur */
 async function apiList() {
   const res = await fetch(`${FIREBASE_DB_URL}/${NODE}.json`);
   const data = await check(res, "Veriler yüklenemedi");
   if (!data) return [];
-  return Object.entries(data).map(([key, val]) => ({ id: key, ...(val || {}) }));
+  return Object.entries(data).map(([key, val]) => {
+    const r = { id: key, ...(val || {}) };
+    r.musteri = r.musteri || "";
+    r.blm = r.blm || "EXPORT-1";
+    r.kategori = r.kategori || "PLANLI";
+    r.sevkiyatTipi = r.sevkiyatTipi || "KOMPLE TIR";
+    r.ad = (r.ad == null || r.ad === "") ? 1 : (Number(r.ad) || 1);
+    r.durum = r.durum || "Yükleme Bekliyor";
+    r.comments = Array.isArray(r.comments) ? r.comments : [];
+    return r;
+  });
 }
 function markLocalOp() { lastLocalOp = Date.now(); }
 async function apiInsert(rec) {
@@ -1309,7 +1300,7 @@ function getSureDk(r) {
 }
 /* ⚠️ Durum yan etkileri — kronometreyi (loadingStartedAt/loadingEndedAt) KORUR.
    Gerçekleşen tarih: Tamamlandı'ya geçişte yalnızca BOŞSA bugün yazılır;
-   doluysa (elle girilmiş ya da önceden yazılmışsa) DOKUNULMAZ. */
+   doluysa DOKUNULMAZ. */
 function applyDurumSideEffects(rec) {
   const d = rec.durum;
   if (d === "Yükleniyor") {
@@ -1364,9 +1355,11 @@ const hiddenCols = new Set();
 
 /* ================= Son filtre hatırlama ================= */
 const PREF_KEY = "sevkiyat_prefs";
+const PREF_VERSION = 2; /* kolon yapısı değişince artırılır → gizli kolonlar sıfırlanır */
 function savePrefs() {
   try {
     localStorage.setItem(PREF_KEY, JSON.stringify({
+      pv: PREF_VERSION,
       search: document.getElementById("search").value,
       searchScope: document.getElementById("searchScope").value,
       dateFilter, dateFrom, dateTo, statusFilter,
@@ -1380,6 +1373,12 @@ function loadPrefs() {
   try {
     const p = JSON.parse(localStorage.getItem(PREF_KEY));
     if (!p) { applyHiddenCols(); updateSearchPlaceholder(); return; }
+    /* Tercih eski sürümse: kolon yapısı değişmiştir → gizli kolonları sıfırla,
+       filtreleri koru. Güncelleme sonrası "kolonlar kayboldu" sürprizi olmaz. */
+    if (p.pv !== PREF_VERSION) {
+      p.hiddenCols = [];
+      p.sortCol = null;
+    }
     dateFilter = p.dateFilter || "week-current";
     dateFrom = p.dateFrom || "";
     dateTo = p.dateTo || "";
@@ -1437,7 +1436,6 @@ async function load(withSpinner = true, live = false) {
       if (d.deleted) parts.push(`🗑️ ${d.deleted} silindi`);
       if (parts.length) showToast("🔄 Ekip değişikliği algılandı:<br><b>" + parts.join(" · ") + "</b>");
     }
-    /* Silinen seçimleri temizle */
     const ids = new Set(rows.map(r => r.id));
     [...selectedIds].forEach(id => { if (!ids.has(id)) selectedIds.delete(id); });
     updateBulkBar();
@@ -1626,6 +1624,30 @@ function updateSureCells() {
   });
 }
 
+/* ============================================================
+   🆕 TABLO BAŞLIĞI — ALL_COLS'tan üretilir (hizalama garantisi)
+   ============================================================ */
+function renderThead() {
+  const tr = document.getElementById("theadRow");
+  let html = `<th class="selbox-th" title="Toplu düzenleme için seç"><input type="checkbox" id="selAll" class="selbox" /></th>`;
+  ALL_COLS.forEach(([k, label]) => {
+    const sortable = SORTABLE[k] ? ` data-sort="${k}"` : "";
+    let title = "";
+    if (k === "gerceklesenTarih") title = ` title="Durum 'Yükleme Tamamlandı' olunca otomatik yazılır"`;
+    if (k === "oncelikNo") title = ` title="Öncelik no: 1-2-3… bu kayıtları varsayılan sıralamada en üste taşır"`;
+    html += `<th data-col="${k}"${sortable}${title}>${esc(label)}<span class="arw"></span></th>`;
+  });
+  html += `<th></th>`;
+  tr.innerHTML = html;
+}
+function updateSortHeaders() {
+  document.querySelectorAll("th[data-sort]").forEach(th => {
+    const col = th.dataset.sort;
+    const arw = th.querySelector(".arw");
+    if (arw) arw.textContent = (sortCol === col) ? (sortDir === "desc" ? " ▾" : " ▴") : "";
+  });
+}
+
 /* ================= Render ================= */
 function render() {
   renderDatalist();
@@ -1703,7 +1725,7 @@ function planlananView(x) {
   if (g > 0) html += `<div class="late-badge">⚠ ${g} gün gecikti</div>`;
   return html;
 }
-/* Gerçekleşen tarih: otomatik yazılır, elle düzenlenmez — hover'da açıklama */
+/* Gerçekleşen tarih: otomatik yazılır, elle düzenlenmez */
 function gerceklesenView(x) {
   let html = formatDate(x.gerceklesenTarih);
   if (x.durum === "Yükleme Tamamlandı") {
@@ -1751,6 +1773,7 @@ function rowHtml(r) {
     ${tdHtml(r, "musteri", "strong", x => `<span class="musteri-chip" data-mchip="${r.id}" title="Müşteri kartını aç">${esc(x.musteri)}</span>`)}
     ${tdHtml(r, "blm", "", x => esc(x.blm))}
     ${tdHtml(r, "kategori", "", x => esc(x.kategori))}
+    ${tdHtml(r, "sevkiyatTipi", "", x => esc(x.sevkiyatTipi))}
     ${tdHtml(r, "ad", "center", x => esc(x.ad))}
     ${tdHtml(r, "planlananTarih", "", planlananView)}
     <td data-col="hafta" class="center muted">${dt ? getISOWeek(dt) : "-"}</td>
@@ -2295,7 +2318,6 @@ function openMusteriKart(id) {
   const geciken = all.filter(r => gecikmeGunu(r) > 0);
   const az = sapmaAnalizi(all);
   const musSapma = az ? az.musteri.get(name) : null;
-  /* Son 5 sevkiyat: tarihe göre en yeni */
   const son5 = [...all].sort((a, b) => tarihCmp(b.planlananTarih, a.planlananTarih)).slice(0, 5);
   const sapmaHtml = musSapma
     ? `<div class="kpi ${musSapma.toplam / musSapma.n > 0 ? "c-red" : "c-green"}"><div class="kpi-head">🗓️ Ortalama sapma</div><div class="kpi-val" style="font-size:20px">${fmtSapma(musSapma.toplam / musSapma.n)} gün</div><div class="kpi-sub">${musSapma.n} tamamlanan · zamanında %${(musSapma.zamaninda / musSapma.n * 100).toFixed(0)}</div></div>`
@@ -2341,13 +2363,6 @@ document.getElementById("btnBulkCancel").addEventListener("click", () => {
   selectedIds.clear();
   render();
 });
-document.getElementById("selAll").addEventListener("change", e => {
-  const on = e.target.checked;
-  const list = filtered();
-  if (on) list.forEach(r => selectedIds.add(r.id));
-  else { list.forEach(r => selectedIds.delete(r.id)); }
-  render();
-});
 document.getElementById("btnBulkApply").addEventListener("click", async () => {
   if (!selectedIds.size) return;
   const yeniTarih = document.getElementById("bulkDate").value;
@@ -2368,7 +2383,6 @@ document.getElementById("btnBulkApply").addEventListener("click", async () => {
       if (yeniTarih) updated.planlananTarih = yeniTarih;
       const eskiDurum = updated.durum;
       if (yeniDurum) updated.durum = yeniDurum;
-      /* Tarih değişince gecikme rozetini temizlemek için eski gecikme takibine gerek yok */
       if (yeniDurum && yeniDurum !== eskiDurum) applyDurumSideEffects(updated);
       const saved = await apiUpdate(r.id, updated);
       rows = rows.map(x => x.id === r.id ? saved : x);
@@ -2629,7 +2643,6 @@ document.getElementById("tbody").addEventListener("click", e => {
     }
     return;
   }
-  /* Müşteri kartı: müşteri hücresindeki isme tıkla */
   const chip = e.target.closest("[data-mchip]");
   if (chip) { gate("musteri-kart", chip.dataset.mchip); return; }
   if (e.target.closest("input, select, option")) return;
@@ -2642,7 +2655,6 @@ document.getElementById("tbody").addEventListener("click", e => {
   if (!trow) return;
   gate("cell-edit", { td, id: trow.dataset.rowid, field: td.dataset.field });
 });
-/* Toplu seçim kutuları (change event için ayrı dinleyici) */
 document.getElementById("tbody").addEventListener("change", e => {
   const cb = e.target.closest("input.selbox[data-sel]");
   if (cb) {
@@ -2726,6 +2738,15 @@ document.querySelector("thead").addEventListener("click", e => {
   else { sortCol = null; }
   savePrefs();
   updateSortHeaders();
+  render();
+});
+/* Tümünü seç (delegasyon — thead yeniden üretilse de çalışır) */
+document.querySelector("thead").addEventListener("change", e => {
+  if (e.target.id !== "selAll") return;
+  const on = e.target.checked;
+  const list = filtered();
+  if (on) list.forEach(r => selectedIds.add(r.id));
+  else { list.forEach(r => selectedIds.delete(r.id)); }
   render();
 });
 
@@ -3070,7 +3091,7 @@ async function adminAddUser() {
   }
 }
 async function adminRemoveUser(email) {
-  if (!confirm(`${email} için özel yetkiler kaldırılsın mı?\n(Kullanıcı giriş yapmaya devam eder, varsayılan yetkiler uygulanır.)`)) return;
+  if (!confirm(`${email} için özel yetkiler kaldırılsın mi?\n(Kullanıcı giriş yapmaya devam eder, varsayılan yetkiler uygulanır.)`)) return;
   try {
     await authFetch(`${FIREBASE_DB_URL}/${USERS_NODE}/${userKey(email)}.json`, { method: "DELETE" });
     delete userEntries[email];
@@ -3236,14 +3257,13 @@ function sureTable(az) {
     .map(([k, g]) => {
       const ort = g.toplam / g.n;
       const asimOran = (g.asim / g.n * 100).toFixed(0);
-      const renk = ort > 0 ? "" : "color:var(--green);font-weight:600";
       return `<tr><td class="strong">${esc(k)}</td><td class="center">${g.n}</td>
         <td class="center">${fmtN(ort)} dk</td>
         <td class="center" style="${g.kotu > 0 ? "color:var(--red)" : "color:var(--green)"}">${fmtN(g.kotu)} dk</td>
         <td class="center" style="${g.asim ? "color:var(--red)" : "color:var(--green)"}">%${asimOran}</td></tr>`;
     }).join("");
   return `<div class="rpt"><h3>⏱️ Yüklenme süresi performansı — müşteri + tip bazlı</h3>
-    <p class="hint">Kronometre verisi olan tamamlanmış yüklemeler. Ortalama süre standart süreye göre sıralanır — en tepedekiler en yavaş yüklenen kombinasyonlar. Aşım %: standart süreyi aşan yüklemelerin oranı.</p>
+    <p class="hint">Kronometre verisi olan tamamlanmış yüklemeler. Ortalama süreye göre sıralanır — en tepedekiler en yavaş yüklenen kombinasyonlar. Aşım %: standart süreyi aşan yüklemelerin oranı.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>Müşteri · Tip</th><th>Yükleme</th><th>Ortalama süre</th><th>En kötü aşım</th><th>Aşım oranı</th></tr></thead>
       <tbody>${rowsHtml}</tbody>
@@ -4137,6 +4157,7 @@ updateOfflineBadge();
 /* ================= Başlat ================= */
 updateUserUI();
 (async () => {
+  renderThead();      /* 🆕 başlık satırı JS'ten üretilir — gövdeyle birebir hizalı */
   loadPrefs();
   loadKapasitePrefs();
   updateSortHeaders();
