@@ -437,6 +437,21 @@
   .cmt-input { display: flex; flex-direction: column; gap: 8px; }
   .cmt-input textarea { width: 100%; resize: vertical; min-height: 64px; }
 
+  /* 🆕 Toplu düzenleme seçim */
+  .selbox { width: 15px; height: 15px; cursor: pointer; }
+  .bulkbar {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    z-index: 55; background: #1e293b; color: #f8fafc;
+    border-radius: 12px; padding: 10px 16px; display: flex; gap: 10px; align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,.4); font-size: 13px; font-weight: 600;
+  }
+  .bulkbar input[type="date"] { padding: 5px 8px; }
+  .musteri-chip {
+    display: inline-block; cursor: pointer;
+    border-bottom: 1px dotted var(--primary);
+  }
+  .musteri-chip:hover { color: var(--primary); }
+
   @media (max-width: 720px) {
     header { padding: 10px 12px; padding-top: max(10px, env(safe-area-inset-top)); }
     main { padding: 12px 12px 24px; }
@@ -458,7 +473,7 @@
   }
 
   @media print {
-    header .toolbar, #saveError, #guestInfo, .hint, .modal-bg, .toast, #cellEditor { display: none !important; }
+    header .toolbar, #saveError, #guestInfo, .hint, .modal-bg, .toast, #cellEditor, .selbox, .bulkbar { display: none !important; }
     body {
       --bg: #fff; --surface: #fff; --border: #ccc; --text: #111; --muted: #666;
       --primary-soft: #eef2ff; --green-soft: #ecfdf5; --amber-soft: #fffbeb; --red-soft: #fef2f2;
@@ -552,6 +567,7 @@
     <table>
       <thead>
         <tr>
+          <th class="selbox-th" title="Toplu düzenleme için seç"><input type="checkbox" id="selAll" class="selbox" /></th>
           <th data-col="musteri" data-sort="musteri">Müşteri<span class="arw"></span></th>
           <th data-col="blm" data-sort="blm">BLM<span class="arw"></span></th>
           <th data-col="kategori" data-sort="kategori">Kategori<span class="arw"></span></th>
@@ -561,7 +577,7 @@
           <th data-col="hafta" data-sort="hafta">Hafta<span class="arw"></span></th>
           <th data-col="ay" data-sort="ay">Ay<span class="arw"></span></th>
           <th data-col="reelPlan" data-sort="reelPlan">Reel Plan<span class="arw"></span></th>
-          <th data-col="gerceklesenTarih" data-sort="gerceklesenTarih">Gerçekleşen<span class="arw"></span></th>
+          <th data-col="gerceklesenTarih" title="Durum 'Yükleme Tamamlandı' olunca otomatik yazılır">Gerçekleşen<span class="arw"></span></th>
           <th data-col="durum" data-sort="durum">Durum<span class="arw"></span></th>
           <th data-col="sure">Süre</th>
           <th data-col="oncelikNo" data-sort="oncelikNo" title="Öncelik no: 1-2-3… bu kayıtları varsayılan sıralamada en üste taşır">⭐ Önc.<span class="arw"></span></th>
@@ -577,12 +593,25 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → <b>yerinde açılan</b> kutuda değiştir → <b>Enter</b> (veya dışarı tıkla) → kaydedilir; <b>Esc</b> iptal. <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt (bitiş girersen kayıt Tamamlandı olur). <b>⭐ Önc.</b> kolonuna 1-2-3 yaz → o kayıtlar varsayılan sıralamada en üste dizilir. <b>💬</b> yorum butonu satırın sağında. <b>📅 Takvim</b>'de çipleri sürükleyip tarih değiştir.</p>
+  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → <b>yerinde açılan</b> kutuda değiştir → <b>Enter</b> (veya dışarı tıkla) → kaydedilir; <b>Esc</b> iptal. <b>Gerçekleşen tarih</b> otomatik yazılır (durum Tamamlandı olunca). <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt. <b>⭐ Önc.</b> kolonuna 1-2-3 yaz → en üste dizilir. <b>💬</b> yorum butonu satırın sağında. <b>📅 Takvim</b>'de çipleri sürükle. Müşteri adına tıkla → <b>kart</b>. İlk kolonun kutuları ile <b>toplu düzenleme</b>.</p>
 </main>
 
 <div id="cellEditor" class="hidden"></div>
 
 <datalist id="musteri-list"></datalist>
+
+<div id="bulkBar" class="bulkbar hidden">
+  <span id="bulkCount">0 seçili</span>
+  <input type="date" id="bulkDate" title="Seçili kayıtları bu tarihe taşı" />
+  <select id="bulkDurum" title="Durumu değiştir">
+    <option value="">Durum (değişmez)</option>
+    <option value="Yükleme Bekliyor">Yükleme Bekliyor</option>
+    <option value="Yükleniyor">Yükleniyor</option>
+    <option value="Yükleme Tamamlandı">Yükleme Tamamlandı</option>
+  </select>
+  <button class="btn primary" id="btnBulkApply">Uygula</button>
+  <button class="btn" id="btnBulkCancel">Vazgeç</button>
+</div>
 
 <div id="modal" class="modal-bg hidden">
   <div class="modal">
@@ -596,7 +625,6 @@
       <label><span>AD</span><input id="f-ad" type="number" /></label>
       <label><span>Planlanan tarih</span><input id="f-planlananTarih" type="date" /></label>
       <label><span>Reel plan tarihi</span><input id="f-reelPlan" type="date" /></label>
-      <label><span>Gerçekleşen tarih</span><input id="f-gerceklesenTarih" type="date" /></label>
       <label><span>Durum</span><select id="f-durum"></select></label>
       <label><span>Aracı geldi mi</span><select id="f-araciGeldi"></select></label>
       <label><span>PRS M3</span><input id="f-prsM3" type="number" /></label>
@@ -618,11 +646,13 @@
       <button class="rtab active" data-rtab="genel">📊 Genel Bakış</button>
       <button class="rtab" data-rtab="analiz">📈 Trend & Analiz</button>
       <button class="rtab" data-rtab="kapasite">👷 Kapasite</button>
+      <button class="rtab" data-rtab="sure">⏱️ Süre Performansı</button>
       <button class="rtab" data-rtab="detay">📋 Detay Tablolar</button>
     </div>
     <div id="reportPaneGenel" class="rpane"></div>
     <div id="reportPaneAnaliz" class="rpane hidden"></div>
     <div id="reportPaneKapasite" class="rpane hidden"></div>
+    <div id="reportPaneSure" class="rpane hidden"></div>
     <div id="reportPaneDetay" class="rpane hidden"></div>
     <div class="modal-actions"><button class="btn" id="btnCloseReport">Kapat</button></div>
   </div>
@@ -859,7 +889,7 @@ const CELL_DEFS = {
   ad:               { kind: "number", w: "w-num" },
   planlananTarih:   { kind: "date",   w: "w-date" },
   reelPlan:         { kind: "date",   w: "w-date" },
-  gerceklesenTarih: { kind: "date",   w: "w-date" },
+  /* gerceklesenTarih artık elle düzenlenmez — durum değişince otomatik yazılır */
   durum:            { kind: "select", options: DURUMLAR },
   oncelikNo:        { kind: "number", w: "w-num" },
   aciklama:         { kind: "text",   w: "w-aciklama" },
@@ -966,7 +996,6 @@ function tarihCmp(a, b) {
   if (!b) return -1;
   return a < b ? -1 : a > b ? 1 : 0;
 }
-/* Hücre değerini log/metin gösterimine uygun formatla */
 function dispVal(field, val) {
   const def = CELL_DEFS[field];
   if (def && def.kind === "date") return formatDate(val);
@@ -1278,6 +1307,9 @@ function getSureDk(r) {
   const hit = sureAyarlari[comboKey(r.musteri, r.sevkiyatTipi)];
   return hit ? hit.sureDk : sureVarsayilan;
 }
+/* ⚠️ Durum yan etkileri — kronometreyi (loadingStartedAt/loadingEndedAt) KORUR.
+   Gerçekleşen tarih: Tamamlandı'ya geçişte yalnızca BOŞSA bugün yazılır;
+   doluysa (elle girilmiş ya da önceden yazılmışsa) DOKUNULMAZ. */
 function applyDurumSideEffects(rec) {
   const d = rec.durum;
   if (d === "Yükleniyor") {
@@ -1288,6 +1320,7 @@ function applyDurumSideEffects(rec) {
     rec.loadingEndedAt = null;
   } else if (d === "Yükleme Tamamlandı") {
     if (rec.loadingStartedAt && !rec.loadingEndedAt) rec.loadingEndedAt = Date.now();
+    if (!rec.gerceklesenTarih) rec.gerceklesenTarih = todayISO();
   }
   return rec;
 }
@@ -1326,6 +1359,7 @@ let currentCommentId = null;
 let currentSureId = null;
 let kalY = 0, kalM = 0;
 let depoTab = "anlik";
+const selectedIds = new Set();
 const hiddenCols = new Set();
 
 /* ================= Son filtre hatırlama ================= */
@@ -1403,6 +1437,10 @@ async function load(withSpinner = true, live = false) {
       if (d.deleted) parts.push(`🗑️ ${d.deleted} silindi`);
       if (parts.length) showToast("🔄 Ekip değişikliği algılandı:<br><b>" + parts.join(" · ") + "</b>");
     }
+    /* Silinen seçimleri temizle */
+    const ids = new Set(rows.map(r => r.id));
+    [...selectedIds].forEach(id => { if (!ids.has(id)) selectedIds.delete(id); });
+    updateBulkBar();
   } catch (e) {
     setSaveError(e.message);
   }
@@ -1665,8 +1703,17 @@ function planlananView(x) {
   if (g > 0) html += `<div class="late-badge">⚠ ${g} gün gecikti</div>`;
   return html;
 }
+/* Gerçekleşen tarih: otomatik yazılır, elle düzenlenmez — hover'da açıklama */
+function gerceklesenView(x) {
+  let html = formatDate(x.gerceklesenTarih);
+  if (x.durum === "Yükleme Tamamlandı") {
+    html += `<div class="muted" style="font-size:9.5px">otomatik</div>`;
+  }
+  return html;
+}
 function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
   return `<tr class="${rowClass}">
+    <td class="center"><input type="checkbox" class="selbox" data-sel disabled /></td>
     <td data-col="musteri">${fInput(d, scope, "musteri", "text", "w-musteri", true)}</td>
     <td data-col="blm">${fSelect(d, scope, "blm", BLMS)}</td>
     <td data-col="kategori">${fInput(d, scope, "kategori", "text", "w-kategori")}</td>
@@ -1676,7 +1723,7 @@ function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
     <td data-col="hafta" class="muted center">auto</td>
     <td data-col="ay" class="muted">auto</td>
     <td data-col="reelPlan">${fInput(d, scope, "reelPlan", "date", "w-date")}</td>
-    <td data-col="gerceklesenTarih">${fInput(d, scope, "gerceklesenTarih", "date", "w-date")}</td>
+    <td data-col="gerceklesenTarih" class="muted">otomatik</td>
     <td data-col="durum">${fSelect(d, scope, "durum", DURUMLAR)}</td>
     <td data-col="sure" class="center"><span class="sure-txt">-</span></td>
     <td data-col="oncelikNo">${fInput(d, scope, "oncelikNo", "number", "w-num")}</td>
@@ -1698,17 +1745,18 @@ function rowHtml(r) {
   const isOvertime = r.durum === "Yükleniyor" && sureBilgi(r).asim;
   const rowCls = r.oncelikli ? "priority" : (isOvertime ? "overtime" : (isToday ? "today-row" : ""));
   const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
+  const isSel = selectedIds.has(r.id);
   return `<tr class="row ${rowCls}" data-rowid="${r.id}">
-    ${tdHtml(r, "musteri", "strong", x => esc(x.musteri))}
+    <td class="center"><input type="checkbox" class="selbox" data-sel="${r.id}" ${isSel ? "checked" : ""} /></td>
+    ${tdHtml(r, "musteri", "strong", x => `<span class="musteri-chip" data-mchip="${r.id}" title="Müşteri kartını aç">${esc(x.musteri)}</span>`)}
     ${tdHtml(r, "blm", "", x => esc(x.blm))}
     ${tdHtml(r, "kategori", "", x => esc(x.kategori))}
-    ${tdHtml(r, "sevkiyatTipi", "", x => esc(x.sevkiyatTipi))}
     ${tdHtml(r, "ad", "center", x => esc(x.ad))}
     ${tdHtml(r, "planlananTarih", "", planlananView)}
     <td data-col="hafta" class="center muted">${dt ? getISOWeek(dt) : "-"}</td>
     <td data-col="ay" class="muted">${dt ? AYLAR[dt.getMonth()] : "-"}</td>
     ${tdHtml(r, "reelPlan", "", x => formatDate(x.reelPlan))}
-    ${tdHtml(r, "gerceklesenTarih", "", x => formatDate(x.gerceklesenTarih))}
+    <td data-col="gerceklesenTarih" class="muted" title="Durum Tamamlandı olunca otomatik yazılır">${gerceklesenView(r)}</td>
     ${tdHtml(r, "durum", "", x => `<span class="badge ${durumClass(x.durum)}">${esc(x.durum)}</span>`)}
     <td data-col="sure" class="center">${sureCellHtml(r)}</td>
     ${tdHtml(r, "oncelikNo", "center", x => numOrDash(x.oncelikNo))}
@@ -1728,7 +1776,7 @@ function rowHtml(r) {
 function renderTable(list) {
   closeCellEditor();
   const tbody = document.getElementById("tbody");
-  const cc = 20 - hiddenCols.size;
+  const cc = 21 - hiddenCols.size;
   let html = "";
   if (loading) html += `<tr><td colspan="${cc}" class="empty">Yükleniyor…</td></tr>`;
   if (addingInline) html += formRowHtml(inlineData, "inline", "inline-row", "save-inline", "cancel-inline");
@@ -1737,6 +1785,9 @@ function renderTable(list) {
   }
   list.forEach(r => { html += rowHtml(r); });
   tbody.innerHTML = html;
+  const all = document.getElementById("selAll");
+  if (all) all.checked = list.length > 0 && list.every(r => selectedIds.has(r.id));
+  updateBulkBar();
 }
 
 /* ============================================================
@@ -1819,6 +1870,9 @@ async function commitCell() {
     }
     if (field === "durum" && val === "Yükleme Tamamlandı" && updated.loadingStartedAt && updated.loadingEndedAt) {
       parts.push(`yüklenme süresi: ${fmtSure(updated.loadingEndedAt - updated.loadingStartedAt)}`);
+    }
+    if (field === "durum" && val === "Yükleme Tamamlandı" && updated.gerceklesenTarih !== row.gerceklesenTarih) {
+      parts.push(`gerçekleşen: ${formatDate(row.gerceklesenTarih)} → ${formatDate(updated.gerceklesenTarih)} (otomatik)`);
     }
     await apiLog("guncelleme", id, updated.musteri, parts.join(" · "));
   } catch (e) { setSaveError(e.message); }
@@ -1917,6 +1971,7 @@ function runAction({ type, param }) {
     case "comments":    openComments(param); break;
     case "sure-edit":   openSureEdit(param); break;
     case "edit-date":   changeDate(param.id, param.tarih); break;
+    case "musteri-kart": openMusteriKart(param); break;
     case "delete":
       if (confirm("Bu kayıt veritabanından silinsin mi?")) deleteRow(param);
       break;
@@ -2105,6 +2160,8 @@ document.getElementById("btnSureEditSave").addEventListener("click", async () =>
       if (end < start) { alert("Bitiş, başlangıçtan önce olamaz."); return; }
       updated.loadingEndedAt = end;
       updated.durum = "Yükleme Tamamlandı";
+      /* Bitiş günü = gerçekleşen tarih (kronometre korunur, tarih güncellenir) */
+      updated.gerceklesenTarih = isoFromDate(new Date(end));
     } else {
       updated.loadingEndedAt = null;
     }
@@ -2113,6 +2170,7 @@ document.getElementById("btnSureEditSave").addEventListener("click", async () =>
     const end = new Date(eVal).getTime();
     if (end < start) { alert("Bitiş, başlangıçtan önce olamaz."); return; }
     updated.loadingEndedAt = end;
+    updated.gerceklesenTarih = isoFromDate(new Date(end));
   }
   try {
     const saved = await apiUpdate(row.id, updated);
@@ -2223,7 +2281,114 @@ async function changeDate(id, tarih) {
 }
 
 /* ============================================================
-   🖥️ DEPO EKRAN MODU — 3 sekme: Anlık / Kalan / Bitmiş
+   👤 MÜŞTERİ KARTI
+   ============================================================ */
+function openMusteriKart(id) {
+  const row = rows.find(r => r.id === id);
+  if (!row || !row.musteri) return;
+  const name = row.musteri;
+  const all = enriched(rows).filter(r => (r.musteri || "").trim().toLowerCase() === name.trim().toLowerCase());
+  const toplamAd = all.reduce((s, r) => s + adet(r), 0);
+  const toplamM3 = all.reduce((s, r) => s + (Number(r.m3) || 0), 0);
+  const tamam = all.filter(r => r.durum === "Yükleme Tamamlandı");
+  const tamamAd = tamam.reduce((s, r) => s + adet(r), 0);
+  const geciken = all.filter(r => gecikmeGunu(r) > 0);
+  const az = sapmaAnalizi(all);
+  const musSapma = az ? az.musteri.get(name) : null;
+  /* Son 5 sevkiyat: tarihe göre en yeni */
+  const son5 = [...all].sort((a, b) => tarihCmp(b.planlananTarih, a.planlananTarih)).slice(0, 5);
+  const sapmaHtml = musSapma
+    ? `<div class="kpi ${musSapma.toplam / musSapma.n > 0 ? "c-red" : "c-green"}"><div class="kpi-head">🗓️ Ortalama sapma</div><div class="kpi-val" style="font-size:20px">${fmtSapma(musSapma.toplam / musSapma.n)} gün</div><div class="kpi-sub">${musSapma.n} tamamlanan · zamanında %${(musSapma.zamaninda / musSapma.n * 100).toFixed(0)}</div></div>`
+    : `<div class="kpi c-amber"><div class="kpi-head">🗓️ Ortalama sapma</div><div class="kpi-val" style="font-size:20px">—</div><div class="kpi-sub">tamamlanan kayıt yok</div></div>`;
+  const kpiHtml = `<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi c-primary"><div class="kpi-head">📦 Toplam</div><div class="kpi-val">${fmtN(toplamAd)}</div><div class="kpi-sub">yükleme · ${fmtN(toplamM3)} m³ · ${all.length} kayıt</div></div>
+    <div class="kpi c-green"><div class="kpi-head">✅ Tamamlanan</div><div class="kpi-val">${fmtN(tamamAd)}</div><div class="kpi-sub">%${toplamAd ? (tamamAd / toplamAd * 100).toFixed(1) : "0.0"} · ${geciken.length} geciken kayıt</div></div>
+    ${sapmaHtml}
+  </div>`;
+  const sonHtml = son5.length ? `<div class="rpt"><h3>🕘 Son 5 sevkiyat</h3><div class="table-wrap"><table>
+    <thead><tr><th>Planlanan</th><th>Tip</th><th>AD</th><th>Durum</th><th>Gerçekleşen</th></tr></thead>
+    <tbody>${son5.map(r => `<tr>
+      <td>${formatDate(r.planlananTarih)}</td>
+      <td>${esc(r.sevkiyatTipi)}</td>
+      <td class="center">${esc(r.ad)}</td>
+      <td><span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></td>
+      <td>${formatDate(r.gerceklesenTarih)}</td>
+    </tr>`).join("")}</tbody>
+  </table></div></div>` : "";
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.style.zIndex = "75";
+  modal.innerHTML = `<div class="modal wide">
+    <h2>👤 ${esc(name)}</h2>
+    ${kpiHtml}${sonHtml}
+    <div class="modal-actions"><button class="btn primary" id="btnMKClose">Kapat</button></div>
+  </div>`;
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+  modal.querySelector("#btnMKClose").addEventListener("click", () => modal.remove());
+}
+
+/* ============================================================
+   ⚙️ TOPLU DÜZENLEME
+   ============================================================ */
+function updateBulkBar() {
+  const bar = document.getElementById("bulkBar");
+  if (!selectedIds.size) { bar.classList.add("hidden"); return; }
+  document.getElementById("bulkCount").textContent = `${selectedIds.size} kayıt seçili`;
+  bar.classList.remove("hidden");
+}
+document.getElementById("btnBulkCancel").addEventListener("click", () => {
+  selectedIds.clear();
+  render();
+});
+document.getElementById("selAll").addEventListener("change", e => {
+  const on = e.target.checked;
+  const list = filtered();
+  if (on) list.forEach(r => selectedIds.add(r.id));
+  else { list.forEach(r => selectedIds.delete(r.id)); }
+  render();
+});
+document.getElementById("btnBulkApply").addEventListener("click", async () => {
+  if (!selectedIds.size) return;
+  const yeniTarih = document.getElementById("bulkDate").value;
+  const yeniDurum = document.getElementById("bulkDurum").value;
+  if (!yeniTarih && !yeniDurum) { alert("Tarih veya durum seç."); return; }
+  const secili = rows.filter(r => selectedIds.has(r.id));
+  const detay = secili.map(r => `${r.musteri}`).join(", ");
+  const notlar = [];
+  if (yeniTarih) notlar.push(`planlanan → ${formatDate(yeniTarih)}`);
+  if (yeniDurum) notlar.push(`durum → ${yeniDurum}`);
+  if (!confirm(`${secili.length} kayıt güncellenecek:\n${detay}\n\n${notlar.join(" · ")}\n\nOnaylıyor musun?`)) return;
+  const btn = document.getElementById("btnBulkApply");
+  btn.disabled = true; btn.textContent = "Uygulanıyor…";
+  try {
+    let done = 0;
+    for (const r of secili) {
+      const updated = { ...r };
+      if (yeniTarih) updated.planlananTarih = yeniTarih;
+      const eskiDurum = updated.durum;
+      if (yeniDurum) updated.durum = yeniDurum;
+      /* Tarih değişince gecikme rozetini temizlemek için eski gecikme takibine gerek yok */
+      if (yeniDurum && yeniDurum !== eskiDurum) applyDurumSideEffects(updated);
+      const saved = await apiUpdate(r.id, updated);
+      rows = rows.map(x => x.id === r.id ? saved : x);
+      done++;
+    }
+    await apiLog("guncelleme", "", secili.map(r => r.musteri).join(", "),
+      `⚙️ toplu düzenleme (${done} kayıt): ${notlar.join(" · ")}`);
+    selectedIds.clear();
+    setSaveError("");
+    render();
+    showToast(`✅ ${done} kayıt güncellendi.`);
+  } catch (e) {
+    setSaveError(e.message);
+    alert("Toplu güncelleme hatası: " + e.message);
+  }
+  btn.disabled = false; btn.textContent = "Uygula";
+});
+
+/* ============================================================
+   🖥️ DEPO EKRAN MODU — 3 sekme
    ============================================================ */
 function openDepo() {
   depoTab = "anlik";
@@ -2245,7 +2410,6 @@ document.querySelectorAll(".depo-tab").forEach(b => {
     renderDepoContent();
   });
 });
-/* 💬 Son 5 yorumu virgülle ayırıp satıra ekle */
 function depoCmtLine(r) {
   const l = Array.isArray(r.comments) ? r.comments : [];
   if (!l.length) return "";
@@ -2282,7 +2446,6 @@ function renderDepoContent() {
   const c = document.getElementById("depoContent");
 
   if (depoTab === "kalan") {
-    /* 📅 Kalan: bugün+gelecek, tamamlanmamış — güne göre gruplu */
     const kalan = list.filter(r => r.planlananTarih && r.planlananTarih >= today && r.durum !== "Yükleme Tamamlandı");
     const byDate = new Map();
     kalan.forEach(r => {
@@ -2299,10 +2462,7 @@ function renderDepoContent() {
         const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
         const satirlar = gList.map(r => {
           const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
-          const cmtTxt = cmtN ? (() => {
-            const son5 = r.comments.slice(-5);
-            return `<span class="w-cmt">💬 ${son5.map(x => esc(x.text)).join(", ")}</span>`;
-          })() : "";
+          const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
           return `<div class="depo-week-row">
             <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtTxt}</div>
             <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.durum === "Yükleniyor" ? " · 🟠 yükleniyor" : ""}</div>
@@ -2319,7 +2479,6 @@ function renderDepoContent() {
   }
 
   if (depoTab === "bitmis") {
-    /* ✅ Bitmiş: yalnızca güncel haftanın tamamlanmışları — en yeni gün üstte */
     const thisWeek = getISOWeek(new Date());
     const bitmis = list.filter(r => {
       if (r.durum !== "Yükleme Tamamlandı") return false;
@@ -2364,7 +2523,6 @@ function renderDepoContent() {
     return;
   }
 
-  /* ⚡ Anlık Durum (varsayılan) */
   const geciken = list.filter(r => gecikmeGunu(r) > 0).sort((a, b) => a.planlananTarih < b.planlananTarih ? -1 : 1);
   const yukleniyor = list.filter(r => r.durum === "Yükleniyor").sort((a, b) => (a.loadingStartedAt || 0) - (b.loadingStartedAt || 0));
   const bugun = list.filter(r => r.planlananTarih === today && r.durum === "Yükleme Bekliyor")
@@ -2471,6 +2629,9 @@ document.getElementById("tbody").addEventListener("click", e => {
     }
     return;
   }
+  /* Müşteri kartı: müşteri hücresindeki isme tıkla */
+  const chip = e.target.closest("[data-mchip]");
+  if (chip) { gate("musteri-kart", chip.dataset.mchip); return; }
   if (e.target.closest("input, select, option")) return;
   const tr = e.target.closest("tr[data-rowid]");
   const sureTd = e.target.closest('td[data-col="sure"]');
@@ -2480,6 +2641,15 @@ document.getElementById("tbody").addEventListener("click", e => {
   const trow = td.closest("tr[data-rowid]");
   if (!trow) return;
   gate("cell-edit", { td, id: trow.dataset.rowid, field: td.dataset.field });
+});
+/* Toplu seçim kutuları (change event için ayrı dinleyici) */
+document.getElementById("tbody").addEventListener("change", e => {
+  const cb = e.target.closest("input.selbox[data-sel]");
+  if (cb) {
+    if (cb.checked) selectedIds.add(cb.dataset.sel);
+    else selectedIds.delete(cb.dataset.sel);
+    updateBulkBar();
+  }
 });
 function onFieldInput(e) {
   const el = e.target;
@@ -2547,6 +2717,7 @@ document.getElementById("cellEditor").addEventListener("focusout", e => {
 
 /* Kolon sıralama */
 document.querySelector("thead").addEventListener("click", e => {
+  if (e.target.closest("#selAll")) return;
   const th = e.target.closest("th[data-sort]");
   if (!th) return;
   const col = th.dataset.sort;
@@ -2631,7 +2802,6 @@ function openModal() {
   document.getElementById("f-ad").value = rec.ad;
   document.getElementById("f-planlananTarih").value = rec.planlananTarih;
   document.getElementById("f-reelPlan").value = rec.reelPlan;
-  document.getElementById("f-gerceklesenTarih").value = "";
   document.getElementById("f-durum").value = rec.durum;
   document.getElementById("f-araciGeldi").value = "";
   document.getElementById("f-prsM3").value = "";
@@ -2672,7 +2842,6 @@ document.getElementById("btnSaveForm").addEventListener("click", async () => {
   rec.ad = getVal("f-ad");
   rec.planlananTarih = getVal("f-planlananTarih");
   rec.reelPlan = getVal("f-reelPlan");
-  rec.gerceklesenTarih = getVal("f-gerceklesenTarih");
   rec.durum = getVal("f-durum");
   rec.araciGeldi = getVal("f-araciGeldi");
   rec.prsM3 = getVal("f-prsM3");
@@ -3034,6 +3203,54 @@ function sapmaTable(az) {
         <td class="center" style="font-weight:700;${az.ort > 0 ? "color:var(--red)" : "color:var(--green)"}">${fmtSapma(az.ort)} gün</td>
         <td class="center" style="${az.enKotu > 0 ? "color:var(--red)" : ""}">${fmtSapma(az.enKotu)} gün</td>
         <td class="center">%${(az.zamaninda / az.n * 100).toFixed(0)}</td></tr></tfoot>
+    </table></div></div>`;
+}
+/* ⏱️ Yüklenme süresi performans analizi */
+function sureAnalizi(list) {
+  const kayitlar = list.filter(r => r.durum === "Yükleme Tamamlandı" && r.loadingStartedAt && r.loadingEndedAt)
+    .map(r => {
+      const gecenDk = Math.round((r.loadingEndedAt - r.loadingStartedAt) / 60000);
+      const standart = getSureDk(r);
+      const farkDk = gecenDk - standart;
+      return { musteri: r.musteri, tip: r.sevkiyatTipi, gecenDk, standart, farkDk };
+    });
+  if (!kayitlar.length) return null;
+  const n = kayitlar.length;
+  const ortGecen = kayitlar.reduce((a, s) => a + s.gecenDk, 0) / n;
+  const asimli = kayitlar.filter(s => s.farkDk > 0).length;
+  const enKotu = kayitlar.reduce((m, s) => Math.max(m, s.farkDk), -Infinity);
+  const m = new Map();
+  kayitlar.forEach(s => {
+    const k = s.musteri + " · " + s.tip;
+    if (!m.has(k)) m.set(k, { n: 0, toplam: 0, kotu: -Infinity, asim: 0 });
+    const g = m.get(k);
+    g.n++; g.toplam += s.gecenDk;
+    if (s.farkDk > g.kotu) g.kotu = s.farkDk;
+    if (s.farkDk > 0) g.asim++;
+  });
+  return { n, ortGecen, asimli, enKotu, musteri: m };
+}
+function sureTable(az) {
+  const rowsHtml = [...az.musteri.entries()]
+    .sort((a, b) => (b[1].toplam / b[1].n) - (a[1].toplam / a[1].n))
+    .map(([k, g]) => {
+      const ort = g.toplam / g.n;
+      const asimOran = (g.asim / g.n * 100).toFixed(0);
+      const renk = ort > 0 ? "" : "color:var(--green);font-weight:600";
+      return `<tr><td class="strong">${esc(k)}</td><td class="center">${g.n}</td>
+        <td class="center">${fmtN(ort)} dk</td>
+        <td class="center" style="${g.kotu > 0 ? "color:var(--red)" : "color:var(--green)"}">${fmtN(g.kotu)} dk</td>
+        <td class="center" style="${g.asim ? "color:var(--red)" : "color:var(--green)"}">%${asimOran}</td></tr>`;
+    }).join("");
+  return `<div class="rpt"><h3>⏱️ Yüklenme süresi performansı — müşteri + tip bazlı</h3>
+    <p class="hint">Kronometre verisi olan tamamlanmış yüklemeler. Ortalama süre standart süreye göre sıralanır — en tepedekiler en yavaş yüklenen kombinasyonlar. Aşım %: standart süreyi aşan yüklemelerin oranı.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Müşteri · Tip</th><th>Yükleme</th><th>Ortalama süre</th><th>En kötü aşım</th><th>Aşım oranı</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot><tr><td>GENEL</td><td class="center">${az.n}</td>
+        <td class="center" style="font-weight:700">${fmtN(az.ortGecen)} dk</td>
+        <td class="center" style="${az.enKotu > 0 ? "color:var(--red)" : ""}">${fmtN(az.enKotu)} dk</td>
+        <td class="center">%${(az.asimli / az.n * 100).toFixed(0)}</td></tr></tfoot>
     </table></div></div>`;
 }
 function haftaData() {
@@ -3437,6 +3654,19 @@ function buildKapasite() {
   }
 }
 
+/* ============================================================
+   ⏱️ SÜRE PERFORMANS SEKMESİ
+   ============================================================ */
+function buildSure(list) {
+  const az = sureAnalizi(list);
+  const c = document.getElementById("reportPaneSure");
+  if (!az) {
+    c.innerHTML = `<p class="hint">⏱️ Süre performansı için henüz kronometre verisi yok — bir kaydı "Yükleniyor" yapıp sonra "Tamamlandı" yapınca burada analiz başlar.</p>`;
+    return;
+  }
+  c.innerHTML = sureTable(az);
+}
+
 function buildDetay(list) {
   document.getElementById("reportPaneDetay").innerHTML =
     statsTable(groupStats(list, r => r.musteri), "Müşteri bazlı", "Müşteri") +
@@ -3454,6 +3684,7 @@ function buildReports() {
   document.getElementById("reportPaneAnaliz").innerHTML = list.length ? "" : emptyMsg;
   document.getElementById("reportPaneDetay").innerHTML = list.length ? "" : emptyMsg;
   document.getElementById("reportPaneKapasite").innerHTML = "";
+  document.getElementById("reportPaneSure").innerHTML = "";
   if (!list.length) return;
   buildGenel(list);
   buildAnaliz(list);
@@ -3466,9 +3697,11 @@ function switchReportTab(tab) {
   document.getElementById("reportPaneGenel").classList.toggle("hidden", tab !== "genel");
   document.getElementById("reportPaneAnaliz").classList.toggle("hidden", tab !== "analiz");
   document.getElementById("reportPaneKapasite").classList.toggle("hidden", tab !== "kapasite");
+  document.getElementById("reportPaneSure").classList.toggle("hidden", tab !== "sure");
   document.getElementById("reportPaneDetay").classList.toggle("hidden", tab !== "detay");
   destroyCharts();
   if (tab === "kapasite") { buildKapasite(); return; }
+  if (tab === "sure") { buildSure(filtered()); return; }
   const list = filtered();
   if (!list.length) return;
   if (tab === "genel") buildGenel(list);
