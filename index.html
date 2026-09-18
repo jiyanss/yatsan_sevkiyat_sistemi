@@ -951,6 +951,20 @@ function gecikmeGunu(r) {
   if (r.planlananTarih >= today) return 0;
   return Math.round((parseLocalDate(today) - parseLocalDate(r.planlananTarih)) / 86400000);
 }
+  /* Durumdan bağımsız ham gecikme hesabı (snapshot için) */
+function gecikmeGunRaw(r) {
+  if (!r.planlananTarih) return 0;
+  const today = todayISO();
+  if (r.planlananTarih >= today) return 0;
+  return Math.round((parseLocalDate(today) - parseLocalDate(r.planlananTarih)) / 86400000);
+}
+/* Görüntüleme: aktifken canlı hesap, tamamlandıysa kayıtlı snapshot */
+function gecikmeBilgi(r) {
+  if (r.durum === "Yükleme Tamamlandı") {
+    return { gun: Number(r.gecikmeSon) || 0, neden: r.gecikmeNedeni || "" };
+  }
+  return { gun: gecikmeGunu(r), neden: r.gecikmeNedeni || "" };
+}
 function durumClass(d) {
   if (d === "Yükleme Tamamlandı") return "done";
   if (d === "Yükleniyor") return "loading";
@@ -1196,6 +1210,8 @@ function toDb(r) {
     m3: (r.m3 === "" || r.m3 == null) ? null : Number(r.m3),
     oncelikli: !!r.oncelikli,
     oncelikNo: (r.oncelikNo === "" || r.oncelikNo == null) ? null : Number(r.oncelikNo),
+    gecikmeNedeni: r.gecikmeNedeni || "",
+    gecikmeSon: (r.gecikmeSon == null) ? null : Number(r.gecikmeSon),
     comments: Array.isArray(r.comments) ? r.comments : [],
     loadingStartedAt: (r.loadingStartedAt == null) ? null : Number(r.loadingStartedAt),
     loadingEndedAt: (r.loadingEndedAt == null) ? null : Number(r.loadingEndedAt),
@@ -1336,6 +1352,9 @@ function applyDurumSideEffects(rec) {
   } else if (d === "Yükleme Tamamlandı") {
     if (rec.loadingStartedAt && !rec.loadingEndedAt) rec.loadingEndedAt = Date.now();
     if (!rec.gerceklesenTarih) rec.gerceklesenTarih = todayISO();
+    /* Gecikme snapshot: o an gecikmeliyse gün sayısı kayda yazılır (kronometreye dokunmaz) */
+    const raw = gecikmeGunRaw(rec);
+    if (raw > 0) rec.gecikmeSon = raw; else rec.gecikmeSon = null;
   }
   return rec;
 }
@@ -1745,10 +1764,10 @@ function tdHtml(r, field, extraCls, viewFn) {
 }
 function planlananView(x) {
   let html = formatDate(x.planlananTarih);
-  const g = gecikmeGunu(x);
-  if (g > 0) {
-    html += `<div class="late-badge">⚠ ${g} gün gecikti`;
-    if (x.gecikmeNedeni) html += ` <span class="late-cause">· ${esc(x.gecikmeNedeni)}</span>`;
+  const b = gecikmeBilgi(x);
+  if (b.gun > 0) {
+    html += `<div class="late-badge">⚠ ${b.gun} gün gecikti`;
+    if (b.neden) html += ` <span class="late-cause">· ${esc(b.neden)}</span>`;
     html += ` <button class="cause-btn" data-cause="${x.id}" title="Gecikme nedeni seç/değiştir">📌</button></div>`;
   }
   return html;
@@ -2243,8 +2262,8 @@ document.getElementById("btnSureEditSave").addEventListener("click", async () =>
 function openCauseModal(id) {
   const row = rows.find(r => r.id === id);
   if (!row) return;
-  const g = gecikmeGunu(row);
-  if (g <= 0) { alert("Bu kayıt gecikmiş durumda değil — neden girebilmek için planlanan tarihi geçmişte olmalı ve tamamlanmamalı."); return; }
+  const g = gecikmeBilgi(row).gun;
+  if (g <= 0) { alert("Bu kayıt gecikmiş durumda değil — neden girebilmek için planlanan tarihi geçmişte olmalı."); return; }
   const neden = row.gecikmeNedeni || "";
   const items = GECIKME_NEDENLERI.map(n =>
     `<label class="check" style="margin-bottom:8px"><input type="radio" name="causeSel" value="${esc(n)}" ${neden === n ? "checked" : ""} /><span>${esc(n)}</span></label>`
@@ -3536,10 +3555,11 @@ function gecikmeNedenData() {
   const m = new Map();
   let isimsiz = 0;
   rows.forEach(r => {
-    if (gecikmeGunu(r) <= 0) return;
-    if (r.gecikmeNedeni) {
-      if (!m.has(r.gecikmeNedeni)) m.set(r.gecikmeNedeni, { adet: 0 });
-      m.get(r.gecikmeNedeni).adet += 1;
+    const b = gecikmeBilgi(r);
+    if (b.gun <= 0) return;
+    if (b.neden) {
+      if (!m.has(b.neden)) m.set(b.neden, { adet: 0 });
+      m.get(b.neden).adet += 1;
     } else {
       isimsiz++;
     }
@@ -3945,8 +3965,8 @@ function exportExcel() {
       "Reel Plan": r.reelPlan ? formatDate(r.reelPlan) : "",
       "Gerçekleşen Tarih": r.gerceklesenTarih ? formatDate(r.gerceklesenTarih) : "",
       "Durum": r.durum,
-      "Gecikme (gün)": gecikmeGunu(r) > 0 ? gecikmeGunu(r) : "",
-      "Gecikme Nedeni": gecikmeGunu(r) > 0 ? (r.gecikmeNedeni || "") : "",
+      "Gecikme (gün)": (() => { const b = gecikmeBilgi(r); return b.gun > 0 ? b.gun : ""; })(),
+      "Gecikme Nedeni": (() => { const b = gecikmeBilgi(r); return b.gun > 0 ? b.neden : ""; })(),
       "Yükleme Süresi": b.durum !== "none" ? fmtSure(b.gecenMs) : "",
       "Süre Aşımı (dk)": (b.durum !== "none" && b.asim) ? b.asimDk : "",
       "Öncelik No": r.oncelikNo ?? "",
