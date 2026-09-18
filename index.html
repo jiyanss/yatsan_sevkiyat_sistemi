@@ -166,6 +166,12 @@
   .late-badge {
     color: var(--red); font-size: 9.5px; font-weight: 700; margin-top: 1px;
     letter-spacing: .02em; white-space: nowrap;
+      .late-cause { color: var(--amber); font-size: 9.5px; font-weight: 700; }
+  .cause-btn {
+    background: none; border: none; cursor: pointer; padding: 0 2px;
+    font-size: 10px; color: var(--amber); vertical-align: middle;
+  }
+  .cause-btn:hover { color: var(--red); }
   }
 
   .sure-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 96px; }
@@ -828,7 +834,7 @@ const ADMIN_EMAILS = [
 const PERM_LABELS = { add: "Ekleme", edit: "Düzenleme", duplicate: "Çoğaltma", del: "Silme", imp: "Excel Yükleme" };
 const PERM_MAP = {
   "inline-add": "add", "form-add": "add", "save-inline": "add",
-  "cell-edit": "edit", "sure-edit": "edit", "edit-date": "edit", "comment": "edit",
+  "cell-edit": "edit", "sure-edit": "edit", "edit-date": "edit", "comment": "edit", "cause": "edit",
   "duplicate": "duplicate",
   "delete": "del",
   "import": "imp", "do-import": "imp"
@@ -844,6 +850,7 @@ const DURUMLAR = ["Yükleme Bekliyor", "Yükleniyor", "Yükleme Tamamlandı"];
 const BLMS = ["EXPORT-1","EXPORT-2","EXPORT-3"];
 const TIPLER = ["KOMPLE TIR","PARSIYEL TIR","40 HC","20 DC"];
 const GELDI = ["", "GELDİ", "HAYIR"];
+const GECIKME_NEDENLERI = ["Araç yok", "Evrak/Gümrük", "Üretim gecikmesi", "Müşteri iptali", "Diğer"];
 const M3_CARPAN = { "KOMPLE TIR": 90, "40 HC": 70, "20 DC": 35 };
 const DURUM_SIRA = { "Yükleniyor": 0, "Yükleme Bekliyor": 1, "Yükleme Tamamlandı": 2 };
 const SORTABLE = { musteri:1, blm:1, kategori:1, sevkiyatTipi:1, ad:1, planlananTarih:1,
@@ -1739,7 +1746,11 @@ function tdHtml(r, field, extraCls, viewFn) {
 function planlananView(x) {
   let html = formatDate(x.planlananTarih);
   const g = gecikmeGunu(x);
-  if (g > 0) html += `<div class="late-badge">⚠ ${g} gün gecikti</div>`;
+  if (g > 0) {
+    html += `<div class="late-badge">⚠ ${g} gün gecikti`;
+    if (x.gecikmeNedeni) html += ` <span class="late-cause">· ${esc(x.gecikmeNedeni)}</span>`;
+    html += ` <button class="cause-btn" data-cause="${x.id}" title="Gecikme nedeni seç/değiştir">📌</button></div>`;
+  }
   return html;
 }
 /* Gerçekleşen tarih: otomatik yazılır, elle düzenlenmez */
@@ -2008,7 +2019,7 @@ function runAction({ type, param }) {
     case "do-import":   doImport(); break;
     case "cell-edit":   openCellEditor(param.td, param.id, param.field); break;
     case "duplicate":   duplicateRow(param); break;
-    case "comments":    openComments(param); break;
+    case "comments":    openComments(param); break;    case "cause":       openCauseModal(param); break;
     case "sure-edit":   openSureEdit(param); break;
     case "edit-date":   changeDate(param.id, param.tarih); break;
     case "musteri-kart": openMusteriKart(param); break;
@@ -2226,7 +2237,72 @@ document.getElementById("btnSureEditSave").addEventListener("click", async () =>
     showToast("✅ Süre güncellendi.");
   } catch (e) { setSaveError(e.message); }
 });
-
+/* ============================================================
+   ⚠️ GECİKME NEDENİ SEÇİMİ
+   ============================================================ */
+function openCauseModal(id) {
+  const row = rows.find(r => r.id === id);
+  if (!row) return;
+  const g = gecikmeGunu(row);
+  if (g <= 0) { alert("Bu kayıt gecikmiş durumda değil — neden girebilmek için planlanan tarihi geçmişte olmalı ve tamamlanmamalı."); return; }
+  const neden = row.gecikmeNedeni || "";
+  const items = GECIKME_NEDENLERI.map(n =>
+    `<label class="check" style="margin-bottom:8px"><input type="radio" name="causeSel" value="${esc(n)}" ${neden === n ? "checked" : ""} /><span>${esc(n)}</span></label>`
+  ).join("") +
+  `<label class="check"><input type="radio" name="causeSel" value="__diger__" ${neden && !GECIKME_NEDENLERI.includes(neden) ? "checked" : ""} /><span>Diğer (özel metin)</span></label>
+   <input type="text" id="causeCustom" class="hidden" placeholder="Neden yaz…" value="${neden && !GECIKME_NEDENLERI.includes(neden) ? esc(neden) : ""}" style="margin-top:8px;width:100%" />`;
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.style.zIndex = "75";
+  modal.innerHTML = `<div class="modal">
+    <h2>⚠️ Gecikme Nedeni</h2>
+    <p class="hint"><b>${esc(row.musteri)}</b> · ${formatDate(row.planlananTarih)} · ${g} gün gecikti</p>
+    ${items}
+    <div class="modal-actions">
+      ${neden ? `<button class="btn" id="btnCauseDel">Nedeni Kaldır</button>` : ""}
+      <button class="btn primary" id="btnCauseSave">Kaydet</button>
+    </div>
+  </div>`;
+  modal.addEventListener("change", e => {
+    if (e.target.name === "causeSel") {
+      const custom = modal.querySelector("#causeCustom");
+      custom.classList.toggle("hidden", e.target.value !== "__diger__");
+    }
+  });
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+  modal.querySelector("#btnCauseSave").addEventListener("click", async () => {
+    const sel = modal.querySelector("input[name='causeSel']:checked");
+    if (!sel) { alert("Bir neden seç."); return; }
+    let val = sel.value;
+    if (val === "__diger__") {
+      val = modal.querySelector("#causeCustom").value.trim();
+      if (!val) { alert("Özel neden yaz."); return; }
+    }
+    try {
+      const saved = await apiUpdate(row.id, { ...row, gecikmeNedeni: val });
+      rows = rows.map(r => r.id === row.id ? saved : r);
+      setSaveError("");
+      render();
+      modal.remove();
+      await apiLog("guncelleme", row.id, row.musteri, `gecikme nedeni: ${val}`);
+      showToast(`✅ Gecikme nedeni kaydedildi: ${esc(val)}`);
+    } catch (e) { setSaveError(e.message); }
+  });
+  const delBtn = modal.querySelector("#btnCauseDel");
+  if (delBtn) delBtn.addEventListener("click", async () => {
+    try {
+      const updated = { ...row };
+      delete updated.gecikmeNedeni;
+      const saved = await apiUpdate(row.id, updated);
+      rows = rows.map(r => r.id === row.id ? saved : r);
+      render();
+      modal.remove();
+      await apiLog("guncelleme", row.id, row.musteri, "gecikme nedeni kaldırıldı");
+      showToast("🗑️ Neden kaldırıldı.");
+    } catch (e) { setSaveError(e.message); }
+  });
+}
 /* ================= 📅 Takvim görünümü ================= */
 function openTakvim() {
   const d = new Date();
@@ -2662,6 +2738,8 @@ document.getElementById("tbody").addEventListener("click", e => {
   }
   const chip = e.target.closest("[data-mchip]");
   if (chip) { gate("musteri-kart", chip.dataset.mchip); return; }
+  const causeBtn = e.target.closest("[data-cause]");
+  if (causeBtn) { gate("cause", causeBtn.dataset.cause); return; }
   if (e.target.closest("input, select, option")) return;
   const tr = e.target.closest("tr[data-rowid]");
   const sureTd = e.target.closest('td[data-col="sure"]');
@@ -3453,7 +3531,66 @@ function buildGenel(list) {
     }
   }));
 }
-
+/* ⚠️ Gecikme nedeni dağılımı — grafik + tablo */
+function gecikmeNedenData() {
+  const m = new Map();
+  let isimsiz = 0;
+  rows.forEach(r => {
+    if (gecikmeGunu(r) <= 0) return;
+    if (r.gecikmeNedeni) {
+      if (!m.has(r.gecikmeNedeni)) m.set(r.gecikmeNedeni, { adet: 0 });
+      m.get(r.gecikmeNedeni).adet += 1;
+    } else {
+      isimsiz++;
+    }
+  });
+  return { m, isimsiz };
+}
+function gecikmeNedenTable() {
+  const { m, isimsiz } = gecikmeNedenData();
+  const toplam = [...m.values()].reduce((s, g) => s + g.adet, 0);
+  if (!toplam) return `<p class="hint">⚠️ Gecikme nedeni henüz girilmemiş — geciken kayıtlarda 📌 butonuna tıklayarak neden seç.</p>`;
+  const noCauseBlock = isimsiz
+    ? `<p class="hint">⚠️ ${isimsiz} geciken kaydın nedeni henüz girilmemiş.</p>`
+    : "";
+  const chartBlock = (typeof Chart === "undefined")
+    ? ``
+    : `<div class="chart-box" style="margin-bottom:16px"><h3>⚠️ Gecikmeler neden kaynaklanıyor?</h3><div class="chart-holder"><canvas id="chNeden"></canvas></div></div>`;
+  const rowsHtml = [...m.entries()]
+    .sort((a, b) => b[1].adet - a[1].adet)
+    .map(([k, g]) => `<tr><td class="strong">${esc(k)}</td><td class="center">${g.adet}</td><td class="center">%${(g.adet / toplam * 100).toFixed(0)}</td></tr>`).join("");
+  const html = `<div class="rpt"><h3>⚠️ Gecikme nedeni dağılımı</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Neden</th><th>Geciken kayıt</th><th>Pay</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot><tr><td>TOPLAM</td><td class="center">${toplam}</td><td class="center">—</td></tr></tfoot>
+    </table></div></div>`;
+  /* HTML'i koy, grafik sonradan kurulsun */
+  setTimeout(() => {
+    if (typeof Chart === "undefined") return;
+    const cnv = document.getElementById("chNeden");
+    if (!cnv) return;
+    const { textColor } = chartBase();
+    chartInstances.push(new Chart(cnv.getContext("2d"), {
+      type: "doughnut",
+      data: {
+        labels: [...m.keys()],
+        datasets: [{ data: [...m.values()].map(g => g.adet),
+          backgroundColor: ["#dc2626", "#d97706", "#8b5cf6", "#0ea5e9", "#f59e0b", "#059669", "#64748b"],
+          borderWidth: 0, hoverOffset: 8 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: "60%",
+        plugins: {
+          legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, pointStyle: "circle", padding: 12, font: { size: 11 } } },
+          tooltip: { callbacks: { label: c => ` ${c.label}: ${fmtN(c.parsed)} kayıt` } },
+          datalabels: { display: false }
+        }
+      }
+    }));
+  }, 50);
+  return chartBlock + html + noCauseBlock;
+}
 function buildAnaliz(list) {
   const { textColor, gridColor } = chartBase();
   const az = sapmaAnalizi(list);
@@ -3461,8 +3598,9 @@ function buildAnaliz(list) {
     ? `<p class="hint">⚠️ Grafik kütüphanesi (CDN) yüklenemedi.</p>`
     : `<div class="chart-grid">
         <div class="chart-box wide"><h3>📈 Haftalık yükleme hacmi & tamamlanma oranı (son 8 hafta)</h3><div class="chart-holder"><canvas id="chKarma"></canvas></div></div>
-        ${az ? `<div class="chart-box wide"><h3>🗓️ Müşteri bazlı ortalama plan sapması (gün)</h3><div class="chart-holder tall"><canvas id="chSapma"></canvas></div></div>` : ""}
+         ${az ? `<div class="chart-box wide"><h3>🗓️ Müşteri bazlı ortalama plan sapması (gün)</h3><div class="chart-holder tall"><canvas id="chSapma"></canvas></div></div>` : ""}
       </div>` +
+        gecikmeNedenTable() +
     (az ? sapmaTable(az) : `<p class="hint">🗓️ Sapma analizi için henüz tamamlanmış (gerçekleşen tarihi dolu) kayıt yok.</p>`);
   document.getElementById("reportPaneAnaliz").innerHTML = chartBlock;
   if (typeof Chart === "undefined") return;
@@ -3808,6 +3946,7 @@ function exportExcel() {
       "Gerçekleşen Tarih": r.gerceklesenTarih ? formatDate(r.gerceklesenTarih) : "",
       "Durum": r.durum,
       "Gecikme (gün)": gecikmeGunu(r) > 0 ? gecikmeGunu(r) : "",
+      "Gecikme Nedeni": gecikmeGunu(r) > 0 ? (r.gecikmeNedeni || "") : "",
       "Yükleme Süresi": b.durum !== "none" ? fmtSure(b.gecenMs) : "",
       "Süre Aşımı (dk)": (b.durum !== "none" && b.asim) ? b.asimDk : "",
       "Öncelik No": r.oncelikNo ?? "",
