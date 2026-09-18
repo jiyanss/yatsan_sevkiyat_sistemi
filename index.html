@@ -570,7 +570,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 Hücreye tıkla → <b>yerinde açılan</b> kutuda değiştir → <b>Enter</b> (veya dışarı tıkla) → kaydedilir; <b>Esc</b> iptal. <b>Gerçekleşen tarih</b> otomatik yazılır (durum Tamamlandı olunca). <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt. <b>⭐ Önc.</b> kolonuna 1-2-3 yaz → en üste dizilir. <b>💬</b> yorum butonu satırın sağında. <b>📅 Takvim</b>'de çipleri sürükle. Müşteri adına tıkla → <b>kart</b>. İlk kolonun kutuları ile <b>toplu düzenleme</b>.</p>
+  <p class="hint" style="margin-top:8px">💡 <b>Varsayılan sıralama:</b> ⭐ Öncelikli kayıtlar en üste → Durum (Yükleniyor → Bekliyor → Tamamlandı) → her grupta Planlanan Tarih (eski → yeni) → Müşteri. Başlığa tıklayarak değiştir (3. tık: varsayılana dön). Hücreye tıkla → değiştir → <b>Enter</b>. <b>Gerçekleşen tarih</b> otomatik yazılır. <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt. <b>💬</b> yorum butonu satırın sağında. <b>📅 Takvim</b>'de çipleri sürükle. Müşteri adına tıkla → <b>kart</b>. İlk kolonun kutuları ile <b>toplu düzenleme</b>.</p>
 </main>
 
 <div id="cellEditor" class="hidden"></div>
@@ -983,25 +983,27 @@ function dispVal(field, val) {
 function oncelikVal(r) {
   return (r.oncelikNo === "" || r.oncelikNo == null) ? Infinity : Number(r.oncelikNo);
 }
-/* Varsayılan sıralama:
-   1) Reel Plan: eskiden yeniye (boşlar en sona)
-   2) Müşteri adı: alfabetik
-   3) Planlanan tarih: eskiden yeniye (boşlar en sona)
-   4) Müşteri adı tekrar (tie-breaker)
-   5) ⭐ Öncelik no (verilmişse öne alır)
-   6) Gerçekleşen tarih (tie-breaker) */
+/* ============================================================
+   VARSAYILAN SIRALAMA (kullanıcının tarifi):
+   1) ⭐ Öncelik numarası verilenler en üste (1,2,3…)
+   2) Durum: Yükleniyor (en üst) → Yükleme Bekliyor (orta) → Yükleme Tamamlandı (en alt)
+   3) Her durum grubunun İÇİNDE Planlanan Tarih: eski → yeni (boşlar sona)
+   4) Aynı tarih + durumda: Müşteri adı alfabetik
+   5) Tie-breaker: Reel Plan → Gerçekleşen
+   ============================================================ */
 function sortList(list) {
   return list.slice().sort((x, y) => {
-    let c = tarihCmp(x.reelPlan, y.reelPlan);
-    if (c) return c;
-    c = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
-    if (c) return c;
-    c = tarihCmp(x.planlananTarih, y.planlananTarih);
-    if (c) return c;
-    c = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
-    if (c) return c;
     const px = oncelikVal(x), py = oncelikVal(y);
     if (px !== py) return px - py;
+    const dx = DURUM_SIRA[x.durum] ?? 9;
+    const dy = DURUM_SIRA[y.durum] ?? 9;
+    if (dx !== dy) return dx - dy;
+    let c = tarihCmp(x.planlananTarih, y.planlananTarih);
+    if (c) return c;
+    c = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
+    if (c) return c;
+    c = tarihCmp(x.reelPlan, y.reelPlan);
+    if (c) return c;
     return tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih);
   });
 }
@@ -1033,7 +1035,7 @@ function cmpVals(x, y, col) {
     case "durum":
       return (DURUM_SIRA[vx] ?? 9) - (DURUM_SIRA[vy] ?? 9);
     case "planlananTarih": case "reelPlan": case "gerceklesenTarih":
-      return vx < vy ? -1 : vx > vy ? 1 : 0;
+      return tarihCmp(vx, vy);
     default:
       return String(vx || "").localeCompare(String(vy || ""), "tr");
   }
@@ -1042,6 +1044,8 @@ function colEmpty(r, col) {
   const v = r[col];
   return v === undefined || v === null || v === "" || v === "-";
 }
+/* Kolon sıralaması: eşitlik durumunda varsayılan kriterlerle tie-break —
+   böylece bir kolona göre sıralarken bile gruplar içi düzen karışık görünmez */
 function getSortedList(list) {
   if (!sortCol || !SORTABLE[sortCol]) return sortList(list);
   return list.slice().sort((x, y) => {
@@ -1050,7 +1054,18 @@ function getSortedList(list) {
     if (xe) return 1;
     if (ye) return -1;
     const c = cmpVals(x, y, sortCol);
-    return sortDir === "desc" ? -c : c;
+    if (c) return sortDir === "desc" ? -c : c;
+    /* Tie-break: varsayılan sıralama kriterleriyle düzene sok */
+    const px = oncelikVal(x), py = oncelikVal(y);
+    if (px !== py) return px - py;
+    const dx = DURUM_SIRA[x.durum] ?? 9;
+    const dy = DURUM_SIRA[y.durum] ?? 9;
+    if (dx !== dy) return dx - dy;
+    let t = tarihCmp(x.planlananTarih, y.planlananTarih);
+    if (t) return t;
+    t = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
+    if (t) return t;
+    return tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih);
   });
 }
 function updateSortHeaders() {
