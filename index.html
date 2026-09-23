@@ -958,6 +958,10 @@ function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
+  /* Depo ekranı tarihi: reel plan varsa o, yoksa planlanan tarih */
+function depoTarih(r) {
+  return r.reelPlan || r.planlananTarih || "";
+}
 function isoFromDate(d) {
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
