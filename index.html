@@ -456,6 +456,10 @@
     border-bottom: 1px dotted var(--primary);
   }
   .musteri-chip:hover { color: var(--primary); }
+  .fresh-badge { font-size: 9px; margin-top: 1px; white-space: nowrap; }
+  .fresh-badge.f-new { color: var(--green); font-weight: 700; }
+  .fresh-badge.f-day { color: var(--amber); font-weight: 600; }
+  .fresh-badge.f-old { color: var(--muted); }
 
   @media (max-width: 720px) {
     header { padding: 10px 12px; padding-top: max(10px, env(safe-area-inset-top)); }
@@ -576,7 +580,7 @@
       <tbody id="tbody"></tbody>
     </table>
   </div>
-  <p class="hint" style="margin-top:8px">💡 <b>Varsayılan sıralama:</b> ⭐ Öncelikli kayıtlar en üste → Durum (Yükleniyor → Bekliyor → Tamamlandı) → her grupta Planlanan Tarih (eski → yeni) → Müşteri. Başlığa tıklayarak değiştir (3. tık: varsayılana dön). Hücreye tıkla → değiştir → <b>Enter</b>. <b>Gerçekleşen tarih</b> otomatik yazılır. <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt. <b>💬</b> yorum butonu satırın sağında. <b>📅 Takvim</b>'de çipleri sürükle. Müşteri adına tıkla → <b>kart</b>. İlk kolonun kutuları ile <b>toplu düzenleme</b>.</p>
+  <p class="hint" style="margin-top:8px">💡 <b>Varsayılan sıralama:</b> ⭐ Öncelikli kayıtlar (öncelik no: 1,2,3…) en üste → Durum (Yükleniyor → Bekliyor → Tamamlandı) → her grupta <b>Reel Plan</b> (eski → yeni) → Müşteri. <b>Hafta/Ay</b> reel plan tarihinden hesaplanır; <b>Planlanan tarih</b> girilince Reel Plan otomatik eşitlenir. Başlığa tıklayarak değiştir (3. tık: varsayılana dön). Hücreye tıkla → değiştir → <b>Enter</b>. <b>Gerçekleşen tarih</b> otomatik yazılır. <b>🔄 rozeti</b> kaydın son güncellenme zamanını gösterir. <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt. <b>💬</b> yorum butonu satırın sağında. <b>📅 Takvim</b>'de çipleri sürükle. Müşteri adına tıkla → <b>kart</b>. İlk kolonun kutuları ile <b>toplu düzenleme</b>.</p>
 </main>
 
 <div id="cellEditor" class="hidden"></div>
@@ -700,7 +704,7 @@
 <div id="backupModal" class="modal-bg hidden">
   <div class="modal">
     <h2>💾 Yedekle / Geri Yükle</h2>
-    <p class="hint">Tüm veri (kayıtlar + geçmiş + kullanıcı yetkileri + süre ayarları) tek JSON dosyasına indirilir. Geri yükleme <b>mevcut verilerin tamamını değiştirir</b> — dikkatli kullan.</p>
+    <p class="hint">Tüm veri (kayıtlar + geçmiş + kullanıcı yetkileri + süre ayarları) tek JSON dosyasına indirilir. Geri yükleme <b>mevcut verilerin tamamını değiştirir</b> — dikkatli kullan. 🤖 <b>Otomatik günlük yedek:</b> uygulama, günün ilk girişli açılışında tüm veriyi Firebase'te <b>sevkiyat_yedek</b> düğümüne yazar; son 14 gün saklanır.</p>
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
       <button class="btn primary" id="btnBackupDownload" style="padding:12px">📥 Yedeği İndir (JSON)</button>
       <label class="btn" style="text-align:center;padding:12px;cursor:pointer">
@@ -823,6 +827,8 @@ const NODE = "sevkiyat";
 const HIST_NODE = "sevkiyat_history";
 const USERS_NODE = "sevkiyat_users";
 const SURE_NODE = "sevkiyat_suresi";
+const YEDEK_NODE = "sevkiyat_yedek";
+const YEDEK_SAKLAMA_GUN = 14;
 
 /* ============================================================
    ROLLER — ADMİN PANELİNDEN YÖNETİLİR
@@ -894,7 +900,8 @@ const ACTION_META = {
   "cogaltma":   { label: "Çoğaltıldı",      dot: "dup" },
   "excel":      { label: "Excel yükleme",   dot: "excel" },
   "yetki":      { label: "Yetki değişti",   dot: "excel" },
-  "yorum":      { label: "Yorum eklendi",   dot: "edit" }
+  "yorum":      { label: "Yorum eklendi",   dot: "edit" },
+  "yedek":      { label: "Otomatik yedek",  dot: "dup" }
 };
 
 /* ================= Yardımcılar ================= */
@@ -910,6 +917,15 @@ function shortUser(e) { return e ? String(e).split("@")[0] : "-"; }
 function fmtDateTime(ts) {
   const d = new Date(ts);
   return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function relTime(ts) {
+  const ms = Date.now() - ts;
+  if (ms < 60000) return "şimdi";
+  const dk = Math.floor(ms / 60000);
+  if (dk < 60) return `${dk} dk önce`;
+  const h = Math.floor(dk / 60);
+  if (h < 24) return `${h} sa önce`;
+  return `${Math.floor(h / 24)} gün önce`;
 }
 function fmtSapma(n) { return (n > 0 ? "+" : "") + (Math.round(n * 10) / 10).toLocaleString("tr-TR"); }
 function fmtSure(ms) {
@@ -1006,24 +1022,27 @@ function oncelikVal(r) {
 }
 /* ============================================================
    VARSAYILAN SIRALAMA (kullanıcının tarifi):
-   1) ⭐ Öncelik numarası verilenler en üste (1,2,3…)
+   1) ⭐ Öncelikli işaretli kayıtlar + öncelik numarası (1,2,3…) en üste
    2) Durum: Yükleniyor (en üst) → Yükleme Bekliyor (orta) → Yükleme Tamamlandı (en alt)
-   3) Her durum grubunun İÇİNDE Planlanan Tarih: eski → yeni (boşlar sona)
+   3) Her durum grubunun İÇİNDE Reel Plan: eski → yeni (boşlar sona;
+      eski kayıtlarda reel plan yoksa planlanan tarihe düşülür)
    4) Aynı tarih + durumda: Müşteri adı alfabetik
-   5) Tie-breaker: Reel Plan → Gerçekleşen
+   5) Tie-breaker: Gerçekleşen
    ============================================================ */
+function oncelikBas(r) { return r.oncelikli ? 0 : 1; }
+function reelKey(r) { return r.reelPlan || r.planlananTarih; }
 function sortList(list) {
   return list.slice().sort((x, y) => {
+    const bx = oncelikBas(x), by = oncelikBas(y);
+    if (bx !== by) return bx - by;
     const px = oncelikVal(x), py = oncelikVal(y);
     if (px !== py) return px - py;
     const dx = DURUM_SIRA[x.durum] ?? 9;
     const dy = DURUM_SIRA[y.durum] ?? 9;
     if (dx !== dy) return dx - dy;
-    let c = tarihCmp(x.planlananTarih, y.planlananTarih);
+    let c = tarihCmp(reelKey(x), reelKey(y));
     if (c) return c;
     c = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
-    if (c) return c;
-    c = tarihCmp(x.reelPlan, y.reelPlan);
     if (c) return c;
     return tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih);
   });
@@ -1077,26 +1096,20 @@ function getSortedList(list) {
     const c = cmpVals(x, y, sortCol);
     if (c) return sortDir === "desc" ? -c : c;
     /* Tie-break: varsayılan sıralama kriterleriyle düzene sok */
+    const bx = oncelikBas(x), by = oncelikBas(y);
+    if (bx !== by) return bx - by;
     const px = oncelikVal(x), py = oncelikVal(y);
     if (px !== py) return px - py;
     const dx = DURUM_SIRA[x.durum] ?? 9;
     const dy = DURUM_SIRA[y.durum] ?? 9;
     if (dx !== dy) return dx - dy;
-    let t = tarihCmp(x.planlananTarih, y.planlananTarih);
+    let t = tarihCmp(reelKey(x), reelKey(y));
     if (t) return t;
     t = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
     if (t) return t;
     return tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih);
   });
 }
-function updateSortHeaders() {
-  document.querySelectorAll("th[data-sort]").forEach(th => {
-    const col = th.dataset.sort;
-    const arw = th.querySelector(".arw");
-    if (arw) arw.textContent = (sortCol === col) ? (sortDir === "desc" ? " ▾" : " ▴") : "";
-  });
-}
-
 /* ================= Kimlik doğrulama (Firebase Auth REST) ================= */
 const AUTH_KEY = "sevkiyat_auth";
 let currentUser = null;
@@ -1216,7 +1229,8 @@ function toDb(r) {
     loadingStartedAt: (r.loadingStartedAt == null) ? null : Number(r.loadingStartedAt),
     loadingEndedAt: (r.loadingEndedAt == null) ? null : Number(r.loadingEndedAt),
     createdBy: r.createdBy || (currentUser ? currentUser.email : ""),
-    updatedBy: currentUser ? currentUser.email : ""
+    updatedBy: currentUser ? currentUser.email : "",
+    updatedAt: r.updatedAt ?? null
   };
 }
 async function apiLog(action, recId, musteri, detay) {
@@ -1262,6 +1276,7 @@ function markLocalOp() { lastLocalOp = Date.now(); }
 async function apiInsert(rec) {
   markLocalOp();
   const body = toDb(rec);
+  body.updatedAt = Date.now();
   const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
@@ -1271,6 +1286,7 @@ async function apiInsert(rec) {
 async function apiUpdate(id, rec) {
   markLocalOp();
   const body = toDb(rec);
+  body.updatedAt = Date.now();
   const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
@@ -1286,7 +1302,11 @@ async function apiBulkInsert(recs) {
   markLocalOp();
   const body = {};
   const stamp = Date.now().toString(36);
-  recs.forEach((rec, i) => { body["imp-" + stamp + "-" + String(i).padStart(4, "0")] = toDb(rec); });
+  recs.forEach((rec, i) => {
+    const d = toDb(rec);
+    d.updatedAt = Date.now();
+    body["imp-" + stamp + "-" + String(i).padStart(4, "0")] = d;
+  });
   const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
@@ -1545,7 +1565,8 @@ function dateBounds() {
 }
 function enriched(list) {
   return list.map(r => {
-    const dt = parseLocalDate(r.planlananTarih);
+    /* Hafta/Ay artık REEL PLAN tarihinden hesaplanır (eski kayıtlarda reel plan yoksa planlanandan) */
+    const dt = parseLocalDate(r.reelPlan || r.planlananTarih);
     return { ...r, hafta: dt ? getISOWeek(dt) : "-", ay: dt ? AYLAR[dt.getMonth()] : "-" };
   });
 }
@@ -1809,7 +1830,7 @@ function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
   </tr>`;
 }
 function rowHtml(r) {
-  const dt = parseLocalDate(r.planlananTarih);
+  const dt = parseLocalDate(r.reelPlan || r.planlananTarih); /* hafta/ay reel plandan */
   const isToday = r.planlananTarih === todayISO();
   const isOvertime = r.durum === "Yükleniyor" && sureBilgi(r).asim;
   const rowCls = r.oncelikli ? "priority" : (isOvertime ? "overtime" : (isToday ? "today-row" : ""));
@@ -1835,7 +1856,7 @@ function rowHtml(r) {
     <td data-col="status" class="center">${durumIcon(r.durum)}</td>
     ${tdHtml(r, "prsM3", "center", x => numOrDash(x.prsM3))}
     <td data-col="m3" class="center">${numOrDash(r.m3)}</td>
-    <td data-col="createdBy" class="muted" title="${esc(r.createdBy || "")}">${esc(shortUser(r.createdBy))}</td>
+    <td data-col="createdBy" class="muted" title="${esc(r.createdBy || "")}">${esc(shortUser(r.createdBy))}${r.updatedAt ? `<div class="fresh-badge ${Date.now() - r.updatedAt < 3600000 ? "f-new" : Date.now() - r.updatedAt < 86400000 ? "f-day" : "f-old"}" title="Son güncelleme: ${fmtDateTime(r.updatedAt)}${r.updatedBy ? " · " + esc(shortUser(r.updatedBy)) : ""}">🔄 ${relTime(r.updatedAt)}</div>` : ""}</td>
     <td class="nowrap">
       <button class="icon-btn cmt" data-action="comments" data-id="${r.id}" title="Yorumlar">💬${cmtN ? `<span class="cmt-n">${cmtN}</span>` : ""}</button>
       <button class="icon-btn dup" data-action="duplicate" data-id="${r.id}" title="Kopyala (bugüne planlar, durum sıfırlanır)">⧉</button>
@@ -1924,6 +1945,8 @@ async function commitCell() {
     }
   }
   const updated = { ...row, [field]: val };
+  /* Planlanan tarih girilince Reel Plan otomatik eşitlenir */
+  if (field === "planlananTarih" && val) updated.reelPlan = val;
   if (["sevkiyatTipi", "ad", "prsM3"].includes(field)) {
     const m3 = hesaplaM3(updated.sevkiyatTipi, updated.ad, updated.prsM3);
     if (m3 !== null) updated.m3 = m3;
@@ -1937,6 +1960,9 @@ async function commitCell() {
     const parts = [`${FIELD_LABELS[field] || field}: "${dispVal(field, row[field])}" → "${dispVal(field, val)}"`];
     if (String(updated.m3 ?? "") !== String(row.m3 ?? "")) {
       parts.push(`${FIELD_LABELS.m3}: "${dispVal("m3", row.m3)}" → "${dispVal("m3", updated.m3)}"`);
+    }
+    if (field === "planlananTarih" && String(updated.reelPlan ?? "") !== String(row.reelPlan ?? "")) {
+      parts.push(`${FIELD_LABELS.reelPlan}: "${dispVal("reelPlan", row.reelPlan)}" → "${dispVal("reelPlan", updated.reelPlan)}" (otomatik)`);
     }
     if (field === "durum" && val === "Yükleme Tamamlandı" && updated.loadingStartedAt && updated.loadingEndedAt) {
       parts.push(`yüklenme süresi: ${fmtSure(updated.loadingEndedAt - updated.loadingStartedAt)}`);
@@ -2403,14 +2429,15 @@ takvimGrid.addEventListener("drop", e => {
 async function changeDate(id, tarih) {
   const row = rows.find(r => r.id === id);
   if (!row) return;
-  const updated = { ...row, planlananTarih: tarih };
+  /* Takvim sürüklemesinde planlanan + reel plan birlikte güncellenir */
+  const updated = { ...row, planlananTarih: tarih, reelPlan: tarih };
   try {
     const saved = await apiUpdate(id, updated);
     rows = rows.map(r => r.id === id ? saved : r);
     setSaveError("");
     render();
     renderTakvim();
-    await apiLog("guncelleme", id, row.musteri, `planlanan: ${formatDate(row.planlananTarih)} → ${formatDate(tarih)} (takvim sürükle-bırak)`);
+    await apiLog("guncelleme", id, row.musteri, `planlanan+reel: ${formatDate(row.planlananTarih)} → ${formatDate(tarih)} (takvim sürükle-bırak)`);
     showToast(`📅 ${esc(row.musteri)} → ${formatDate(tarih)}`);
   } catch (e) { setSaveError(e.message); }
 }
@@ -2483,7 +2510,7 @@ document.getElementById("btnBulkApply").addEventListener("click", async () => {
   const secili = rows.filter(r => selectedIds.has(r.id));
   const detay = secili.map(r => `${r.musteri}`).join(", ");
   const notlar = [];
-  if (yeniTarih) notlar.push(`planlanan → ${formatDate(yeniTarih)}`);
+  if (yeniTarih) notlar.push(`planlanan + reel plan → ${formatDate(yeniTarih)}`);
   if (yeniDurum) notlar.push(`durum → ${yeniDurum}`);
   if (!confirm(`${secili.length} kayıt güncellenecek:\n${detay}\n\n${notlar.join(" · ")}\n\nOnaylıyor musun?`)) return;
   const btn = document.getElementById("btnBulkApply");
@@ -2492,7 +2519,7 @@ document.getElementById("btnBulkApply").addEventListener("click", async () => {
     let done = 0;
     for (const r of secili) {
       const updated = { ...r };
-      if (yeniTarih) updated.planlananTarih = yeniTarih;
+      if (yeniTarih) { updated.planlananTarih = yeniTarih; updated.reelPlan = yeniTarih; }
       const eskiDurum = updated.durum;
       if (yeniDurum) updated.durum = yeniDurum;
       if (yeniDurum && yeniDurum !== eskiDurum) applyDurumSideEffects(updated);
@@ -2587,7 +2614,7 @@ function renderDepoContent() {
       html += `<div class="depo-empty">Kalan yükleme yok 🎉</div>`;
     } else {
       gunler.forEach(iso => {
-        const gList = byDate.get(iso).sort((a, b) => (oncelikVal(a) - oncelikVal(b)) || (String(a.musteri).localeCompare(String(b.musteri), "tr")));
+        const gList = byDate.get(iso).sort((a, b) => (oncelikBas(a) - oncelikBas(b)) || (oncelikVal(a) - oncelikVal(b)) || (String(a.musteri).localeCompare(String(b.musteri), "tr")));
         const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
         const satirlar = gList.map(r => {
           const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
@@ -2638,8 +2665,8 @@ function renderDepoContent() {
           const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
           const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
           return `<div class="depo-week-row">
-            <div class="w-m">${esc(r.musteri)}${cmtTxt}</div>
             <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
+            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""}</div>
           </div>`;
         }).join("");
         html += `<div class="depo-week-day">
@@ -2744,6 +2771,49 @@ document.getElementById("backupFile").addEventListener("change", async e => {
   e.target.value = "";
 });
 
+/* ================= 🤖 Otomatik günlük yedek ================= */
+/* Günün ilk girişli açılışında tüm veri Firebase'te YEDEK_NODE'a yazılır;
+   son YEDEK_SAKLAMA_GUN gün saklanır, eskiler silinir. Rules'ta sevkiyat_yedek
+   düğümüne yetkili kullanıcı için okuma/yazma izni verilmelidir. */
+async function otomatikGunlukYedek() {
+  if (!currentUser) return;
+  try {
+    const bugun = todayISO();
+    const mevcut = await check(await authFetch(`${FIREBASE_DB_URL}/${YEDEK_NODE}/${bugun}.json`), "Yedek durumu okunamadı");
+    if (mevcut) return; /* bugünün yedeği zaten alınmış */
+    const [svk, hist, usr, sur] = await Promise.all([
+      fetch(`${FIREBASE_DB_URL}/${NODE}.json`).then(r => r.json()),
+      fetch(`${FIREBASE_DB_URL}/${HIST_NODE}.json`).then(r => r.json()),
+      authFetch(`${FIREBASE_DB_URL}/${USERS_NODE}.json`).then(r => r.json()),
+      fetch(`${FIREBASE_DB_URL}/${SURE_NODE}.json`).then(r => r.json())
+    ]);
+    const payload = {
+      app: "sevkiyat-planlama", version: 1, ts: Date.now(), user: currentUser.email,
+      data: { sevkiyat: svk || {}, history: hist || {}, users: usr || {}, suresi: sur || {} }
+    };
+    await authFetch(`${FIREBASE_DB_URL}/${YEDEK_NODE}/${bugun}.json`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+    });
+    /* Saklama sınırından eski günlerin yedeklerini sil */
+    const sinirD = new Date();
+    sinirD.setDate(sinirD.getDate() - YEDEK_SAKLAMA_GUN);
+    const sinir = isoFromDate(sinirD);
+    const keys = await fetch(`${FIREBASE_DB_URL}/${YEDEK_NODE}.json?shallow=true`).then(r => r.json());
+    if (keys) {
+      for (const k of Object.keys(keys)) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(k) && k < sinir) {
+          try { await authFetch(`${FIREBASE_DB_URL}/${YEDEK_NODE}/${k}.json`, { method: "DELETE" }); } catch (e) {}
+        }
+      }
+    }
+    const nRec = Object.keys(payload.data.sevkiyat).length;
+    await apiLog("yedek", "", "", `otomatik günlük yedek oluşturuldu · ${nRec} kayıt · ${bugun}`);
+    console.info(`🤖 Otomatik günlük yedek alındı (${bugun}): ${nRec} kayıt.`);
+  } catch (e) {
+    console.warn("Otomatik günlük yedek atlandı:", e.message);
+  }
+}
+
 /* ================= Olaylar ================= */
 document.getElementById("tbody").addEventListener("click", e => {
   const btn = e.target.closest("button[data-action]");
@@ -2785,6 +2855,12 @@ function onFieldInput(e) {
   const field = el.dataset.field;
   if (!field) return;
   if (inlineData) inlineData[field] = el.value;
+  /* Satır içi formda planlanan girilince reel plana da otomatik yaz */
+  if (field === "planlananTarih" && el.value && inlineData) {
+    inlineData.reelPlan = el.value;
+    const rpIn = el.closest("tr")?.querySelector('input[data-field="reelPlan"]');
+    if (rpIn) rpIn.value = el.value;
+  }
   if (field === "durum") {
     const cell = el.closest("tr")?.querySelector(".st-cell");
     if (cell) cell.innerHTML = durumIcon(el.value);
@@ -2952,6 +3028,10 @@ function openModal() {
 function closeModal() { document.getElementById("modal").classList.add("hidden"); }
 function getVal(id) { return document.getElementById(id).value; }
 
+/* Planlanan tarih seçilince Reel Plan otomatik eşitlenir */
+document.getElementById("f-planlananTarih").addEventListener("change", e => {
+  if (e.target.value) document.getElementById("f-reelPlan").value = e.target.value;
+});
 document.getElementById("f-sevkiyatTipi").addEventListener("change", e => {
   const yeni = hesaplaM3(e.target.value, getVal("f-ad"), getVal("f-prsM3"));
   if (yeni !== null) document.getElementById("f-m3").value = yeni;
@@ -3360,9 +3440,9 @@ function sureAnalizi(list) {
   const m = new Map();
   kayitlar.forEach(s => {
     const k = s.musteri + " · " + s.tip;
-    if (!m.has(k)) m.set(k, { n: 0, toplam: 0, kotu: -Infinity, asim: 0 });
+    if (!m.has(k)) m.set(k, { n: 0, toplam: 0, kotu: -Infinity, asim: 0, stTop: 0 });
     const g = m.get(k);
-    g.n++; g.toplam += s.gecenDk;
+    g.n++; g.toplam += s.gecenDk; g.stTop += s.standart;
     if (s.farkDk > g.kotu) g.kotu = s.farkDk;
     if (s.farkDk > 0) g.asim++;
   });
@@ -3620,7 +3700,7 @@ function buildAnaliz(list) {
   const chartBlock = (typeof Chart === "undefined")
     ? `<p class="hint">⚠️ Grafik kütüphanesi (CDN) yüklenemedi.</p>`
     : `<div class="chart-grid">
-        <div class="chart-box wide"><h3>📈 Haftalık yükleme hacmi & tamamlanma oranı (son 8 hafta)</h3><div class="chart-holder"><canvas id="chKarma"></canvas></div></div>
+         <div class="chart-box wide"><h3>📈 Haftalık yükleme hacmi & tamamlanma oranı (son 8 hafta · reel plana göre)</h3><div class="chart-holder"><canvas id="chKarma"></canvas></div></div>
          ${az ? `<div class="chart-box wide"><h3>🗓️ Müşteri bazlı ortalama plan sapması (gün)</h3><div class="chart-holder tall"><canvas id="chSapma"></canvas></div></div>` : ""}
       </div>` +
         gecikmeNedenTable() +
@@ -3862,7 +3942,65 @@ function buildSure(list) {
     c.innerHTML = `<p class="hint">⏱️ Süre performansı için henüz kronometre verisi yok — bir kaydı "Yükleniyor" yapıp sonra "Tamamlandı" yapınca burada analiz başlar.</p>`;
     return;
   }
-  c.innerHTML = sureTable(az);
+  const asimOran = az.asimli / az.n * 100;
+  const kpiBlock = `<div class="kpi-grid">
+    <div class="kpi c-primary"><div class="kpi-head">🧮 Analiz edilen yükleme</div><div class="kpi-val">${fmtN(az.n)}</div><div class="kpi-sub">kronometre verisi olan tamamlanmış kayıt</div></div>
+    <div class="kpi c-green"><div class="kpi-head">⏱️ Ortalama yüklenme süresi</div><div class="kpi-val">${fmtN(az.ortGecen)} dk</div><div class="kpi-sub">tüm kombinasyonların ortalaması</div></div>
+    <div class="kpi c-red"><div class="kpi-head">⚠️ Standart süreyi aşan</div><div class="kpi-val">%${asimOran.toFixed(0)}</div><div class="kpi-sub">${az.asimli} / ${az.n} yükleme</div></div>
+    <div class="kpi c-amber"><div class="kpi-head">🔻 En kötü aşım</div><div class="kpi-val">${fmtN(Math.max(az.enKotu, 0))} dk</div><div class="kpi-sub">standart sürenin üzerine çıkan en yüksek fark</div></div>
+  </div>`;
+  const chartBlock = (typeof Chart === "undefined")
+    ? ``
+    : `<div class="chart-box wide" style="margin-bottom:16px"><h3>⏱️ Ortalama yüklenme süresi vs standart (en yavaş 15 kombinasyon)</h3><div class="chart-holder tall"><canvas id="chSure"></canvas></div></div>`;
+  c.innerHTML = kpiBlock + chartBlock + sureTable(az);
+  if (typeof Chart === "undefined") return;
+  const { textColor, gridColor } = chartBase();
+  const arr = [...az.musteri.entries()]
+    .map(([k, g]) => ({ k, ort: g.toplam / g.n, std: g.stTop / g.n, n: g.n, asim: g.asim }))
+    .sort((a, b) => b.ort - a.ort)
+    .slice(0, 15);
+  chartInstances.push(new Chart(document.getElementById("chSure").getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: arr.map(x => x.k),
+      datasets: [
+        {
+          label: "Ortalama süre (dk)",
+          data: arr.map(x => Math.round(x.ort)),
+          backgroundColor: arr.map(x => x.ort > x.std ? "#dc2626cc" : "#059669cc"),
+          borderRadius: 5, maxBarThickness: 22
+        },
+        {
+          type: "line", label: "Standart süre",
+          data: arr.map(x => Math.round(x.std)),
+          borderColor: "#4f46e5", borderWidth: 2, borderDash: [6, 4],
+          pointRadius: 3, pointBackgroundColor: "#4f46e5", fill: false
+        }
+      ]
+    },
+    options: {
+      indexAxis: "y", responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, padding: 12, font: { size: 11 } } },
+        datalabels: {
+          anchor: "end", align: "end", clamp: true,
+          color: textColor, font: { weight: "700", size: 10 },
+          display: ctx => ctx.dataset.type !== "line",
+          formatter: v => fmtN(v) + " dk"
+        },
+        tooltip: { callbacks: { label: ctx => {
+          const d = arr[ctx.dataIndex];
+          return ctx.dataset.type === "line"
+            ? ` Standart: ${fmtN(d.std)} dk`
+            : ` Ortalama: ${fmtN(d.ort)} dk · ${d.n} yükleme · aşım %${(d.asim / d.n * 100).toFixed(0)}`;
+        } } }
+      },
+      scales: {
+        x: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0, maxTicksLimit: 6 } },
+        y: { grid: { display: false }, ticks: { color: textColor, font: { size: 10.5, weight: "600" } } }
+      }
+    }
+  }));
 }
 
 function buildDetay(list) {
@@ -4067,7 +4205,7 @@ function mapRowToRec(row) {
   if (tip) rec.sevkiyatTipi = tip;
   rec.ad = Number(g("ad")) || 1;
   rec.planlananTarih = parseExcelDate(g("planlananTarih"));
-  rec.reelPlan = parseExcelDate(g("reelPlan"));
+  rec.reelPlan = parseExcelDate(g("reelPlan")) || rec.planlananTarih;
   rec.gerceklesenTarih = parseExcelDate(g("gerceklesenTarih"));
   const dv = String(g("durum")).trim();
   if (dv) {
@@ -4230,6 +4368,7 @@ async function tryLogin() {
     }
     if (pendingAction) { const pa = pendingAction; pendingAction = null; runAction(pa); }
     else render();
+    otomatikGunlukYedek(); /* günün ilk girişinde yedek alınmamışsa arka planda al */
   } catch (e) {
     err.textContent = "Bağlantı hatası: " + e.message;
     err.classList.remove("hidden");
@@ -4353,6 +4492,7 @@ updateUserUI();
   render();
   await load(true);
   startLiveSync();
+  otomatikGunlukYedek(); /* günün ilk girişli açılışında arka planda yedek */
 })();
 </script>
 </body>
