@@ -965,19 +965,28 @@ function depoTarih(r) {
 function isoFromDate(d) {
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
+/* Gecikme REEL PLAN tarihine göre hesaplanır; reel plan boşsa planlanan tarih kullanılır */
+function gecikmeTarihi(r) {
+  return r.reelPlan || r.planlananTarih || "";
+}
+
 function gecikmeGunu(r) {
-  if (!r.planlananTarih || r.durum === "Yükleme Tamamlandı") return 0;
+  const t = gecikmeTarihi(r);
+  if (!t || r.durum === "Yükleme Tamamlandı") return 0;
   const today = todayISO();
-  if (r.planlananTarih >= today) return 0;
-  return Math.round((parseLocalDate(today) - parseLocalDate(r.planlananTarih)) / 86400000);
+  if (t >= today) return 0;
+  return Math.round((parseLocalDate(today) - parseLocalDate(t)) / 86400000);
 }
-  /* Durumdan bağımsız ham gecikme hesabı (snapshot için) */
+
+/* Durumdan bağımsız ham gecikme hesabı (snapshot için) */
 function gecikmeGunRaw(r) {
-  if (!r.planlananTarih) return 0;
+  const t = gecikmeTarihi(r);
+  if (!t) return 0;
   const today = todayISO();
-  if (r.planlananTarih >= today) return 0;
-  return Math.round((parseLocalDate(today) - parseLocalDate(r.planlananTarih)) / 86400000);
+  if (t >= today) return 0;
+  return Math.round((parseLocalDate(today) - parseLocalDate(t)) / 86400000);
 }
+
 /* Görüntüleme: aktifken canlı hesap, tamamlandıysa kayıtlı snapshot */
 function gecikmeBilgi(r) {
   if (r.durum === "Yükleme Tamamlandı") {
@@ -2686,7 +2695,7 @@ function renderDepoContent() {
     return;
   }
 
-  const geciken = list.filter(r => gecikmeGunu(r) > 0).sort((a, b) => a.planlananTarih < b.planlananTarih ? -1 : 1);
+  const geciken = list.filter(r => gecikmeGunu(r) > 0).sort((a, b) => gecikmeTarihi(a) < gecikmeTarihi(b) ? -1 : 1);
   const yukleniyor = list.filter(r => r.durum === "Yükleniyor").sort((a, b) => (a.loadingStartedAt || 0) - (b.loadingStartedAt || 0));
   const bugun = list.filter(r => dT(r) === today && r.durum === "Yükleme Bekliyor")
     .sort((a, b) => (oncelikVal(a) - oncelikVal(b)));
@@ -2694,7 +2703,7 @@ function renderDepoContent() {
   html += `<div class="depo-sec-title" style="color:#fbbf24">🟠 ŞİMDİ YÜKLENİYOR (${yukleniyor.length})</div>`;
   html += yukleniyor.length ? yukleniyor.map(r => depoItem(r, "d-amber", formatDate(dT(r)))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
   html += `<div class="depo-sec-title" style="color:#f87171">🔴 GECİKEN (${geciken.reduce((s, r) => s + adet(r), 0)})</div>`;
-  html += geciken.length ? geciken.map(r => depoItem(r, "d-red", `${formatDate(r.planlananTarih)} · ⚠ ${gecikmeGunu(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
+  html += geciken.length ? geciken.map(r => depoItem(r, "d-red", `${formatDate(gecikmeTarihi(r))} · ⚠ ${gecikmeGunu(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
   html += `<div class="depo-sec-title" style="color:#818cf8">🔵 BUGÜN BEKLİYOR (${bugun.reduce((s, r) => s + adet(r), 0)})</div>`;
   html += bugun.length ? bugun.map(r => depoItem(r, "d-blue", "bugün")).join("") : `<div class="depo-empty">Bugün için bekleyen yükleme yok.</div>`;
   c.innerHTML = html;
