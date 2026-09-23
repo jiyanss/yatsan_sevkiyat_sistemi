@@ -2599,6 +2599,8 @@ function gunEtiketi(iso) {
 function renderDepoContent() {
   const today = todayISO();
   const d = new Date();
+  /* Depo ekranı tarihi: reel plan varsa o, yoksa planlanan tarih */
+  const dT = r => r.reelPlan || r.planlananTarih || "";
   document.getElementById("depoClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   document.getElementById("depoDate").textContent =
     `${GUNLER[{ 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[d.getDay()]]} · ${d.getDate()} ${AYLAR[d.getMonth()]} ${d.getFullYear()}`;
@@ -2606,11 +2608,12 @@ function renderDepoContent() {
   const c = document.getElementById("depoContent");
 
   if (depoTab === "kalan") {
-    const kalan = list.filter(r => r.planlananTarih && r.planlananTarih >= today && r.durum !== "Yükleme Tamamlandı");
+    const kalan = list.filter(r => dT(r) && dT(r) >= today && r.durum !== "Yükleme Tamamlandı");
     const byDate = new Map();
     kalan.forEach(r => {
-      if (!byDate.has(r.planlananTarih)) byDate.set(r.planlananTarih, []);
-      byDate.get(r.planlananTarih).push(r);
+      const key = dT(r);
+      if (!byDate.has(key)) byDate.set(key, []);
+      byDate.get(key).push(r);
     });
     const gunler = [...byDate.keys()].sort();
     let html = `<div class="depo-sec-title" style="color:#34d399">📅 KALAN YÜKLEMELER (${kalan.reduce((s, r) => s + adet(r), 0)} yükleme · ${gunler.length} gün)</div>`;
@@ -2685,11 +2688,11 @@ function renderDepoContent() {
 
   const geciken = list.filter(r => gecikmeGunu(r) > 0).sort((a, b) => a.planlananTarih < b.planlananTarih ? -1 : 1);
   const yukleniyor = list.filter(r => r.durum === "Yükleniyor").sort((a, b) => (a.loadingStartedAt || 0) - (b.loadingStartedAt || 0));
-  const bugun = list.filter(r => r.planlananTarih === today && r.durum === "Yükleme Bekliyor")
+  const bugun = list.filter(r => dT(r) === today && r.durum === "Yükleme Bekliyor")
     .sort((a, b) => (oncelikVal(a) - oncelikVal(b)));
   let html = "";
   html += `<div class="depo-sec-title" style="color:#fbbf24">🟠 ŞİMDİ YÜKLENİYOR (${yukleniyor.length})</div>`;
-  html += yukleniyor.length ? yukleniyor.map(r => depoItem(r, "d-amber", formatDate(r.planlananTarih))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
+  html += yukleniyor.length ? yukleniyor.map(r => depoItem(r, "d-amber", formatDate(dT(r)))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
   html += `<div class="depo-sec-title" style="color:#f87171">🔴 GECİKEN (${geciken.reduce((s, r) => s + adet(r), 0)})</div>`;
   html += geciken.length ? geciken.map(r => depoItem(r, "d-red", `${formatDate(r.planlananTarih)} · ⚠ ${gecikmeGunu(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
   html += `<div class="depo-sec-title" style="color:#818cf8">🔵 BUGÜN BEKLİYOR (${bugun.reduce((s, r) => s + adet(r), 0)})</div>`;
