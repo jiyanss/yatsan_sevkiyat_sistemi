@@ -1,4 +1,3 @@
-<style>
   :root {
     --bg: #f1f5f9; --surface: #ffffff; --border: #e2e8f0;
     --text: #0f172a; --muted: #64748b;
@@ -495,4 +494,3 @@
   td[data-col="reelPlan"] { font-weight: 600; }
   .table-wrap { max-height: calc(100vh - 190px); overflow-y: auto; }
 thead th { position: sticky; top: 0; z-index: 5; background: #1e293b; }
-</style>
