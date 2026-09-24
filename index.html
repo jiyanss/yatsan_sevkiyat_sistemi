@@ -965,22 +965,24 @@ function depoTarih(r) {
 function isoFromDate(d) {
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
-/* Gecikme REEL PLAN tarihine göre hesaplanır; reel plan boşsa planlanan tarih kullanılır */
+/* Operasyonel tarih: reel plan (yoksa planlanan) — filtre, bugün kontrolü, takvim ve gruplama için */
 function gecikmeTarihi(r) {
   return r.reelPlan || r.planlananTarih || "";
 }
 
+/* Gecikme görüntüsü PLANLANAN tarafa göre: reel plan ileri çekilse bile
+   "X gün gecikti + neden" bilgisi kaybolmasın diye bilinçli olarak böyle. */
 function gecikmeGunu(r) {
-  const t = gecikmeTarihi(r);
+  const t = r.planlananTarih || "";
   if (!t || r.durum === "Yükleme Tamamlandı") return 0;
   const today = todayISO();
   if (t >= today) return 0;
   return Math.round((parseLocalDate(today) - parseLocalDate(t)) / 86400000);
 }
 
-/* Durumdan bağımsız ham gecikme hesabı (snapshot için) */
+/* Durumdan bağımsız ham gecikme (snapshot için) */
 function gecikmeGunRaw(r) {
-  const t = gecikmeTarihi(r);
+  const t = r.planlananTarih || "";
   if (!t) return 0;
   const today = todayISO();
   if (t >= today) return 0;
@@ -994,7 +996,6 @@ function gecikmeBilgi(r) {
   }
   return { gun: gecikmeGunu(r), neden: r.gecikmeNedeni || "" };
 }
-
 function durumClass(d) {
   if (d === "Yükleme Tamamlandı") return "done";
   if (d === "Yükleniyor") return "loading";
@@ -1054,7 +1055,10 @@ function sortList(list) {
     const dx = DURUM_SIRA[x.durum] ?? 9;
     const dy = DURUM_SIRA[y.durum] ?? 9;
     if (dx !== dy) return dx - dy;
+    /* Önce Reel Plan, eşitse Planlanan Tarih (eski → yeni) */
     let c = tarihCmp(reelKey(x), reelKey(y));
+    if (c) return c;
+    c = tarihCmp(x.planlananTarih, y.planlananTarih);
     if (c) return c;
     c = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
     if (c) return c;
@@ -1117,7 +1121,9 @@ function getSortedList(list) {
     const dx = DURUM_SIRA[x.durum] ?? 9;
     const dy = DURUM_SIRA[y.durum] ?? 9;
     if (dx !== dy) return dx - dy;
-    let t = tarihCmp(reelKey(x), reelKey(y));
+       let t = tarihCmp(reelKey(x), reelKey(y));
+    if (t) return t;
+    t = tarihCmp(x.planlananTarih, y.planlananTarih);
     if (t) return t;
     t = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
     if (t) return t;
@@ -1602,13 +1608,14 @@ function filtered() {
   const bounds = (!isWeekMode && dateFilter !== "all") ? dateBounds() : null;
   const result = enriched(rows).filter(r => {
     if (dateFilter === "week-current") {
-      /* Gecikme REEL PLAN bazlı hesaplanır (gecikmeGunu) */
-      const isDelayed = gecikmeGunu(r) > 0;
+      /* "+ gecikenler" OPERASYONEL: reel planı hâlâ bugünün gerisinde kalan tamamlanmamışlar.
+         Reel planı ileri çekilen kayıt geciken sayılmaz — yeni haftasında görünür. */
+      const rp = r.reelPlan || r.planlananTarih;
+      const isDelayed = rp && rp < today && r.durum !== "Yükleme Tamamlandı";
       if (!(String(r.hafta) === String(thisWeek) || isDelayed)) return false;
     } else if (weekNum !== null) {
       if (String(r.hafta) !== weekNum) return false;
     } else if (bounds) {
-      /* Tarih aralığı filtreleri de reel plan bazlı */
       const d = gecikmeTarihi(r);
       if (!d) return false;
       if (d < bounds.from || d > bounds.to) return false;
@@ -1808,14 +1815,10 @@ function planlananView(x) {
     html += `<div class="late-badge">⚠ ${b.gun} gün gecikti`;
     if (b.neden) html += ` <span class="late-cause">· ${esc(b.neden)}</span>`;
     html += ` <button class="cause-btn" data-cause="${x.id}" title="Gecikme nedeni seç/değiştir">📌</button></div>`;
-  }
-  return html;
-}
-/* Gerçekleşen tarih: otomatik yazılır, elle düzenlenmez */
-function gerceklesenView(x) {
-  let html = formatDate(x.gerceklesenTarih);
-  if (x.durum === "Yükleme Tamamlandı") {
-    html += `<div class="muted" style="font-size:9.5px">otomatik</div>`;
+  } else if (x.gecikmeNedeni) {
+    /* Gecikme geçmişte kalmış olsa bile (reel plan ileri çekilmiş) girilen not görünür */
+    html += `<div class="late-cause">📌 ${esc(x.gecikmeNedeni)}`;
+    html += ` <button class="cause-btn" data-cause="${x.id}" title="Gecikme nedeni seç/değiştir">✏️</button></div>`;
   }
   return html;
 }
