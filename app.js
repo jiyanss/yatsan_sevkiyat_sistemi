@@ -3722,4 +3722,3 @@ updateUserUI();
   startLiveSync();
   otomatikGunlukYedek(); /* günün ilk girişli açılışında arka planda yedek */
 })();
-</script>
