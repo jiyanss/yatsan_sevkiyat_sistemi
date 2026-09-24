@@ -970,6 +970,11 @@ function gecikmeTarihi(r) {
   return r.reelPlan || r.planlananTarih || "";
 }
 
+/* Gecikme REEL PLAN tarihine göre hesaplanır; reel plan boşsa planlanan tarih kullanılır */
+function gecikmeTarihi(r) {
+  return r.reelPlan || r.planlananTarih || "";
+}
+
 function gecikmeGunu(r) {
   const t = gecikmeTarihi(r);
   if (!t || r.durum === "Yükleme Tamamlandı") return 0;
@@ -994,6 +999,7 @@ function gecikmeBilgi(r) {
   }
   return { gun: gecikmeGunu(r), neden: r.gecikmeNedeni || "" };
 }
+
 function durumClass(d) {
   if (d === "Yükleme Tamamlandı") return "done";
   if (d === "Yükleniyor") return "loading";
