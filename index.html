@@ -3825,17 +3825,18 @@ function buildAnaliz(list) {
    ============================================================ */
 function kapasiteData() {
   const today = todayISO();
-  const list = enriched(rows).filter(r =>
-    r.planlananTarih && r.planlananTarih >= today &&
-    r.durum !== "Yükleme Tamamlandı"
-  );
+  const list = enriched(rows).filter(r => {
+    const d = gecikmeTarihi(r);
+    return d && d >= today && r.durum !== "Yükleme Tamamlandı";
+  });
   const m = new Map();
   list.forEach(r => {
-    const g = m.get(r.planlananTarih) || { yukleme: 0, saatDk: 0, tanimsiz: 0 };
+    const d = gecikmeTarihi(r);
+    const g = m.get(d) || { yukleme: 0, saatDk: 0, tanimsiz: 0 };
     g.yukleme += adet(r);
     g.saatDk += (getSureDk(r) * adet(r));
     if (!sureAyarlari[comboKey(r.musteri, r.sevkiyatTipi)]) g.tanimsiz += adet(r);
-    m.set(r.planlananTarih, g);
+    m.set(d, g);
   });
   return [...m.entries()]
     .sort((a, b) => a[0] < b[0] ? -1 : 1)
