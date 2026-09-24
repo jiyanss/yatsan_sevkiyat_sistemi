@@ -494,3 +494,34 @@
   td[data-col="reelPlan"] { font-weight: 600; }
   .table-wrap { max-height: calc(100vh - 190px); overflow-y: auto; }
 thead th { position: sticky; top: 0; z-index: 5; background: #1e293b; }
+
+/* ============ KONTRAST GÜÇLENDİRME ============ */
+
+/* Durum rozetleri: daha doygun zemin, okunur metin */
+.badge.done    { background: #a7f3d0; color: #065f46; }
+.badge.loading { background: #fde68a; color: #92400e; }
+.badge.waiting { background: #fecaca; color: #991b1b; }
+body.dark .badge.done    { background: #064e3b; color: #6ee7b7; }
+body.dark .badge.loading { background: #78350f; color: #fcd34d; }
+body.dark .badge.waiting { background: #7f1d1d; color: #fca5a5; }
+
+/* Satır vurguları: belirgin */
+tr.priority, tr.priority:hover { background: #fef3c7; }
+body.dark tr.priority, body.dark tr.priority:hover { background: #3a2f10; }
+
+tr.overtime, tr.overtime:hover { background: #fee2e2; }
+body.dark tr.overtime, body.dark tr.overtime:hover { background: #3d1a1f; }
+
+tr.today-row, tr.today-row:hover { background: #d1fae5; }
+body.dark tr.today-row, body.dark tr.today-row:hover { background: #10331f; }
+
+/* Zebra biraz daha görünür */
+tbody tr:where(:nth-child(odd):not(.priority, .overtime, .today-row, .inline-row)) {
+  background: #f8fafc;
+}
+body.dark tbody tr:where(:nth-child(odd):not(.priority, .overtime, .today-row, .inline-row)) {
+  background: #0f1930;
+}
+
+/* Kolon başlıkları ile gövde arasında net ayrım */
+thead th { border-bottom: 2px solid #0f172a; }
