@@ -863,6 +863,11 @@ const PERM_MAP = {
 const DEFAULT_PERMS = { add: true, edit: true, duplicate: true, del: false, imp: false };
 const IDLE_MS = 15 * 60 * 1000;
 
+window.addEventListener("error", e => {
+  const el = document.getElementById("saveError");
+  if (el) { el.textContent = "⚠️ Kod hatası: " + e.message; el.classList.remove("hidden"); }
+});
+  
 /* ================= Sabitler ================= */
 const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUNLER = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
