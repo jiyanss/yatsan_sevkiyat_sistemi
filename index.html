@@ -490,11 +490,26 @@
     body { background: #fff; }
     main { padding: 0; max-width: none; }
     header { position: static; border: none; }
-    .table-wrap { border: 1px solid #999; box-shadow: none; overflow: visible; border-radius: 0; }
+    .table-wrap { border: 1px solid #999; box-shadow: none; overflow: visible; border-radius: 0; max-height: none; }
     td:last-child, th:last-child { display: none; }
     thead tr { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     tr { page-break-inside: avoid; }
   }
+  tbody tr:where(:nth-child(odd):not(.priority, .overtime, .today-row, .inline-row)) {
+  background: var(--bg);
+}
+  @media (hover: hover) {
+  td.nowrap .icon-btn { opacity: .35; }
+  tr.row:hover td.nowrap .icon-btn { opacity: 1; }
+}
+  .badge.done, .badge.loading, .badge.waiting { border: none; padding: 3px 10px; }
+.badge.done::before, .badge.loading::before, .badge.waiting::before {
+  content: "●"; margin-right: 5px; font-size: 8px;
+}
+  td { font-variant-numeric: tabular-nums; padding: 7px 8px; }
+  td[data-col="reelPlan"] { font-weight: 600; }
+  .table-wrap { max-height: calc(100vh - 190px); overflow-y: auto; }
+thead th { position: sticky; top: 0; z-index: 5; background: #1e293b; }
 </style>
 </head>
 <body>
