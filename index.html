@@ -2714,8 +2714,16 @@ function renderDepoContent() {
     c.innerHTML = html;
     return;
   }
-
-  const geciken = list.filter(r => gecikmeGunu(r) > 0).sort((a, b) => gecikmeTarihi(a) < gecikmeTarihi(b) ? -1 : 1);
+  /* Operasyonel gecikme: REEL PLAN bugünün gerisinde kalan tamamlanmamışlar.
+     Reel planı ileri çekilen kayıt burada GECİKEN görünmez —
+     gecikme notları zaten "Kalan Yüklemeler" sekmesinde gösteriliyor. */
+  const opGecikme = r => {
+    const t = dT(r);
+    if (!t || r.durum === "Yükleme Tamamlandı") return 0;
+    if (t >= today) return 0;
+    return Math.round((parseLocalDate(today) - parseLocalDate(t)) / 86400000);
+  };
+  const geciken = list.filter(r => opGecikme(r) > 0).sort((a, b) => dT(a) < dT(b) ? -1 : 1);
   const yukleniyor = list.filter(r => r.durum === "Yükleniyor").sort((a, b) => (a.loadingStartedAt || 0) - (b.loadingStartedAt || 0));
   const bugun = list.filter(r => dT(r) === today && r.durum === "Yükleme Bekliyor")
     .sort((a, b) => (oncelikVal(a) - oncelikVal(b)));
@@ -2723,7 +2731,7 @@ function renderDepoContent() {
   html += `<div class="depo-sec-title" style="color:#fbbf24">🟠 ŞİMDİ YÜKLENİYOR (${yukleniyor.length})</div>`;
   html += yukleniyor.length ? yukleniyor.map(r => depoItem(r, "d-amber", formatDate(dT(r)))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
   html += `<div class="depo-sec-title" style="color:#f87171">🔴 GECİKEN (${geciken.reduce((s, r) => s + adet(r), 0)})</div>`;
-  html += geciken.length ? geciken.map(r => depoItem(r, "d-red", `${formatDate(gecikmeTarihi(r))} · ⚠ ${gecikmeGunu(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
+  html += geciken.length ? geciken.map(r => depoItem(r, "d-red", `${formatDate(dT(r))} · ⚠ ${opGecikme(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
   html += `<div class="depo-sec-title" style="color:#818cf8">🔵 BUGÜN BEKLİYOR (${bugun.reduce((s, r) => s + adet(r), 0)})</div>`;
   html += bugun.length ? bugun.map(r => depoItem(r, "d-blue", "bugün")).join("") : `<div class="depo-empty">Bugün için bekleyen yükleme yok.</div>`;
   c.innerHTML = html;
