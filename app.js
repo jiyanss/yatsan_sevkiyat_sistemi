@@ -3659,7 +3659,7 @@ setInterval(() => {
   const manifest = {
     name: "Sevkiyat Planlama — İhracat",
     short_name: "Sevkiyat",
-    start_url: ".",
+    start_url: window.location.href.split("#")[0],
     display: "standalone",
     background_color: "#f1f5f9",
     theme_color: "#4f46e5",
