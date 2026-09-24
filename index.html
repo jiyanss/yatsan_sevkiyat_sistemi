@@ -1822,6 +1822,14 @@ function planlananView(x) {
   }
   return html;
 }
+  /* Gerçekleşen tarih: otomatik yazılır, elle düzenlenmez */
+function gerceklesenView(x) {
+  let html = formatDate(x.gerceklesenTarih);
+  if (x.durum === "Yükleme Tamamlandı") {
+    html += `<div class="muted" style="font-size:9.5px">otomatik</div>`;
+  }
+  return html;
+}
 function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
   return `<tr class="${rowClass}">
     <td class="center"><input type="checkbox" class="selbox" data-sel disabled /></td>
