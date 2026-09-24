@@ -2025,7 +2025,7 @@ async function otomatikGunlukYedek() {
     const sinirD = new Date();
     sinirD.setDate(sinirD.getDate() - YEDEK_SAKLAMA_GUN);
     const sinir = isoFromDate(sinirD);
-    const keys = await fetch(`${FIREBASE_DB_URL}/${YEDEK_NODE}.json?shallow=true`).then(r => r.json());
+    const keys = await authFetch(`${FIREBASE_DB_URL}/${YEDEK_NODE}.json?shallow=true`).then(r => r.json());
     if (keys) {
       for (const k of Object.keys(keys)) {
         if (/^\d{4}-\d{2}-\d{2}$/.test(k) && k < sinir) {
