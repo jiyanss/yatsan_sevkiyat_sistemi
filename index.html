@@ -1602,13 +1602,16 @@ function filtered() {
   const bounds = (!isWeekMode && dateFilter !== "all") ? dateBounds() : null;
   const result = enriched(rows).filter(r => {
     if (dateFilter === "week-current") {
-      const isDelayed = r.planlananTarih && r.planlananTarih < today && r.durum !== "Yükleme Tamamlandı";
+      /* Gecikme REEL PLAN bazlı hesaplanır (gecikmeGunu) */
+      const isDelayed = gecikmeGunu(r) > 0;
       if (!(String(r.hafta) === String(thisWeek) || isDelayed)) return false;
     } else if (weekNum !== null) {
       if (String(r.hafta) !== weekNum) return false;
     } else if (bounds) {
-      if (!r.planlananTarih) return false;
-      if (r.planlananTarih < bounds.from || r.planlananTarih > bounds.to) return false;
+      /* Tarih aralığı filtreleri de reel plan bazlı */
+      const d = gecikmeTarihi(r);
+      if (!d) return false;
+      if (d < bounds.from || d > bounds.to) return false;
     }
     if (statusFilter === "kalan" && r.durum === "Yükleme Tamamlandı") return false;
     else if (statusFilter === "bekliyor" && r.durum !== "Yükleme Bekliyor") return false;
@@ -1629,7 +1632,8 @@ function computeSummary(list) {
   const toplamAd = list.reduce((s, r) => s + adet(r), 0);
   const tamamAd  = list.filter(r => r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + adet(r), 0);
   const yukleniyorAd = list.filter(r => r.durum === "Yükleniyor").reduce((s, r) => s + adet(r), 0);
-  const bugunAd   = list.filter(r => r.planlananTarih === today).reduce((s, r) => s + adet(r), 0);
+  /* BUGÜN sayacı: reel plan bugüne eşit olanlar (yoksa planlanan) */
+  const bugunAd   = list.filter(r => gecikmeTarihi(r) === today).reduce((s, r) => s + adet(r), 0);
   const gecikenAd = list.reduce((s, r) => s + (gecikmeGunu(r) > 0 ? adet(r) : 0), 0);
   const maxGecikme = list.reduce((m, r) => Math.max(m, gecikmeGunu(r)), 0);
   const toplamM3 = list.reduce((s, r) => s + (Number(r.m3) || 0), 0);
@@ -1638,7 +1642,8 @@ function computeSummary(list) {
   const gunIdx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
   const gunAd = GUNLER.map(() => 0);
   list.forEach(r => {
-    const dt = parseLocalDate(r.planlananTarih);
+    /* Gün dağılımı da reel plan bazlı */
+    const dt = parseLocalDate(gecikmeTarihi(r));
     if (!dt) return;
     const idx = gunIdx[dt.getDay()];
     if (idx !== undefined) gunAd[idx] += adet(r);
@@ -1647,7 +1652,6 @@ function computeSummary(list) {
            bekleyenAd: toplamAd - tamamAd - yukleniyorAd,
            bugunAd, gecikenAd, maxGecikme, toplamM3, toplamM3Tamam, oran, gunAd };
 }
-
 /* ================= ⏱️ Süre hücresi ================= */
 function sureBilgi(r) {
   const sureDk = getSureDk(r);
@@ -1845,7 +1849,7 @@ function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
 }
 function rowHtml(r) {
   const dt = parseLocalDate(r.reelPlan || r.planlananTarih); /* hafta/ay reel plandan */
-  const isToday = r.planlananTarih === todayISO();
+  const isToday = gecikmeTarihi(r) === todayISO();
   const isOvertime = r.durum === "Yükleniyor" && sureBilgi(r).asim;
   const rowCls = r.oncelikli ? "priority" : (isOvertime ? "overtime" : (isToday ? "today-row" : ""));
   const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
