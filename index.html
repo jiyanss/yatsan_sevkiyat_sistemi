@@ -2307,7 +2307,7 @@ function openCauseModal(id) {
   const row = rows.find(r => r.id === id);
   if (!row) return;
   const g = gecikmeBilgi(row).gun;
-  if (g <= 0) { alert("Bu kayıt gecikmiş durumda değil — neden girebilmek için planlanan tarihi geçmişte olmalı."); return; }
+  if (g <= 0) { alert("Bu kayıt gecikmiş durumda değil — neden girebilmek için reel plan tarihi geçmişte olmalı."); return; }
   const neden = row.gecikmeNedeni || "";
   const items = GECIKME_NEDENLERI.map(n =>
     `<label class="check" style="margin-bottom:8px"><input type="radio" name="causeSel" value="${esc(n)}" ${neden === n ? "checked" : ""} /><span>${esc(n)}</span></label>`
@@ -2319,7 +2319,7 @@ function openCauseModal(id) {
   modal.style.zIndex = "75";
   modal.innerHTML = `<div class="modal">
     <h2>⚠️ Gecikme Nedeni</h2>
-    <p class="hint"><b>${esc(row.musteri)}</b> · ${formatDate(row.planlananTarih)} · ${g} gün gecikti</p>
+    <p class="hint"><b>${esc(row.musteri)}</b> · ${formatDate(gecikmeTarihi(row))} · ${g} gün gecikti</p>
     ${items}
     <div class="modal-actions">
       ${neden ? `<button class="btn" id="btnCauseDel">Nedeni Kaldır</button>` : ""}
@@ -2383,9 +2383,10 @@ function renderTakvim() {
   const today = todayISO();
   const byDate = new Map();
   rows.forEach(r => {
-    if (!r.planlananTarih) return;
-    if (!byDate.has(r.planlananTarih)) byDate.set(r.planlananTarih, []);
-    byDate.get(r.planlananTarih).push(r);
+    const d = r.reelPlan || r.planlananTarih;
+    if (!d) return;
+    if (!byDate.has(d)) byDate.set(d, []);
+    byDate.get(d).push(r);
   });
   let cells = "";
   for (let i = 0; i < offset; i++) cells += `<div class="kal-cell kal-blank"></div>`;
