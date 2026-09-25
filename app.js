@@ -203,6 +203,14 @@ function hesaplaM3(tip, ad, prsM3) {
   if (carpan === undefined) return null;
   return (Number(ad) || 0) * carpan;
 }
+/* BLM değerini standart forma çevir: "export1", "EXPORT 2", "Export-3" → EXPORT-1/2/3 */
+function normalizeBlm(v) {
+  const s = String(v || "").toUpperCase().replace(/[\s\-_]/g, "");
+  const m = s.match(/^EXPORT(\d+)$/);
+  if (m && +m[1] >= 1 && +m[1] <= 3) return `EXPORT-${m[1]}`;
+  const t = String(v || "").trim();
+  return BLMS.includes(t) ? t : null;
+}
 function tarihCmp(a, b) {
   if (!a && !b) return 0;
   if (!a) return 1;
@@ -3427,7 +3435,7 @@ function mapRowToRec(row) {
   const rec = emptyRecord();
   const g = k => { const h = fieldMap[k]; return h ? row[h] : ""; };
   rec.musteri = String(g("musteri") ?? "").trim();
-  rec.blm = String(g("blm") || "EXPORT-1").trim() || "EXPORT-1";
+  rec.blm = normalizeBlm(g("blm")) || "EXPORT-1";
   rec.kategori = String(g("kategori") || "PLANLI").trim() || "PLANLI";
   const tip = normalizeTip(g("sevkiyatTipi"));
   if (tip) rec.sevkiyatTipi = tip;
