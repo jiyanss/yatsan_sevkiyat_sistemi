@@ -24,7 +24,7 @@ const PERM_MAP = {
   "import": "imp", "do-import": "imp"
 };
 const DEFAULT_PERMS = { add: true, edit: true, duplicate: true, del: false, imp: false };
-const IDLE_MS = 15 * 60 * 1000;
+const IDLE_MS = 60 * 60 * 1000;
 
 window.addEventListener("error", e => {
   const el = document.getElementById("saveError");
@@ -3630,7 +3630,7 @@ let lastActivity = Date.now();
 );
 setInterval(() => {
   if (!currentUser) return;
-  if (Date.now() - lastActivity > IDLE_MS) doLogout("15 dakika işlem olmadığı için oturum kapatıldı.");
+  if (Date.now() - lastActivity > IDLE_MS) doLogout(`${IDLE_MS / 60000} dakika işlem olmadığı için oturum kapatıldı.`);
 }, 10000);
 
 setInterval(() => {
