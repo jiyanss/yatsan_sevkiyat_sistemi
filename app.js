@@ -3532,43 +3532,105 @@ function exportExcel() {
   if (typeof XLSX === "undefined") { alert("Excel kütüphanesi (CDN) yüklenemedi."); return; }
   const list = filtered();
   if (!list.length) { alert("Aktarılacak kayıt yok."); return; }
-  const data = list.map(r => {
+  const today = todayISO();
+
+  /* --- stil yardımcıları --- */
+  const B = { style: "thin", color: { rgb: "CBD5E1" } };
+  const BORDER = { top: B, left: B, bottom: B, right: B };
+  const FONT = { name: "Calibri", sz: 10, color: { rgb: "0F172A" } };
+  const base = () => ({ font: FONT, border: BORDER, alignment: { vertical: "center" } });
+  const FILL = rgb => ({ pattern: "solid", fgColor: { rgb } });
+  const HEAD_FILL = FILL("1E293B");
+  const HEAD_FONT = { name: "Calibri", sz: 10, bold: true, color: { rgb: "FFFFFF" } };
+  const fills = {
+    priority: FILL("FEF3C7"),  /* öncelikli sarı */
+    overtime: FILL("FEE2E2"),  /* süre aşımı kırmızı */
+    today:    FILL("D1FAE5"),  /* bugün yeşili */
+    arsiv:    FILL("F1F5F9")   /* arşiv soluk */
+  };
+  const durumStil = {
+    "Yükleme Tamamlandı": { fill: FILL("A7F3D0"), fontColor: "065F46" },
+    "Yükleniyor":         { fill: FILL("FDE68A"), fontColor: "92400E" },
+    "Yükleme Bekliyor":   { fill: FILL("FECACA"), fontColor: "991B1B" }
+  };
+
+  /* --- veri --- */
+  const HEAD = ["Müşteri","BLM","Kategori","Sevkiyat Tipi","AD","Planlanan","Reel Plan","Hafta","Ay",
+    "Gerçekleşen","Durum","Gecikme (gün)","Gecikme Nedeni","Yükleme Süresi","Süre Aşımı (dk)",
+    "Öncelik No","Yorum (adet)","Açıklama","Aracı Geldi","PRS M3","M3","Öncelikli","Ekleyen","Kayıt Türü"];
+  const grid = [HEAD];
+  const rowMeta = [];
+  list.forEach(r => {
     const b = sureBilgi(r);
-    return {
-      "Müşteri": r.musteri,
-      "BLM": r.blm,
-      "Kategori": r.kategori,
-      "Sevkiyat Tipi": r.sevkiyatTipi,
-      "AD": Number(r.ad) || 0,
-      "Planlanan Tarih": r.planlananTarih ? formatDate(r.planlananTarih) : "",
-      "Reel Plan": r.reelPlan ? formatDate(r.reelPlan) : "",
-      "Gerçekleşen Tarih": r.gerceklesenTarih ? formatDate(r.gerceklesenTarih) : "",
-      "Durum": r.durum,
-      "Gecikme (gün)": (() => { const b = gecikmeBilgi(r); return b.gun > 0 ? b.gun : ""; })(),
-      "Gecikme Nedeni": (() => { const b = gecikmeBilgi(r); return b.gun > 0 ? b.neden : ""; })(),
-      "Yükleme Süresi": b.durum !== "none" ? fmtSure(b.gecenMs) : "",
-      "Süre Aşımı (dk)": (b.durum !== "none" && b.asim) ? b.asimDk : "",
-      "Öncelik No": r.oncelikNo ?? "",
-      "Yorum (adet)": Array.isArray(r.comments) ? r.comments.length : 0,
-      "Açıklama": r.aciklama || "",
-      "Aracı Geldi": r.araciGeldi || "",
-      "PRS M3": r.prsM3 ?? "",
-      "M3": r.m3 ?? "",
-      "Öncelikli": r.oncelikli ? "Evet" : "",
-      "Ekleyen": r.createdBy || ""
-    };
+    const gb = gecikmeBilgi(r);
+    const isToday = gecikmeTarihi(r) === today;
+    const isOvertime = r.durum === "Yükleniyor" && b.asim;
+    const kind = r._arsiv ? "arsiv" : (r.oncelikli ? "priority" : isOvertime ? "overtime" : isToday ? "today" : null);
+    rowMeta.push({ kind, durum: r.durum, gecikmeGun: gb.gun, arsiv: !!r._arsiv });
+    grid.push([
+      r.musteri, r.blm, r.kategori, r.sevkiyatTipi,
+      Number(r.ad) || 0,
+      r.planlananTarih ? formatDate(r.planlananTarih) : "",
+      r.reelPlan ? formatDate(r.reelPlan) : "",
+      r.hafta ?? "-", r.ay ?? "-",
+      r.gerceklesenTarih ? formatDate(r.gerceklesenTarih) : "",
+      r.durum,
+      gb.gun > 0 ? gb.gun : "",
+      gb.gun > 0 ? (gb.neden || "") : "",
+      b.durum !== "none" ? fmtSure(b.gecenMs) : "",
+      (b.durum !== "none" && b.asim) ? b.asimDk : "",
+      r.oncelikNo ?? "",
+      Array.isArray(r.comments) ? r.comments.length : 0,
+      r.aciklama || "",
+      r.araciGeldi || "",
+      r.prsM3 ?? "",
+      r.m3 ?? "",
+      r.oncelikli ? "Evet" : "",
+      r.createdBy || "",
+      r._arsiv ? "Arşiv" : "Aktif"
+    ]);
   });
-  const ws = XLSX.utils.json_to_sheet(data);
-  ws["!cols"] = [{wch:24},{wch:10},{wch:10},{wch:14},{wch:6},{wch:15},{wch:15},{wch:16},{wch:26},{wch:12},{wch:14},{wch:14},{wch:10},{wch:12},{wch:11},{wch:8},{wch:8},{wch:10},{wch:10},{wch:22}];
+
+  const ws = XLSX.utils.aoa_to_sheet(grid);
+  ws["!cols"] = [{wch:24},{wch:10},{wch:10},{wch:14},{wch:6},{wch:12},{wch:12},{wch:7},{wch:10},
+    {wch:12},{wch:22},{wch:12},{wch:16},{wch:14},{wch:12},{wch:9},{wch:11},{wch:30},{wch:11},
+    {wch:8},{wch:8},{wch:10},{wch:18},{wch:9}];
+  const range = XLSX.utils.decode_range(ws["!ref"]);
   try {
-    const range = XLSX.utils.decode_range(ws["!ref"]);
     ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: range.e.r, c: range.e.c } }) };
   } catch (e) {}
+
+  /* --- stilleri uygula --- */
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      const st = ws[addr];
+      if (!st) continue;
+      st.s = base();
+      if (R === 0) {
+        st.s.fill = HEAD_FILL;
+        st.s.font = HEAD_FONT;
+        st.s.alignment = { vertical: "center", horizontal: "center" };
+        continue;
+      }
+      const meta = rowMeta[R - 1];
+      if (meta.kind) st.s.fill = fills[meta.kind];
+      if (meta.arsiv) st.s.font = { ...FONT, color: { rgb: "94A3B8" } };
+      if (C === 10 && durumStil[meta.durum]) {           /* Durum kolonu rozet renkli */
+        st.s.fill = durumStil[meta.durum].fill;
+        st.s.font = { ...FONT, bold: true, color: { rgb: durumStil[meta.durum].fontColor } };
+        st.s.alignment = { vertical: "center", horizontal: "center" };
+      }
+      if (C === 11 && meta.gecikmeGun > 0) {             /* Gecikme kolonu kırmızı */
+        st.s.font = { ...FONT, bold: true, color: { rgb: "DC2626" } };
+      }
+    }
+  }
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sevkiyat");
-  XLSX.writeFile(wb, `sevkiyat_${todayISO()}.xlsx`);
+  XLSX.writeFile(wb, `sevkiyat_${today}.xlsx`);
 }
-
 /* ================= EXCEL İÇE AKTARMA ================= */
 const APP_FIELDS = [
   { key: "musteri",         label: "Müşteri *",        kw: ["musteri", "firma", "customer"] },
