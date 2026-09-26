@@ -2100,9 +2100,13 @@ async function renderArsiv() {
       <td class="center">${formatDate(r.gerceklesenTarih)}</td>
       <td>${esc(r.durum)}</td>
       <td class="center">${esc(r.ad)}</td>
-    </tr>`).join("") : `<tr><td colspan="6" class="empty">Arşiv henüz boş.</td></tr>`;
-  } 
-  document.getElementById("arsivDahil").addEventListener("change", async e => {
+      </tr>`).join("") : `<tr><td colspan="6" class="empty">Arşiv henüz boş.</td></tr>`;
+  } catch (e) {
+    tb.innerHTML = `<tr><td colspan="6" class="empty">Arşiv okunamadı: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+document.getElementById("arsivDahil").addEventListener("change", async e => {
   arsivDahil = e.target.checked;
   savePrefs();
   if (arsivDahil && !Array.isArray(arsivCache)) {
@@ -2113,10 +2117,6 @@ async function renderArsiv() {
   }
   render();
 });
-  catch (e) {
-    tb.innerHTML = `<tr><td colspan="6" class="empty">Arşiv okunamadı: ${esc(e.message)}</td></tr>`;
-  }
-}
 async function arsivle() {
   const kesin = document.getElementById("arsivTarih").value;
   if (!kesin) { alert("Bir tarih seç."); return; }
