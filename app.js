@@ -2157,6 +2157,66 @@ document.getElementById("btnArsivCalistir").addEventListener("click", arsivle);
 document.getElementById("arsivTarih").addEventListener("change", renderArsiv);
 document.getElementById("btnArsivExcel").addEventListener("click", arsivExcel);
 
+/* 🗄️ Arşiv raporu — gecikme bilgisini snapshot'tan (gecikmeSon) okur */
+function arsivStatsTable(list, keyFn, title, colLabel) {
+  const m = new Map();
+  list.forEach(r => {
+    const k = keyFn(r) || "-";
+    if (!m.has(k)) m.set(k, { ad: 0, m3: 0, geciken: 0, maxG: 0 });
+    const g = m.get(k);
+    const a = adet(r);
+    g.ad += a; g.m3 += Number(r.m3) || 0;
+    const gs = Number(r.gecikmeSon) || 0;
+    if (gs > 0) { g.geciken += a; g.maxG = Math.max(g.maxG, gs); }
+  });
+  let tA = 0, tG = 0, tM = 0;
+  const rowsHtml = [...m.entries()].sort((a, b) => b[1].ad - a[1].ad).map(([k, g]) => {
+    tA += g.ad; tG += g.geciken; tM += g.m3;
+    return `<tr><td class="strong">${esc(k)}</td><td class="center">${fmtN(g.ad)}</td><td class="center" style="${g.geciken ? "color:var(--red);font-weight:600" : ""}">${g.geciken ? fmtN(g.geciken) : "-"}</td><td class="center">${g.maxG ? g.maxG + " gün" : "-"}</td><td class="center">${fmtN(g.m3)}</td></tr>`;
+  }).join("");
+  return `<div class="rpt"><h3>${esc(title)}</h3><div class="table-wrap"><table>
+    <thead><tr><th>${esc(colLabel)}</th><th>Yükleme</th><th>Gecikmeli</th><th>En kötü gecikme</th><th>M3</th></tr></thead>
+    <tbody>${rowsHtml || `<tr><td colspan="5" class="empty">Veri yok</td></tr>`}</tbody>
+    <tfoot><tr><td>TOPLAM</td><td class="center">${fmtN(tA)}</td><td class="center">${fmtN(tG)}</td><td class="center">—</td><td class="center">${fmtN(tM)}</td></tr></tfoot>
+  </table></div></div>`;
+}
+async function buildArsiv() {
+  const c = document.getElementById("reportPaneArsiv");
+  c.innerHTML = `<p class="hint">🗄️ Arşiv yükleniyor…</p>`;
+  try {
+    if (!arsivCache) arsivCache = await fetchArsiv();
+  } catch (e) {
+    c.innerHTML = `<p class="hint">Arşiv okunamadı: ${esc(e.message)} (Rules kontrol et)</p>`;
+    return;
+  }
+  const list = arsivCache;
+  if (!list.length) {
+    c.innerHTML = `<p class="hint">🗄️ Arşiv henüz boş — kayıtlar arşivlendiğinde burada dönemsel raporlar oluşur.</p>`;
+    return;
+  }
+  const zengin = enriched(list);
+  const toplamAd = zengin.reduce((s, r) => s + adet(r), 0);
+  const toplamM3 = zengin.reduce((s, r) => s + (Number(r.m3) || 0), 0);
+  const gecikenAd = zengin.reduce((s, r) => s + ((Number(r.gecikmeSon) || 0) > 0 ? adet(r) : 0), 0);
+  let minT = "", maxT = "";
+  zengin.forEach(r => {
+    const t = arsivTarihi(r);
+    if (t && (!minT || t < minT)) minT = t;
+    if (t && (!maxT || t > maxT)) maxT = t;
+  });
+  const kpiBlock = `<div class="kpi-grid">
+    <div class="kpi c-primary"><div class="kpi-head">📦 Arşivdeki toplam</div><div class="kpi-val">${fmtN(toplamAd)}</div><div class="kpi-sub">${zengin.length} kayıt · ${fmtN(toplamM3)} m³</div></div>
+    <div class="kpi c-red"><div class="kpi-head">⚠️ Gecikmeli (kayıt anı)</div><div class="kpi-val">${fmtN(gecikenAd)}</div><div class="kpi-sub">tamamlanma anındaki gecikme snapshot'ı</div></div>
+    <div class="kpi c-amber"><div class="kpi-head">🗓️ Tarih aralığı</div><div class="kpi-val" style="font-size:16px;align-self:center">${minT ? formatDate(minT) + " → " + formatDate(maxT) : "—"}</div><div class="kpi-sub">arşiv tarihi bazlı</div></div>
+  </div>`;
+  const tablolar =
+    arsivStatsTable(zengin, r => r.musteri, "👥 Müşteri bazlı (arşiv)", "Müşteri") +
+    arsivStatsTable(zengin, r => r.ay || "-", "📆 Ay bazlı (reel plan ayı)", "Ay") +
+    arsivStatsTable(zengin, r => r.blm, "🏢 BLM bazlı (arşiv)", "BLM") +
+    arsivStatsTable(zengin, r => r.sevkiyatTipi, "🚛 Sevkiyat tipi bazlı (arşiv)", "Tip");
+  c.innerHTML = kpiBlock + tablolar;
+}
+
 /* ================= Olaylar ================= */
 document.getElementById("tbody").addEventListener("click", e => {
   const btn = e.target.closest("button[data-action]");
@@ -3365,6 +3425,7 @@ function buildReports() {
   document.getElementById("reportPaneDetay").innerHTML = list.length ? "" : emptyMsg;
   document.getElementById("reportPaneKapasite").innerHTML = "";
   document.getElementById("reportPaneSure").innerHTML = "";
+  document.getElementById("reportPaneArsiv").innerHTML = "";
   if (!list.length) return;
   buildGenel(list);
   buildAnaliz(list);
@@ -3379,9 +3440,11 @@ function switchReportTab(tab) {
   document.getElementById("reportPaneKapasite").classList.toggle("hidden", tab !== "kapasite");
   document.getElementById("reportPaneSure").classList.toggle("hidden", tab !== "sure");
   document.getElementById("reportPaneDetay").classList.toggle("hidden", tab !== "detay");
+  document.getElementById("reportPaneArsiv").classList.toggle("hidden", tab !== "arsiv");
   destroyCharts();
   if (tab === "kapasite") { buildKapasite(); return; }
   if (tab === "sure") { buildSure(filtered()); return; }
+  if (tab === "arsiv") { buildArsiv(); return; }
   const list = filtered();
   if (!list.length) return;
   if (tab === "genel") buildGenel(list);
