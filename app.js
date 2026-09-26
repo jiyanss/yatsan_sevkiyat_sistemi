@@ -2744,7 +2744,9 @@ document.getElementById("adminModal").addEventListener("click", e => {
    📊 PROFESYONEL RAPORLAR (sekmeli)
    ============================================================ */
 let chartInstances = [];
+let nedenChartTimer = null;
 function destroyCharts() {
+  clearTimeout(nedenChartTimer);
   chartInstances.forEach(c => { try { c.destroy(); } catch (e) {} });
   chartInstances = [];
 }
@@ -3092,11 +3094,14 @@ function gecikmeNedenTable() {
       <tbody>${rowsHtml}</tbody>
       <tfoot><tr><td>TOPLAM</td><td class="center">${toplam}</td><td class="center">—</td></tr></tfoot>
     </table></div></div>`;
-  /* HTML'i koy, grafik sonradan kurulsun */
-  setTimeout(() => {
+   /* HTML'i koy, grafik sonradan kurulsun (bekleyen kurulumu iptal + eskiyi sök) */
+  clearTimeout(nedenChartTimer);
+  nedenChartTimer = setTimeout(() => {
     if (typeof Chart === "undefined") return;
     const cnv = document.getElementById("chNeden");
     if (!cnv) return;
+    const eski = Chart.getChart(cnv);
+    if (eski) eski.destroy();
     const { textColor } = chartBase();
     chartInstances.push(new Chart(cnv.getContext("2d"), {
       type: "doughnut",
