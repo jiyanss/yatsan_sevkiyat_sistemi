@@ -952,7 +952,12 @@ function renderDatalist() {
   document.getElementById("musteri-list").innerHTML = cust.map(c => `<option value="${esc(c)}">`).join("");
 }
 function renderDateFilter() {
-  const weeks = [...new Set(enriched(rows).map(r => r.hafta).filter(w => w !== "-"))].sort((a, b) => a - b);
+  /* Arşiv dahil açıkken hafta seçenekleri arşiv kayıtlarını da kapsar */
+  let havuz = rows;
+  if (arsivDahil && Array.isArray(arsivCache) && arsivCache.length) {
+    havuz = rows.concat(arsivCache);
+  }
+  const weeks = [...new Set(enriched(havuz).map(r => r.hafta).filter(w => w !== "-"))].sort((a, b) => a - b);
   const opt = (val, label) => `<option value="${val}" ${dateFilter === val ? "selected" : ""}>${label}</option>`;
   document.getElementById("dateFilter").innerHTML =
     `<optgroup label="Hazır aralıklar">` +
