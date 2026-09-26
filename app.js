@@ -2139,7 +2139,7 @@ async function arsivle() {
     await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
       method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(silinecek)
     });
-   try { arsivCache = await fetchArsiv(); } catch (e2) { arsivCache = null; }
+    try { arsivCache = await fetchArsiv(); } catch (e2) { arsivCache = null; }
     await apiLog("guncelleme", "", adaylar.slice(0, 20).map(r => r.musteri).join(", ") + (adaylar.length > 20 ? "…" : ""),
       `🗄️ ${adaylar.length} kayıt arşive taşındı (sınır: ${formatDate(kesin)})`);
     showToast(`✅ ${adaylar.length} kayıt arşive taşındı.`);
@@ -3904,7 +3904,7 @@ updateOfflineBadge();
 /* ================= Başlat ================= */
 updateUserUI();
 (async () => {
-  renderThead();      /* 🆕 başlık satırı JS'ten üretilir — gövdeyle birebir hizalı */
+  renderThead();
   loadPrefs();
   loadKapasitePrefs();
   updateSortHeaders();
@@ -3920,9 +3920,9 @@ updateUserUI();
   }
   render();
   await load(true);
-     if (arsivDahil && !Array.isArray(arsivCache)) {
+  if (arsivDahil && !Array.isArray(arsivCache)) {
     try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
   }
   startLiveSync();
-  otomatikGunlukYedek(); /* günün ilk girişli açılışında arka planda yedek */
+  otomatikGunlukYedek();
 })();
