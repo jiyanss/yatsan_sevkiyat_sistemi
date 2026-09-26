@@ -60,6 +60,7 @@
     </div>
     <button class="btn hidden" id="btnBackup">💾 Yedek</button>
     <button class="btn hidden" id="btnSurePanel">⏱️ Süreler</button>
+    <button class="btn hidden" id="btnArsiv">🗄️ Arşiv</button>
     <button class="btn hidden" id="btnAdminPanel">🛡️ Admin Panel</button>
     <button class="btn" id="btnTheme">🌙</button>
     <button class="btn" id="btnReload">↻</button>
@@ -335,7 +336,26 @@
   </div>
   <div id="depoContent"></div>
 </div>
-
+<div id="arsivModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>🗄️ Arşiv</h2>
+    <p class="hint" id="arsivInfo">—</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:12px">Bu tarihten eskisini arşivle:</label>
+      <input type="date" id="arsivTarih" />
+      <button class="btn primary" id="btnArsivCalistir">📦 Arşivle</button>
+      <button class="btn" id="btnArsivExcel">📤 Arşivi Excel'e aktar</button>
+    </div>
+    <div class="table-wrap" style="margin-top:12px;max-height:46vh;overflow-y:auto">
+      <table>
+        <thead><tr><th>Müşteri</th><th>Planlanan</th><th>Reel Plan</th><th>Gerçekleşen</th><th>Durum</th><th>AD</th></tr></thead>
+        <tbody id="arsivTable"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCloseArsiv">Kapat</button></div>
+  </div>
+</div>
+  
 <div id="toast" class="toast hidden"></div>
 <script src="app.js"></script>  
 </body>
