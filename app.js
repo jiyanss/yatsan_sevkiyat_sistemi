@@ -617,6 +617,7 @@ let loading = false;
 let addingInline = false;
 let inlineData = null;
 let dateFilter = "week-current";
+let arsivDahil = false;
 let dateFrom = "";
 let dateTo = "";
 let statusFilter = "kalan";
@@ -640,7 +641,7 @@ function savePrefs() {
       pv: PREF_VERSION,
       search: document.getElementById("search").value,
       searchScope: document.getElementById("searchScope").value,
-      dateFilter, dateFrom, dateTo, statusFilter,
+      dateFilter, dateFrom, dateTo, statusFilter, arsivDahil,
       sortCol, sortDir,
       hiddenCols: [...hiddenCols],
       showSummary: !document.getElementById("summary").classList.contains("hidden")
@@ -661,6 +662,8 @@ function loadPrefs() {
     dateFrom = p.dateFrom || "";
     dateTo = p.dateTo || "";
     statusFilter = p.statusFilter || "kalan";
+    arsivDahil = !!p.arsivDahil;
+    document.getElementById("arsivDahil").checked = arsivDahil;
     sortCol = SORTABLE[p.sortCol] ? p.sortCol : null;
     sortDir = p.sortDir === "asc" ? "asc" : "desc";
     hiddenCols.clear();
@@ -801,10 +804,14 @@ function filtered() {
   const isWeekMode = dateFilter === "week-current" || dateFilter.startsWith("week-");
   const weekNum = dateFilter.startsWith("week-") ? dateFilter.slice(5) : null;
   const bounds = (!isWeekMode && dateFilter !== "all") ? dateBounds() : null;
-  const result = enriched(rows).filter(r => {
+  /* Arşiv dahil: ana + arşiv kayıtları birleşik havuz (arşivliler _arsiv etiketli, salt okunur) */
+  let kaynak = rows;
+  if (arsivDahil && Array.isArray(arsivCache) && arsivCache.length) {
+    const ids = new Set(rows.map(r => r.id));
+    kaynak = rows.concat(arsivCache.filter(r => !ids.has(r.id)).map(r => ({ ...r, _arsiv: true })));
+  }
+  const result = enriched(kaynak).filter(r => {
     if (dateFilter === "week-current") {
-      /* "+ gecikenler" OPERASYONEL: reel planı hâlâ bugünün gerisinde kalan tamamlanmamışlar.
-         Reel planı ileri çekilen kayıt geciken sayılmaz — yeni haftasında görünür. */
       const rp = r.reelPlan || r.planlananTarih;
       const isDelayed = rp && rp < today && r.durum !== "Yükleme Tamamlandı";
       if (!(String(r.hafta) === String(thisWeek) || isDelayed)) return false;
@@ -1001,7 +1008,8 @@ function cellInputHtml(r, field) {
 function tdHtml(r, field, extraCls, viewFn) {
   const def = CELL_DEFS[field];
   const content = viewFn(r);
-  return `<td data-col="${field}" class="${extraCls || ""}${def ? " editable" : ""}"${def ? ` data-field="${field}"` : ""}>${content}</td>`;
+  const editable = def && !r._arsiv;
+  return `<td data-col="${field}" class="${extraCls || ""}${editable ? " editable" : ""}"${editable ? ` data-field="${field}"` : ""}>${content}</td>`;
 }
 function planlananView(x) {
   let html = formatDate(x.planlananTarih);
@@ -1057,11 +1065,12 @@ function rowHtml(r) {
   const dt = parseLocalDate(r.reelPlan || r.planlananTarih); /* hafta/ay reel plandan */
   const isToday = gecikmeTarihi(r) === todayISO();
   const isOvertime = r.durum === "Yükleniyor" && sureBilgi(r).asim;
-  const rowCls = r.oncelikli ? "priority" : (isOvertime ? "overtime" : (isToday ? "today-row" : ""));
+  let rowCls = r.oncelikli ? "priority" : (isOvertime ? "overtime" : (isToday ? "today-row" : ""));
+  if (r._arsiv) rowCls += " arsiv-row";
   const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
   const isSel = selectedIds.has(r.id);
   return `<tr class="row ${rowCls}" data-rowid="${r.id}">
-    <td class="center"><input type="checkbox" class="selbox" data-sel="${r.id}" ${isSel ? "checked" : ""} /></td>
+    <td class="center"><input type="checkbox" class="selbox" ${r._arsiv ? "disabled" : `data-sel="${r.id}"`} ${!r._arsiv && isSel ? "checked" : ""} /></td>
     ${tdHtml(r, "musteri", "strong", x => `<span class="musteri-chip" data-mchip="${r.id}" title="Müşteri kartını aç">${esc(x.musteri)}</span>`)}
     ${tdHtml(r, "blm", "", x => esc(x.blm))}
     ${tdHtml(r, "kategori", "", x => esc(x.kategori))}
@@ -1081,11 +1090,11 @@ function rowHtml(r) {
     ${tdHtml(r, "prsM3", "center", x => numOrDash(x.prsM3))}
     <td data-col="m3" class="center">${numOrDash(r.m3)}</td>
     <td data-col="createdBy" class="muted" title="${esc(r.createdBy || "")}">${esc(shortUser(r.createdBy))}${r.updatedAt ? `<div class="fresh-badge ${Date.now() - r.updatedAt < 3600000 ? "f-new" : Date.now() - r.updatedAt < 86400000 ? "f-day" : "f-old"}" title="Son güncelleme: ${fmtDateTime(r.updatedAt)}${r.updatedBy ? " · " + esc(shortUser(r.updatedBy)) : ""}">🔄 ${relTime(r.updatedAt)}</div>` : ""}</td>
-    <td class="nowrap">
-      <button class="icon-btn cmt" data-action="comments" data-id="${r.id}" title="Yorumlar">💬${cmtN ? `<span class="cmt-n">${cmtN}</span>` : ""}</button>
+       <td class="nowrap">${r._arsiv
+      ? `<span title="Arşiv kaydı — salt okunur" style="font-size:14px">🗄️</span>`
+      : `<button class="icon-btn cmt" data-action="comments" data-id="${r.id}" title="Yorumlar">💬${cmtN ? `<span class="cmt-n">${cmtN}</span>` : ""}</button>
       <button class="icon-btn dup" data-action="duplicate" data-id="${r.id}" title="Kopyala (bugüne planlar, durum sıfırlanır)">⧉</button>
-      <button class="icon-btn del" data-action="delete" data-id="${r.id}" title="Sil">🗑️</button>
-    </td>
+      <button class="icon-btn del" data-action="delete" data-id="${r.id}" title="Sil">🗑️</button>`}</td>
   </tr>`;
 }
 function renderTable(list) {
@@ -1101,7 +1110,7 @@ function renderTable(list) {
   list.forEach(r => { html += rowHtml(r); });
   tbody.innerHTML = html;
   const all = document.getElementById("selAll");
-  if (all) all.checked = list.length > 0 && list.every(r => selectedIds.has(r.id));
+  if (all) all.checked = list.length > 0 && list.every(r => r._arsiv || selectedIds.has(r.id));
   updateBulkBar();
 }
 
@@ -2092,7 +2101,19 @@ async function renderArsiv() {
       <td>${esc(r.durum)}</td>
       <td class="center">${esc(r.ad)}</td>
     </tr>`).join("") : `<tr><td colspan="6" class="empty">Arşiv henüz boş.</td></tr>`;
-  } catch (e) {
+  } 
+  document.getElementById("arsivDahil").addEventListener("change", async e => {
+  arsivDahil = e.target.checked;
+  savePrefs();
+  if (arsivDahil && !Array.isArray(arsivCache)) {
+    e.target.disabled = true;
+    try { arsivCache = await fetchArsiv(); }
+    catch (err) { showToast("⚠️ Arşiv yüklenemedi: " + esc(err.message)); arsivDahil = false; e.target.checked = false; }
+    e.target.disabled = false;
+  }
+  render();
+});
+  catch (e) {
     tb.innerHTML = `<tr><td colspan="6" class="empty">Arşiv okunamadı: ${esc(e.message)}</td></tr>`;
   }
 }
@@ -2118,7 +2139,7 @@ async function arsivle() {
     await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
       method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(silinecek)
     });
-    arsivCache = null; /* rapor sekmesi taze veri çeksin */
+   try { arsivCache = await fetchArsiv(); } catch (e2) { arsivCache = null; }
     await apiLog("guncelleme", "", adaylar.slice(0, 20).map(r => r.musteri).join(", ") + (adaylar.length > 20 ? "…" : ""),
       `🗄️ ${adaylar.length} kayıt arşive taşındı (sınır: ${formatDate(kesin)})`);
     showToast(`✅ ${adaylar.length} kayıt arşive taşındı.`);
@@ -2341,7 +2362,7 @@ document.querySelector("thead").addEventListener("change", e => {
   if (e.target.id !== "selAll") return;
   const on = e.target.checked;
   const list = filtered();
-  if (on) list.forEach(r => selectedIds.add(r.id));
+  if (on) list.forEach(r => { if (!r._arsiv) selectedIds.add(r.id); });
   else { list.forEach(r => selectedIds.delete(r.id)); }
   render();
 });
@@ -3899,6 +3920,9 @@ updateUserUI();
   }
   render();
   await load(true);
+     if (arsivDahil && !Array.isArray(arsivCache)) {
+    try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
+  }
   startLiveSync();
   otomatikGunlukYedek(); /* günün ilk girişli açılışında arka planda yedek */
 })();
