@@ -3922,7 +3922,6 @@ updateUserUI();
   await load(true);
   if (arsivDahil && !Array.isArray(arsivCache)) {
     try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
-  }
   startLiveSync();
   otomatikGunlukYedek();
 })();
