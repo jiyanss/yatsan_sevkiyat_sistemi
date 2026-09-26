@@ -1684,16 +1684,24 @@ async function changeDate(id, tarih) {
 /* ============================================================
    👤 MÜŞTERİ KARTI
    ============================================================ */
-function openMusteriKart(id) {
+async function openMusteriKart(id) {
   const row = rows.find(r => r.id === id);
   if (!row || !row.musteri) return;
   const name = row.musteri;
-  const all = enriched(rows).filter(r => (r.musteri || "").trim().toLowerCase() === name.trim().toLowerCase());
+  /* Kart TÜM geçmişi kapsar: aktif + arşiv (arşiv bellekte yoksa arka planda çekilir) */
+  if (!Array.isArray(arsivCache)) {
+    try { arsivCache = await fetchArsiv(); } catch (e) { arsivCache = []; }
+  }
+  const ids = new Set(rows.map(r => r.id));
+  const havuz = rows.concat(arsivCache.filter(r => !ids.has(r.id)).map(r => ({ ...r, _arsiv: true })));
+  const all = enriched(havuz).filter(r => (r.musteri || "").trim().toLowerCase() === name.trim().toLowerCase());
+  const arsivN = all.filter(r => r._arsiv).length;
   const toplamAd = all.reduce((s, r) => s + adet(r), 0);
   const toplamM3 = all.reduce((s, r) => s + (Number(r.m3) || 0), 0);
   const tamam = all.filter(r => r.durum === "Yükleme Tamamlandı");
   const tamamAd = tamam.reduce((s, r) => s + adet(r), 0);
-  const geciken = all.filter(r => gecikmeGunu(r) > 0);
+  /* Geciken sayımı: tamamlananlarda kayıtlı snapshot (gecikmeSon) da dahil */
+  const geciken = all.filter(r => gecikmeBilgi(r).gun > 0);
   const az = sapmaAnalizi(all);
   const musSapma = az ? az.musteri.get(name) : null;
   const son5 = [...all].sort((a, b) => tarihCmp(b.planlananTarih, a.planlananTarih)).slice(0, 5);
@@ -1701,7 +1709,7 @@ function openMusteriKart(id) {
     ? `<div class="kpi ${musSapma.toplam / musSapma.n > 0 ? "c-red" : "c-green"}"><div class="kpi-head">🗓️ Ortalama sapma</div><div class="kpi-val" style="font-size:20px">${fmtSapma(musSapma.toplam / musSapma.n)} gün</div><div class="kpi-sub">${musSapma.n} tamamlanan · zamanında %${(musSapma.zamaninda / musSapma.n * 100).toFixed(0)}</div></div>`
     : `<div class="kpi c-amber"><div class="kpi-head">🗓️ Ortalama sapma</div><div class="kpi-val" style="font-size:20px">—</div><div class="kpi-sub">tamamlanan kayıt yok</div></div>`;
   const kpiHtml = `<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
-    <div class="kpi c-primary"><div class="kpi-head">📦 Toplam</div><div class="kpi-val">${fmtN(toplamAd)}</div><div class="kpi-sub">yükleme · ${fmtN(toplamM3)} m³ · ${all.length} kayıt</div></div>
+    <div class="kpi c-primary"><div class="kpi-head">📦 Toplam</div><div class="kpi-val">${fmtN(toplamAd)}</div><div class="kpi-sub">yükleme · ${fmtN(toplamM3)} m³ · ${all.length} kayıt${arsivN ? ` · 🗄️ ${arsivN} arşiv` : ""}</div></div>
     <div class="kpi c-green"><div class="kpi-head">✅ Tamamlanan</div><div class="kpi-val">${fmtN(tamamAd)}</div><div class="kpi-sub">%${toplamAd ? (tamamAd / toplamAd * 100).toFixed(1) : "0.0"} · ${geciken.length} geciken kayıt</div></div>
     ${sapmaHtml}
   </div>`;
@@ -1709,7 +1717,7 @@ function openMusteriKart(id) {
     <thead><tr><th>Planlanan</th><th>Tip</th><th>AD</th><th>Durum</th><th>Gerçekleşen</th></tr></thead>
     <tbody>${son5.map(r => `<tr>
       <td>${formatDate(r.planlananTarih)}</td>
-      <td>${esc(r.sevkiyatTipi)}</td>
+      <td>${r._arsiv ? "🗄️ " : ""}${esc(r.sevkiyatTipi)}</td>
       <td class="center">${esc(r.ad)}</td>
       <td><span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></td>
       <td>${formatDate(r.gerceklesenTarih)}</td>
@@ -1719,7 +1727,7 @@ function openMusteriKart(id) {
   modal.className = "modal-bg";
   modal.style.zIndex = "75";
   modal.innerHTML = `<div class="modal wide">
-    <h2>👤 ${esc(name)}</h2>
+    <h2>👤 ${esc(name)} <span style="font-size:11px;font-weight:500;color:var(--muted)">· tüm geçmiş (aktif + arşiv)</span></h2>
     ${kpiHtml}${sonHtml}
     <div class="modal-actions"><button class="btn primary" id="btnMKClose">Kapat</button></div>
   </div>`;
@@ -1727,7 +1735,6 @@ function openMusteriKart(id) {
   document.body.appendChild(modal);
   modal.querySelector("#btnMKClose").addEventListener("click", () => modal.remove());
 }
-
 /* ============================================================
    ⚙️ TOPLU DÜZENLEME
    ============================================================ */
