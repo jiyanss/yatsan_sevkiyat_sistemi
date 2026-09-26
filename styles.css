@@ -525,3 +525,7 @@ body.dark tbody tr:where(:nth-child(odd):not(.priority, .overtime, .today-row, .
 
 /* Kolon başlıkları ile gövde arasında net ayrım */
 thead th { border-bottom: 2px solid #0f172a; }
+
+.arsiv-chk { display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer; user-select:none; }
+.arsiv-chk input { width:auto; margin:0; accent-color: var(--primary); }
+tr.arsiv-row td { color: var(--muted); }
