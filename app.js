@@ -2084,7 +2084,7 @@ async function renderArsiv() {
     });
     info.innerHTML = `Arşivde <b>${liste.length}</b> kayıt var · Seçilen tarihten (${formatDate(kesin)}) eski <b>${adaylar.length}</b> kayıt arşivlenebilir.`;
     liste.sort((a, b) => tarihCmp(arsivTarihi(b), arsivTarihi(a)));
-    tb.innerHTML = liste.length ? liste.slice(0, 300).map(r => `<tr>
+      tb.innerHTML = liste.length ? liste.map(r => `<tr>
       <td class="strong">${esc(r.musteri)}</td>
       <td class="center">${formatDate(r.planlananTarih)}</td>
       <td class="center">${formatDate(r.reelPlan)}</td>
