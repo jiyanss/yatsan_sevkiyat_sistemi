@@ -6,6 +6,7 @@ const HIST_NODE = "sevkiyat_history";
 const USERS_NODE = "sevkiyat_users";
 const SURE_NODE = "sevkiyat_suresi";
 const YEDEK_NODE = "sevkiyat_yedek";
+const ARSIV_NODE = "sevkiyat_arsiv";
 const YEDEK_SAKLAMA_GUN = 14;
 
 /* ============================================================
@@ -1953,16 +1954,17 @@ document.getElementById("btnBackupDownload").addEventListener("click", async () 
   const btn = document.getElementById("btnBackupDownload");
   btn.disabled = true; btn.textContent = "Hazırlanıyor…";
   try {
-    const [svk, hist, usr, sur] = await Promise.all([
+    const [svk, hist, usr, sur, ars] = await Promise.all([
       fetch(`${FIREBASE_DB_URL}/${NODE}.json`).then(r => r.json()),
       fetch(`${FIREBASE_DB_URL}/${HIST_NODE}.json`).then(r => r.json()),
       authFetch(`${FIREBASE_DB_URL}/${USERS_NODE}.json`).then(r => r.json()),
-      fetch(`${FIREBASE_DB_URL}/${SURE_NODE}.json`).then(r => r.json())
+      fetch(`${FIREBASE_DB_URL}/${SURE_NODE}.json`).then(r => r.json()),
+      authFetch(`${FIREBASE_DB_URL}/${ARSIV_NODE}.json`).then(r => r.json())
     ]);
     const payload = {
       app: "sevkiyat-planlama", version: 1, ts: Date.now(),
       user: currentUser.email,
-      data: { sevkiyat: svk || {}, history: hist || {}, users: usr || {}, suresi: sur || {} }
+      data: { sevkiyat: svk || {}, history: hist || {}, users: usr || {}, suresi: sur || {}, arsiv: ars || {} }
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -1993,6 +1995,7 @@ document.getElementById("backupFile").addEventListener("change", async e => {
     await authFetch(`${FIREBASE_DB_URL}/${HIST_NODE}.json`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d.history || {}) });
     await authFetch(`${FIREBASE_DB_URL}/${USERS_NODE}.json`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d.users || {}) });
     await authFetch(`${FIREBASE_DB_URL}/${SURE_NODE}.json`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d.suresi || {}) });
+    await authFetch(`${FIREBASE_DB_URL}/${ARSIV_NODE}.json`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d.arsiv || {}) });
     await Promise.all([loadUserEntries(), loadSureAyarlari()]);
     await load(false);
     const res = document.getElementById("backupResult");
@@ -2016,15 +2019,16 @@ async function otomatikGunlukYedek() {
     const bugun = todayISO();
     const mevcut = await check(await authFetch(`${FIREBASE_DB_URL}/${YEDEK_NODE}/${bugun}.json`), "Yedek durumu okunamadı");
     if (mevcut) return; /* bugünün yedeği zaten alınmış */
-    const [svk, hist, usr, sur] = await Promise.all([
+    const [svk, hist, usr, sur, ars] = await Promise.all([
       fetch(`${FIREBASE_DB_URL}/${NODE}.json`).then(r => r.json()),
       fetch(`${FIREBASE_DB_URL}/${HIST_NODE}.json`).then(r => r.json()),
       authFetch(`${FIREBASE_DB_URL}/${USERS_NODE}.json`).then(r => r.json()),
-      fetch(`${FIREBASE_DB_URL}/${SURE_NODE}.json`).then(r => r.json())
+      fetch(`${FIREBASE_DB_URL}/${SURE_NODE}.json`).then(r => r.json()),
+      authFetch(`${FIREBASE_DB_URL}/${ARSIV_NODE}.json`).then(r => r.json())
     ]);
     const payload = {
       app: "sevkiyat-planlama", version: 1, ts: Date.now(), user: currentUser.email,
-      data: { sevkiyat: svk || {}, history: hist || {}, users: usr || {}, suresi: sur || {} }
+      data: { sevkiyat: svk || {}, history: hist || {}, users: usr || {}, suresi: sur || {}, arsiv: ars || {} }
     };
     await authFetch(`${FIREBASE_DB_URL}/${YEDEK_NODE}/${bugun}.json`, {
       method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
@@ -2048,6 +2052,110 @@ async function otomatikGunlukYedek() {
     console.warn("Otomatik günlük yedek atlandı:", e.message);
   }
 }
+/* ================= 🗄️ ARŞİV ================= */
+let arsivCache = null;
+function arsivTarihi(r) {
+  return r.gerceklesenTarih || r.reelPlan || r.planlananTarih || "";
+}
+async function fetchArsiv() {
+  const data = await check(await authFetch(`${FIREBASE_DB_URL}/${ARSIV_NODE}.json`), "Arşiv yüklenemedi");
+  return data ? Object.entries(data).map(([id, v]) => ({ id, ...(v || {}) })) : [];
+}
+async function openArsiv() {
+  if (!isAdmin()) { alert("Arşiv sadece yöneticiler içindir."); return; }
+  document.getElementById("arsivModal").classList.remove("hidden");
+  const inp = document.getElementById("arsivTarih");
+  if (!inp.value) {
+    const d = new Date(); d.setDate(d.getDate() - 60);
+    inp.value = isoFromDate(d);
+  }
+  await renderArsiv();
+}
+async function renderArsiv() {
+  const tb = document.getElementById("arsivTable");
+  const info = document.getElementById("arsivInfo");
+  tb.innerHTML = `<tr><td colspan="6" class="empty">Yükleniyor…</td></tr>`;
+  try {
+    const liste = await fetchArsiv();
+    const kesin = document.getElementById("arsivTarih").value || "9999-12-31";
+    const adaylar = rows.filter(r => {
+      const t = arsivTarihi(r);
+      return t && t < kesin && r.durum !== "Yükleniyor";
+    });
+    info.innerHTML = `Arşivde <b>${liste.length}</b> kayıt var · Seçilen tarihten (${formatDate(kesin)}) eski <b>${adaylar.length}</b> kayıt arşivlenebilir.`;
+    liste.sort((a, b) => tarihCmp(arsivTarihi(b), arsivTarihi(a)));
+    tb.innerHTML = liste.length ? liste.slice(0, 300).map(r => `<tr>
+      <td class="strong">${esc(r.musteri)}</td>
+      <td class="center">${formatDate(r.planlananTarih)}</td>
+      <td class="center">${formatDate(r.reelPlan)}</td>
+      <td class="center">${formatDate(r.gerceklesenTarih)}</td>
+      <td>${esc(r.durum)}</td>
+      <td class="center">${esc(r.ad)}</td>
+    </tr>`).join("") : `<tr><td colspan="6" class="empty">Arşiv henüz boş.</td></tr>`;
+  } catch (e) {
+    tb.innerHTML = `<tr><td colspan="6" class="empty">Arşiv okunamadı: ${esc(e.message)}</td></tr>`;
+  }
+}
+async function arsivle() {
+  const kesin = document.getElementById("arsivTarih").value;
+  if (!kesin) { alert("Bir tarih seç."); return; }
+  const adaylar = rows.filter(r => {
+    const t = arsivTarihi(r);
+    return t && t < kesin && r.durum !== "Yükleniyor";
+  });
+  if (!adaylar.length) { alert("Bu tarihtan eski arşivlenecek kayıt yok."); return; }
+  if (!confirm(`${adaylar.length} kayıt arşive taşınacak.\nAna tablodan, depodan ve sayaçlardan kaybolurlar; arşiv raporlarından ve Excel'den görüntülenebilirler.\n\nOnaylıyor musun?`)) return;
+  const btn = document.getElementById("btnArsivCalistir");
+  btn.disabled = true; btn.textContent = "Arşivleniyor…";
+  try {
+    const paket = {};
+    adaylar.forEach(r => { paket[r.id] = toDb(r); });
+    await authFetch(`${FIREBASE_DB_URL}/${ARSIV_NODE}.json`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(paket)
+    });
+    const silinecek = {};
+    adaylar.forEach(r => { silinecek[r.id] = null; });
+    await authFetch(`${FIREBASE_DB_URL}/${NODE}.json`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(silinecek)
+    });
+    arsivCache = null; /* rapor sekmesi taze veri çeksin */
+    await apiLog("guncelleme", "", adaylar.slice(0, 20).map(r => r.musteri).join(", ") + (adaylar.length > 20 ? "…" : ""),
+      `🗄️ ${adaylar.length} kayıt arşive taşındı (sınır: ${formatDate(kesin)})`);
+    showToast(`✅ ${adaylar.length} kayıt arşive taşındı.`);
+    await load(false);
+    await renderArsiv();
+  } catch (e) {
+    alert("Arşivleme hatası: " + e.message + "\n\n⚠️ Rules'ta sevkiyat_arsiv izni var mı kontrol et.");
+  }
+  btn.disabled = false; btn.textContent = "📦 Arşivle";
+}
+async function arsivExcel() {
+  if (typeof XLSX === "undefined") { alert("Excel kütüphanesi yüklenemedi."); return; }
+  try {
+    const liste = await fetchArsiv();
+    if (!liste.length) { alert("Arşiv boş."); return; }
+    const data = liste.map(r => ({
+      "Müşteri": r.musteri, "BLM": r.blm, "Kategori": r.kategori,
+      "Sevkiyat Tipi": r.sevkiyatTipi, "AD": Number(r.ad) || 0,
+      "Planlanan": formatDate(r.planlananTarih), "Reel Plan": formatDate(r.reelPlan),
+      "Gerçekleşen": formatDate(r.gerceklesenTarih), "Durum": r.durum,
+      "M3": r.m3 ?? "", "Ekleyen": r.createdBy || ""
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Arsiv");
+    XLSX.writeFile(wb, `sevkiyat_arsiv_${todayISO()}.xlsx`);
+  } catch (e) { alert("Excel hatası: " + e.message); }
+}
+document.getElementById("btnArsiv").addEventListener("click", openArsiv);
+document.getElementById("btnCloseArsiv").addEventListener("click", () =>
+  document.getElementById("arsivModal").classList.add("hidden"));
+document.getElementById("arsivModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+});
+document.getElementById("btnArsivCalistir").addEventListener("click", arsivle);
+document.getElementById("arsivTarih").addEventListener("change", renderArsiv);
+document.getElementById("btnArsivExcel").addEventListener("click", arsivExcel);
 
 /* ================= Olaylar ================= */
 document.getElementById("tbody").addEventListener("click", e => {
@@ -3568,6 +3676,7 @@ function updateUserUI() {
   document.getElementById("btnAdminPanel").classList.toggle("hidden", !isAdmin());
   document.getElementById("btnSurePanel").classList.toggle("hidden", !isAdmin());
   document.getElementById("btnBackup").classList.toggle("hidden", !isAdmin());
+  document.getElementById("btnArsiv").classList.toggle("hidden", !isAdmin());
   if (currentUser) {
     const admin = isAdmin();
     box.innerHTML = `<span class="user-chip ${admin ? "is-admin" : ""}">${admin ? "🛡️" : "👤"} ${esc(shortUser(currentUser.email))}</span>
