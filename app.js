@@ -117,6 +117,11 @@ function fmtSure(ms) {
   const h = Math.floor(dk / 60), m = dk % 60;
   return h > 0 ? `${h}s ${m}dk` : `${m}dk`;
 }
+function fmtTime(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
 function toLocalDT(ts) {
   if (!ts) return "";
   const d = new Date(ts);
@@ -1031,9 +1036,16 @@ function planlananView(x) {
   return html;
 }
   /* Gerçekleşen tarih: otomatik yazılır, elle düzenlenmez */
+/* Gerçekleşen: tarih + kronometre saat bilgisi */
 function gerceklesenView(x) {
   let html = formatDate(x.gerceklesenTarih);
-  if (x.durum === "Yükleme Tamamlandı") {
+  if (x.durum === "Yükleniyor" && x.loadingStartedAt) {
+    /* Yükleniyor: tarih çizgisi yerine başlangıç saati */
+    html = `<span style="color:var(--amber);font-weight:600;font-size:10.5px">⏱ ${fmtTime(x.loadingStartedAt)}'da başladı</span>`;
+  } else if (x.durum === "Yükleme Tamamlandı" && x.loadingStartedAt && x.loadingEndedAt) {
+    html += `<div class="muted" style="font-size:9.5px">Baş:${fmtTime(x.loadingStartedAt)} - Bitiş:${fmtTime(x.loadingEndedAt)}</div>`;
+  } else if (x.durum === "Yükleme Tamamlandı") {
+    /* Kronometre verisi yoksa eski davranış */
     html += `<div class="muted" style="font-size:9.5px">otomatik</div>`;
   }
   return html;
@@ -1822,6 +1834,11 @@ function depoItem(r, cls, extra) {
   const sureTxt = b.durum !== "none"
     ? (b.asim ? `<span style="color:#f87171">⚠ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşıldı</span>` : `⏱️ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk · %${b.yuzde}`)
     : "";
+  const saatTxt = (b.durum === "live" && r.loadingStartedAt)
+    ? `<div style="font-size:13px;color:#fbbf24;margin-top:4px">⏱ ${fmtTime(r.loadingStartedAt)}'da başladı</div>`
+    : ((b.durum === "done" && r.loadingStartedAt && r.loadingEndedAt)
+      ? `<div style="font-size:13px;color:#8aa0b8;margin-top:4px">Baş:${fmtTime(r.loadingStartedAt)} - Bitiş:${fmtTime(r.loadingEndedAt)}</div>`
+      : "");
   const gb = gecikmeBilgi(r);
   const nedenTxt = (gb.gun > 0 && gb.neden) ? `<div class="d-cmt">⚠️ Gecikme nedeni: ${esc(gb.neden)}</div>` : "";
   return `<div class="depo-item ${cls}">
@@ -1831,7 +1848,7 @@ function depoItem(r, cls, extra) {
       ${depoCmtLine(r)}
       ${nedenTxt}
     </div>
-    <div class="d-right">${esc(r.sevkiyatTipi)} · <span style="font-size:24px;color:#e2e8f0">${esc(r.ad)} yükleme</span><br>${extra}${sureTxt ? " · " + sureTxt : ""}</div>
+    <div class="d-right">${esc(r.sevkiyatTipi)} · <span style="font-size:24px;color:#e2e8f0">${esc(r.ad)} yükleme</span><br>${extra}${sureTxt ? " · " + sureTxt : ""}${saatTxt}</div>
   </div>`;
 }
 function gunEtiketi(iso) {
@@ -1913,11 +1930,12 @@ function renderDepoContent() {
           const sureTxt = b.durum === "done"
             ? (b.asim ? `<span style="color:#fbbf24">⏱️ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşım</span>` : `<span style="color:#34d399">⏱️ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk</span>`)
             : "";
+          const saatTxt = (r.loadingStartedAt && r.loadingEndedAt) ? ` <span style="color:#8aa0b8">· Baş:${fmtTime(r.loadingStartedAt)} - Bitiş:${fmtTime(r.loadingEndedAt)}</span>` : "";
           const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
           const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
           return `<div class="depo-week-row">
             <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
-            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""}</div>
+                        <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""}${saatTxt}</div>
           </div>`;
         }).join("");
         html += `<div class="depo-week-day">
