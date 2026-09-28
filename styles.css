@@ -529,3 +529,13 @@ thead th { border-bottom: 2px solid #0f172a; }
 .arsiv-chk { display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer; user-select:none; }
 .arsiv-chk input { width:auto; margin:0; accent-color: var(--primary); }
 tr.arsiv-row td { color: var(--muted); }
+/* Depo kısayol modu: sadece depo ekranı görünür */
+body.depo-link:not(.depo-open) .brand,
+body.depo-link:not(.depo-open) main,
+body.depo-link:not(.depo-open) #modal,
+body.depo-link:not(.depo-open) .toolbar > *:not(#btnDepo) { display: none !important; }
+body.depo-link:not(.depo-open) header { justify-content: center; }
+body.depo-link:not(.depo-open) #btnDepo {
+  font-size: 16px; padding: 14px 28px; background: var(--primary);
+  border-color: var(--primary); color: #fff;
+}
