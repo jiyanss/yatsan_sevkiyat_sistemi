@@ -623,6 +623,7 @@ let addingInline = false;
 let inlineData = null;
 let dateFilter = "week-current";
 let arsivDahil = false;
+let fitMode = false;
 let dateFrom = "";
 let dateTo = "";
 let statusFilter = "kalan";
@@ -636,6 +637,22 @@ let kalY = 0, kalM = 0;
 let depoTab = "anlik";
 const selectedIds = new Set();
 const hiddenCols = new Set();
+
+function applyFit() {
+  const wrap = document.querySelector(".table-wrap");
+  const tbl = wrap ? wrap.querySelector("table") : null;
+  if (!tbl) return;
+  document.body.classList.toggle("fit-table", fitMode);
+  wrap.style.zoom = "";
+  if (!fitMode) return;
+  /* kompakt sınıf uygulandıktan SONRA ölç → zoom değeri küçük kalır */
+  const need = tbl.scrollWidth;
+  const have = wrap.clientWidth - 2;
+  const z = Math.max(0.55, Math.min(1, have / need));
+  if (z < 0.99) wrap.style.zoom = z.toFixed(3);
+}
+window.addEventListener("resize", () => { if (fitMode) applyFit(); });
+window.addEventListener("load", () => { if (fitMode) applyFit(); });
 
 /* ================= Son filtre hatırlama ================= */
 const PREF_KEY = "sevkiyat_prefs";
@@ -667,6 +684,9 @@ function loadPrefs() {
     dateFrom = p.dateFrom || "";
     dateTo = p.dateTo || "";
     statusFilter = p.statusFilter || "kalan";
+    fitMode = !!p.fitMode;
+    const bf = document.getElementById("btnFit");
+    if (bf) bf.classList.toggle("primary", fitMode);
     arsivDahil = !!p.arsivDahil;
     document.getElementById("arsivDahil").checked = arsivDahil;
     sortCol = SORTABLE[p.sortCol] ? p.sortCol : null;
@@ -951,6 +971,7 @@ function render() {
   const list = filtered();
   renderSummary(list);
   renderTable(list);
+  applyFit();
 }
 function renderDatalist() {
   const cust = [...new Set(rows.map(r => r.musteri).filter(Boolean))];
@@ -2420,6 +2441,12 @@ document.getElementById("btnToggleSummary").addEventListener("click", () => {
   s.classList.toggle("hidden");
   document.getElementById("btnToggleSummary").textContent = s.classList.contains("hidden") ? "Özet" : "Özeti gizle";
   savePrefs();
+});
+document.getElementById("btnFit").addEventListener("click", () => {
+  fitMode = !fitMode;
+  document.getElementById("btnFit").classList.toggle("primary", fitMode);
+  savePrefs();
+  applyFit();
 });
 document.getElementById("btnInlineAdd").addEventListener("click", () => gate("inline-add"));
 document.getElementById("btnShowForm").addEventListener("click", () => gate("form-add"));
