@@ -362,6 +362,14 @@
 </div>
   
 <div id="toast" class="toast hidden"></div>
+  <script>
+  /* Kısayol: dosya.html#depo → doğrudan depo ekranı (yalnızca görüntüleme) */
+  if (location.hash === "#depo") {
+    document.addEventListener("DOMContentLoaded", () => {
+      document.body.classList.add("depo-link");
+    });
+  }
+</script>
 <script src="app.js"></script>  
 </body>
 </html>
