@@ -539,3 +539,8 @@ body.depo-link:not(.depo-open) #btnDepo {
   font-size: 16px; padding: 14px 28px; background: var(--primary);
   border-color: var(--primary); color: #fff;
 }
+/* Sığdır modu: sıkı hücre dolgusu → zoom'un daha az küçülmesi için */
+body.fit-table td  { padding: 4px 5px; font-size: 10.5px; }
+body.fit-table th  { padding: 6px 5px; font-size: 9px; }
+body.fit-table .sure-wrap { min-width: 84px; }
+body.fit-table .surebar   { width: 84px; }
