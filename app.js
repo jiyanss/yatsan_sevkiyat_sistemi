@@ -1793,10 +1793,12 @@ function openDepo() {
   depoTab = "anlik";
   document.querySelectorAll(".depo-tab").forEach(x => x.classList.toggle("active", x.dataset.dtab === "anlik"));
   document.getElementById("depoOverlay").classList.remove("hidden");
+  document.body.classList.add("depo-open");
   renderDepoContent();
 }
 function closeDepo() {
   document.getElementById("depoOverlay").classList.add("hidden");
+   document.body.classList.remove("depo-open");
 }
 document.getElementById("btnDepoClose").addEventListener("click", closeDepo);
 document.addEventListener("keydown", e => {
