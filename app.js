@@ -1873,6 +1873,7 @@ function depoItem(r, cls, extra) {
       <div class="d-musteri">${esc(r.musteri)}</div>
       <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div>
       <div class="d-sub">${aracDurumHtml(r)}</div>
+      ${r.aciklama ? `<div class="d-cmt" style="color:#93c5fd">📝 ${esc(r.aciklama)}</div>` : ""}
       ${depoCmtLine(r)}
       ${nedenTxt}
     </div>
@@ -1917,7 +1918,7 @@ function renderDepoContent() {
           const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
           return `<div class="depo-week-row">
             <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
-            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.durum === "Yükleniyor" ? " · 🟠 yükleniyor" : ""} · ${aracDurumHtml(r)}</div>
+            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.durum === "Yükleniyor" ? " · 🟠 yükleniyor" : ""} · ${aracDurumHtml(r)}${r.aciklama ? ` <span style="color:#93c5fd">📝 ${esc(r.aciklama)}</span>` : ""}</div>
           </div>`;
         }).join("");
         html += `<div class="depo-week-day">
@@ -1963,7 +1964,7 @@ function renderDepoContent() {
           const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
           return `<div class="depo-week-row">
             <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
-                        <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""} · ${aracDurumHtml(r)}</div>
+            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""} · ${aracDurumHtml(r)}${r.aciklama ? ` <span style="color:#93c5fd">📝 ${esc(r.aciklama)}</span>` : ""}</div>
           </div>`;
         }).join("");
         html += `<div class="depo-week-day">
