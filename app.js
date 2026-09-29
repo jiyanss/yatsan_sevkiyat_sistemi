@@ -2343,6 +2343,9 @@ function renderQrPreview() {
     new QRCode(holder, { text: qrUrl(r.id), width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M });
     /* Canvas → IMG: canvas pikselleri innerHTML kopyasında taşınmaz, yazdırmada boşalır.
        Data URL'e çevirince önizleme-kopya-yazıcı üçlüsü güvenli. */
+        /* qrcodejs canvas'ın yanına gizli bir <img> daha koyar — onu at, canvas'ı
+       data-URL img'e çevir (innerHTML kopyası + yazıcı için şart) */
+    holder.querySelectorAll("img").forEach(x => x.remove());
     const cnv = holder.querySelector("canvas");
     if (cnv) {
       const img = document.createElement("img");
