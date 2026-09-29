@@ -122,6 +122,12 @@ function fmtTime(ts) {
   const d = new Date(ts);
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
+/* Araç durumu: GELDİ işaretliyse Geldi, boş/HAYIR ise Gelmedi */
+function aracDurumHtml(r) {
+  return r.araciGeldi === "GELDİ"
+    ? `<span style="color:#34d399;font-weight:700">Araç Durumu: Geldi</span>`
+    : `<span style="color:#fbbf24;font-weight:700">Araç Durumu: Gelmedi</span>`;
+}
 function toLocalDT(ts) {
   if (!ts) return "";
   const d = new Date(ts);
@@ -1103,7 +1109,7 @@ function rowHtml(r) {
   const dt = parseLocalDate(r.reelPlan || r.planlananTarih); /* hafta/ay reel plandan */
   const isToday = gecikmeTarihi(r) === todayISO();
   const isOvertime = r.durum === "Yükleniyor" && sureBilgi(r).asim;
-  let rowCls = r.oncelikli ? "priority" : (isOvertime ? "overtime" : (isToday ? "today-row" : ""));
+  let rowCls = r.oncelikli ? "priority" : (isOvertime ? "overtime" : (r.araciGeldi === "GELDİ" ? "arac-geldi" : (isToday ? "today-row" : "")));
   if (r._arsiv) rowCls += " arsiv-row";
   const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
   const isSel = selectedIds.has(r.id);
@@ -1123,7 +1129,7 @@ function rowHtml(r) {
     <td data-col="sure" class="center">${sureCellHtml(r)}</td>
     ${tdHtml(r, "oncelikNo", "center", x => numOrDash(x.oncelikNo))}
     ${tdHtml(r, "aciklama", "truncate", x => `<span title="${esc(x.aciklama)}">${esc(x.aciklama) || "-"}</span>`)}
-    ${tdHtml(r, "araciGeldi", "", x => esc(x.araciGeldi) || "-")}
+    ${tdHtml(r, "araciGeldi", r.araciGeldi === "GELDİ" ? "arac-gel-yes" : (r.araciGeldi === "HAYIR" ? "arac-gel-no" : ""), x => esc(x.araciGeldi) || "-")}
     <td data-col="status" class="center">${durumIcon(r.durum)}</td>
     ${tdHtml(r, "prsM3", "center", x => numOrDash(x.prsM3))}
     <td data-col="m3" class="center">${numOrDash(r.m3)}</td>
@@ -1866,6 +1872,8 @@ function depoItem(r, cls, extra) {
     <div>
       <div class="d-musteri">${esc(r.musteri)}</div>
       <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div>
+      <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div>
+      <div class="d-sub">${aracDurumHtml(r)}</div>
       ${depoCmtLine(r)}
       ${nedenTxt}
     </div>
@@ -1910,7 +1918,7 @@ function renderDepoContent() {
           const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
           return `<div class="depo-week-row">
             <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
-            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.durum === "Yükleniyor" ? " · 🟠 yükleniyor" : ""}</div>
+            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.durum === "Yükleniyor" ? " · 🟠 yükleniyor" : ""} · ${aracDurumHtml(r)}</div>
           </div>`;
         }).join("");
         html += `<div class="depo-week-day">
@@ -1956,7 +1964,7 @@ function renderDepoContent() {
           const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
           return `<div class="depo-week-row">
             <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
-                        <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""}${saatTxt}</div>
+                        <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""} · ${aracDurumHtml(r)}</div>
           </div>`;
         }).join("");
         html += `<div class="depo-week-day">
