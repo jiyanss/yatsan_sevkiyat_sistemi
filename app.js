@@ -2316,6 +2316,8 @@ function openQrPrint() {
 }
 function renderQrPreview() {
   const box = document.getElementById("qrPreview");
+  const printArea = document.getElementById("qrPrintArea");
+  printArea.innerHTML = "";
   const tarih = document.getElementById("qrTarih").value;
   if (!tarih) { box.innerHTML = `<p class="hint">Bir gün seç.</p>`; return; }
   if (typeof QRCode === "undefined") {
@@ -2323,24 +2325,25 @@ function renderQrPreview() {
     return;
   }
   const liste = rows.filter(r => gecikmeTarihi(r) === tarih && r.durum !== "Yükleme Tamamlandı");
-  if (!liste.length) { box.innerHTML = `<p class="hint">Bu gün için etiketlenecek (tamamlanmamış) kayıt yok.</p>`; return; }
-  box.innerHTML = liste.map(r => `
-    <div class="qr-label">
-      <div class="q-box" data-qr="${r.id}"></div>
+  if (!liste.length) { box.innerHTML = `<p class="hint">Bu gün için etiketlenecek kayıt yok.</p>`; return; }
+  box.innerHTML = "";
+  liste.forEach(r => {
+    const url = qrUrl(r.id);
+    const label = document.createElement("div");
+    label.className = "qr-label";
+    label.innerHTML = `
+      <div class="q-box"></div>
       <div class="q-txt">
         <b>${esc(r.musteri)}</b>
         ${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.oncelikNo ? " · ⭐" + esc(r.oncelikNo) : ""}<br>
-        ${r.aciklama ? "📝 " + esc(r.aciklama) + "<br>" : ""}${formatDate(tarih)}
-      </div>
-    </div>`).join("");
-  box.querySelectorAll("[data-qr]").forEach(el => {
-    new QRCode(el, { text: qrUrl(el.dataset.qr), width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M });
+        ${r.aciklama ? "📝 " + esc(r.aciklama) + "<br>" : ""}${formatDate(tarih)}<br>
+        <span class="q-id">#${esc(r.id.slice(-6))}</span>
+      </div>`;
+    box.appendChild(label);
+    new QRCode(label.querySelector(".q-box"), { text: url, width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M });
   });
-  /* Yazdırma alanına ayrı kopya (aynı etiketler, ayrı QR üretimi) */
-  document.getElementById("qrPrintArea").innerHTML = `<div class="qr-grid">${box.innerHTML}</div>`;
-  document.querySelectorAll("#qrPrintArea [data-qr]").forEach(el => {
-    new QRCode(el, { text: qrUrl(el.dataset.qr), width: 110, height: 110, correctLevel: QRCode.CorrectLevel.M });
-  });
+  /* Yazdırma alanı: üretilmiş önizlemenin birebir kopyası (yeniden üretim YOK → çift QR bitti) */
+  printArea.innerHTML = `<div class="qr-grid">${box.innerHTML}</div>`;
 }
 function qrYazdir() {
   if (!document.getElementById("qrPrintArea").innerHTML) { alert("Önce gün seç, etiketleri oluştur."); return; }
