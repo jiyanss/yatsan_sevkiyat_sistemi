@@ -16,6 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚢</text></svg>" />
 </head>
 <body>
@@ -65,6 +66,7 @@
     <button class="btn hidden" id="btnBackup">💾 Yedek</button>
     <button class="btn hidden" id="btnSurePanel">⏱️ Süreler</button>
     <button class="btn hidden" id="btnArsiv">🗄️ Arşiv</button>
+    <button class="btn" id="btnQrPrint">📱 QR Yazdır</button>
     <button class="btn hidden" id="btnAdminPanel">🛡️ Admin Panel</button>
     <button class="btn" id="btnTheme">🌙</button>
     <button class="btn" id="btnReload">↻</button>
@@ -360,6 +362,30 @@
     </div>
     <div class="modal-actions"><button class="btn" id="btnCloseArsiv">Kapat</button></div>
   </div>
+</div>
+<div id="qrModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>📱 QR Etiket Yazdır</h2>
+    <p class="hint">Etiketleri kesip yüklenen araçların önüne koy. QR okutulunca işlem ekranı açılır: Araç Geldi · Başlat · Bitir. Not: Etiket basarken uygulamayı <b>üretim (Vercel) adresinden</b> açık tut — QR'a basılan adres işlenir.</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:12px">Gün (reel plan):</label>
+      <input type="date" id="qrTarih" />
+      <button class="btn primary" id="btnQrPrintGo">🖨️ Yazdır</button>
+    </div>
+    <div id="qrPreview" class="qr-grid" style="margin-top:12px;max-height:52vh;overflow-y:auto"></div>
+    <div class="modal-actions"><button class="btn" id="btnQrClose">Kapat</button></div>
+  </div>
+</div>
+<div id="qrPrintArea"></div>
+<div id="islemOverlay" class="depo-overlay hidden">
+  <div class="depo-head">
+    <div>
+      <div class="depo-clock" id="islemClock" style="font-size:32px">--:--</div>
+      <div class="depo-date">Yükleme İşlem Ekranı</div>
+    </div>
+    <button class="btn" id="btnIslemClose" style="font-size:15px;padding:10px 18px">✖ Kapat (ESC)</button>
+  </div>
+  <div id="islemContent"></div>
 </div>
   
 <div id="toast" class="toast hidden"></div>
