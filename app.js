@@ -757,6 +757,7 @@ async function load(withSpinner = true, live = false) {
   loading = false;
   render();
   if (!document.getElementById("depoOverlay").classList.contains("hidden")) renderDepoContent();
+  if (!document.getElementById("islemOverlay").classList.contains("hidden")) renderIslem();
 }
 function setSaveError(msg) {
   const el = document.getElementById("saveError");
@@ -1345,6 +1346,8 @@ function runAction({ type, param }) {
     case "sure-edit":   openSureEdit(param); break;
     case "edit-date":   changeDate(param.id, param.tarih); break;
     case "musteri-kart": openMusteriKart(param); break;
+    case "qr-print":    openQrPrint(); break;
+    case "islem-action": islemAction(param); break;
     case "delete":
       if (confirm("Bu kayıt veritabanından silinsin mi?")) deleteRow(param);
       break;
@@ -4226,6 +4229,7 @@ updateUserUI();
   await load(true);
   if (arsivDahil && !Array.isArray(arsivCache)) {
     try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
+  parseIslemHash();
   startLiveSync();}
   otomatikGunlukYedek();
 })();
