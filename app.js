@@ -2410,6 +2410,7 @@ function renderIslem() {
   c.innerHTML = `<div class="islem-card">
     <div class="islem-musteri">${esc(r.musteri)}</div>
     <div class="islem-sub">${esc(r.blm)} · ${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div>
+    <div class="islem-sub" style="font-size:11px;opacity:.55">Kayıt kimliği: #${esc(r.id.slice(-6))}</div>
     <div class="islem-info">
       <div><span>Reel Plan:</span> <b>${formatDate(gecikmeTarihi(r))}</b></div>
       <div><span>Durum:</span> <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></div>
