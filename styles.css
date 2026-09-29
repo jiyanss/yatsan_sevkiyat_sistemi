@@ -552,3 +552,43 @@ body.dark tbody tr:where(.arac-geldi) { background: #142b4d; }
 body.dark tbody tr:where(.arac-geldi):hover { background: #1a3560; }
 td.arac-gel-yes { color: var(--green); font-weight: 700; }
 td.arac-gel-no { color: var(--muted); font-weight: 600; }
+/* QR etiket ızgarası */
+.qr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.qr-label {
+  border: 2px dashed var(--border); border-radius: 10px; padding: 10px;
+  display: flex; gap: 10px; align-items: center; background: var(--surface);
+  page-break-inside: avoid; break-inside: avoid;
+}
+.qr-label .q-box { flex: 0 0 auto; }
+.qr-label .q-txt { font-size: 11px; line-height: 1.45; }
+.qr-label .q-txt b { font-size: 14px; display: block; margin-bottom: 2px; }
+#qrPrintArea { display: none; }
+body.qr-printing > *:not(#qrPrintArea) { display: none !important; }
+body.qr-printing #qrPrintArea { display: block; padding: 10mm; }
+body.qr-printing #qrPrintArea .qr-grid { grid-template-columns: repeat(2, 1fr); gap: 8mm; }
+
+/* 📱 İşlem ekranı (QR sonrası) */
+.islem-card {
+  background: #151f31; border: 1px solid #2b3a52; border-radius: 16px;
+  padding: 24px; max-width: 640px; margin: 0 auto 16px;
+}
+.islem-musteri { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; }
+.islem-sub { font-size: 16px; color: #8aa0b8; margin-top: 4px; }
+.islem-info { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 16px 0; font-size: 15px; }
+.islem-info span { color: #8aa0b8; }
+.islem-btns { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+.islem-btn {
+  border: none; border-radius: 14px; padding: 18px; font-size: 20px; font-weight: 800;
+  cursor: pointer; font-family: inherit; color: #fff; transition: transform .1s, filter .15s;
+}
+.islem-btn:active { transform: scale(.98); }
+.islem-btn:hover { filter: brightness(1.1); }
+.islem-btn.b-geldi { background: #0ea5e9; }
+.islem-btn.b-basla { background: #059669; }
+.islem-btn.b-bitir { background: #4f46e5; }
+.islem-done {
+  background: #0d2b22; border: 1px solid #34d399; color: #34d399;
+  border-radius: 12px; padding: 14px; text-align: center; font-size: 15px; font-weight: 700; margin: 12px 0;
+}
+/* İşlem ekranı açıkken login penceresi üstte görünsün */
+body.islem-open #loginModal { z-index: 95; }
