@@ -544,3 +544,11 @@ body.fit-table td  { padding: 4px 5px; font-size: 10.5px; }
 body.fit-table th  { padding: 6px 5px; font-size: 9px; }
 body.fit-table .sure-wrap { min-width: 84px; }
 body.fit-table .surebar   { width: 84px; }
+
+/* Araç geldi: mavi satır vurgusu + hücre renkleri */
+tbody tr:where(.arac-geldi) { background: #dbeafe; }
+tbody tr:where(.arac-geldi):hover { background: #cfe1fb; }
+body.dark tbody tr:where(.arac-geldi) { background: #142b4d; }
+body.dark tbody tr:where(.arac-geldi):hover { background: #1a3560; }
+td.arac-gel-yes { color: var(--green); font-weight: 700; }
+td.arac-gel-no { color: var(--muted); font-weight: 600; }
