@@ -342,15 +342,15 @@ let currentUser = null;
 let userEntries = {};
 
 function getAuthState() {
-  try { return JSON.parse(sessionStorage.getItem(AUTH_KEY)); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; }
 }
 function saveAuthState(idToken, refreshToken, expiresIn, email) {
-  sessionStorage.setItem(AUTH_KEY, JSON.stringify({
+  localStorage.setItem(AUTH_KEY, JSON.stringify({
     idToken, refreshToken, email, exp: Date.now() + Number(expiresIn) * 1000
   }));
 }
 function clearAuthState() {
-  sessionStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem(AUTH_KEY);
   currentUser = null;
   updateUserUI();
 }
