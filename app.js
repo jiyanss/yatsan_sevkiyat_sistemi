@@ -1872,7 +1872,6 @@ function depoItem(r, cls, extra) {
     <div>
       <div class="d-musteri">${esc(r.musteri)}</div>
       <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div>
-      <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div>
       <div class="d-sub">${aracDurumHtml(r)}</div>
       ${depoCmtLine(r)}
       ${nedenTxt}
