@@ -4257,13 +4257,12 @@ updateUserUI();
       updateUserUI();
     } catch (e) { /* ensureToken gerekli temizliği yaptı */ }
   }
-  render();
+ render();
   await load(true);
   if (arsivDahil && !Array.isArray(arsivCache)) {
-  try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
-  try { parseIslemHash(); } catch (e) { console.error("islem hash hatası:", e); }
+    try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
+  }
+  parseIslemHash();   /* ← BU SATIR: QR linki ilk yüklemede işlensin */
   startLiveSync();
-  otomatikGunlukYedek();
-  startLiveSync();}
   otomatikGunlukYedek();
 })();
