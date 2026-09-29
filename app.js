@@ -2377,7 +2377,11 @@ function closeIslem() {
 }
 function parseIslemHash() {
   const m = location.hash.match(/^#islem=(.+)$/);
-  if (m) openIslem(decodeURIComponent(m[1]));
+  if (!m) return;
+  const id = decodeURIComponent(m[1]);
+  const gizli = document.getElementById("islemOverlay").classList.contains("hidden");
+  if (gizli || id !== islemId) openIslem(id);
+  else renderIslem(); /* aynı kayıt — yine de tazele */
 }
 function islemBtns(d) {
   if (d.durum === "Yükleme Bekliyor") {
