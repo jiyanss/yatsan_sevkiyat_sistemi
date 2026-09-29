@@ -2361,6 +2361,10 @@ function openIslem(id) {
   document.getElementById("islemOverlay").classList.remove("hidden");
   document.body.classList.add("islem-open");
   renderIslem();
+  /* Giriş yoksa hemen login iste — giriş sonrası bu ekran kaldığı yerden devam eder */
+  if (!currentUser) {
+    showLogin("İşlem için giriş yap — giriş sonrası bu ekran otomatik devam eder.");
+  }
 }
 function closeIslem() {
   document.getElementById("islemOverlay").classList.add("hidden");
@@ -4104,6 +4108,7 @@ async function tryLogin() {
     }
     if (pendingAction) { const pa = pendingAction; pendingAction = null; runAction(pa); }
     else render();
+    if (islemId != null) renderIslem();
     otomatikGunlukYedek(); /* günün ilk girişinde yedek alınmamışsa arka planda al */
   } catch (e) {
     err.textContent = "Bağlantı hatası: " + e.message;
