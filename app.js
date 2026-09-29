@@ -2299,6 +2299,176 @@ async function buildArsiv() {
   c.innerHTML = kpiBlock + tablolar;
 }
 
+/* ================= 📱 QR YAZDIRMA + İŞLEM EKRANI ================= */
+let islemId = null;
+
+function qrUrl(id) {
+  return location.origin + location.pathname + "#islem=" + encodeURIComponent(id);
+}
+function openQrPrint() {
+  document.getElementById("qrModal").classList.remove("hidden");
+  const inp = document.getElementById("qrTarih");
+  if (!inp.value) inp.value = todayISO();
+  renderQrPreview();
+}
+function renderQrPreview() {
+  const box = document.getElementById("qrPreview");
+  const tarih = document.getElementById("qrTarih").value;
+  if (!tarih) { box.innerHTML = `<p class="hint">Bir gün seç.</p>`; return; }
+  if (typeof QRCode === "undefined") {
+    box.innerHTML = `<p class="hint">⚠️ QR kütüphanesi (CDN) yüklenemedi — interneti kontrol et.</p>`;
+    return;
+  }
+  const liste = rows.filter(r => gecikmeTarihi(r) === tarih && r.durum !== "Yükleme Tamamlandı");
+  if (!liste.length) { box.innerHTML = `<p class="hint">Bu gün için etiketlenecek (tamamlanmamış) kayıt yok.</p>`; return; }
+  box.innerHTML = liste.map(r => `
+    <div class="qr-label">
+      <div class="q-box" data-qr="${r.id}"></div>
+      <div class="q-txt">
+        <b>${esc(r.musteri)}</b>
+        ${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.oncelikNo ? " · ⭐" + esc(r.oncelikNo) : ""}<br>
+        ${r.aciklama ? "📝 " + esc(r.aciklama) + "<br>" : ""}${formatDate(tarih)}
+      </div>
+    </div>`).join("");
+  box.querySelectorAll("[data-qr]").forEach(el => {
+    new QRCode(el, { text: qrUrl(el.dataset.qr), width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M });
+  });
+  /* Yazdırma alanına ayrı kopya (aynı etiketler, ayrı QR üretimi) */
+  document.getElementById("qrPrintArea").innerHTML = `<div class="qr-grid">${box.innerHTML}</div>`;
+  document.querySelectorAll("#qrPrintArea [data-qr]").forEach(el => {
+    new QRCode(el, { text: qrUrl(el.dataset.qr), width: 110, height: 110, correctLevel: QRCode.CorrectLevel.M });
+  });
+}
+function qrYazdir() {
+  if (!document.getElementById("qrPrintArea").innerHTML) { alert("Önce gün seç, etiketleri oluştur."); return; }
+  document.body.classList.add("qr-printing");
+  const temizle = () => { document.body.classList.remove("qr-printing"); window.removeEventListener("afterprint", temizle); };
+  window.addEventListener("afterprint", temizle);
+  window.print();
+}
+document.getElementById("btnQrPrint").addEventListener("click", () => gate("qr-print"));
+document.getElementById("btnQrClose").addEventListener("click", () => document.getElementById("qrModal").classList.add("hidden"));
+document.getElementById("qrModal").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden"); });
+document.getElementById("qrTarih").addEventListener("change", renderQrPreview);
+document.getElementById("btnQrPrintGo").addEventListener("click", qrYazdir);
+
+/* --- İşlem ekranı (#islem=<id>) --- */
+function openIslem(id) {
+  islemId = id;
+  document.getElementById("islemOverlay").classList.remove("hidden");
+  document.body.classList.add("islem-open");
+  renderIslem();
+}
+function closeIslem() {
+  document.getElementById("islemOverlay").classList.add("hidden");
+  document.body.classList.remove("islem-open");
+  islemId = null;
+  if (location.hash.startsWith("#islem=")) history.replaceState(null, "", location.pathname + location.search);
+}
+function parseIslemHash() {
+  const m = location.hash.match(/^#islem=(.+)$/);
+  if (m) openIslem(decodeURIComponent(m[1]));
+}
+function islemBtns(d) {
+  if (d.durum === "Yükleme Bekliyor") {
+    return `
+      <button class="islem-btn b-geldi" data-iact="geldi">🚛 Araç Geldi</button>
+      <button class="islem-btn b-basla" data-iact="baslat">▶️ Yüklemeyi Başlat</button>`;
+  }
+  if (d.durum === "Yükleniyor") {
+    return `<button class="islem-btn b-bitir" data-iact="bitir">✅ Yüklemeyi Bitir</button>`;
+  }
+  return "";
+}
+function renderIslem() {
+  const c = document.getElementById("islemContent");
+  const d = new Date();
+  document.getElementById("islemClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const r = rows.find(x => x.id === islemId);
+  if (!r) {
+    c.innerHTML = `<div class="islem-card">
+      <div class="islem-musteri">Kayıt bulunamadı</div>
+      <div class="islem-sub">Bu QR'ın kaydı silinmiş veya arşive taşınmış olabilir. Planlama ekranından güncel etiket bas.</div>
+    </div>`;
+    return;
+  }
+  const b = sureBilgi(r);
+  const canEdit = currentUser && hasPerm("edit");
+  const btns = canEdit ? islemBtns(r)
+    : `<div class="islem-done" style="background:#2d2410;border-color:#fbbf24;color:#fbbf24">🔐 İşlem için giriş yapmalısın — giriş yapınca bu ekran devam eder.</div>`;
+  const elapsed = (b.durum === "live" && r.loadingStartedAt) ? fmtSure(Date.now() - r.loadingStartedAt) : "";
+  c.innerHTML = `<div class="islem-card">
+    <div class="islem-musteri">${esc(r.musteri)}</div>
+    <div class="islem-sub">${esc(r.blm)} · ${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div>
+    <div class="islem-info">
+      <div><span>Reel Plan:</span> <b>${formatDate(gecikmeTarihi(r))}</b></div>
+      <div><span>Durum:</span> <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></div>
+      <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b></div>
+      <div><span>Açıklama:</span> ${r.aciklama ? esc(r.aciklama) : "-"}</div>
+    </div>
+    ${b.durum === "live" ? `<div class="islem-done" style="background:#2d2410;border-color:#fbbf24;color:#fbbf24">⏱ Kronometre çalışıyor · <span id="islemElapsed">${elapsed}</span> geçti (${fmtTime(r.loadingStartedAt)}'da başladı)</div>` : ""}
+    ${b.durum === "done" ? `<div class="islem-done">✅ Bu yükleme tamamlandı${r.loadingStartedAt && r.loadingEndedAt ? ` · Baş:${fmtTime(r.loadingStartedAt)} - Bitiş:${fmtTime(r.loadingEndedAt)}` : ""}</div>` : ""}
+    <div class="islem-btns">${btns}</div>
+  </div>
+  <div style="text-align:center;margin-bottom:24px">
+    <button class="btn" id="btnIslemYenile">↻ Yenile</button>
+  </div>`;
+  c.querySelectorAll("[data-iact]").forEach(btn => btn.addEventListener("click", () => islemAction(btn.dataset.iact)));
+  c.querySelector("#btnIslemYenile").addEventListener("click", async () => { await load(false); renderIslem(); });
+}
+async function islemAction(action) {
+  if (!currentUser) {
+    pendingAction = { type: "islem-action", param: action };
+    showLogin("İşlem için giriş yapın — giriş sonrası otomatik devam eder.");
+    return;
+  }
+  if (!hasPerm("edit")) { alert("Bu işlem için düzenleme yetkiniz yok."); return; }
+  const row = rows.find(r => r.id === islemId);
+  if (!row) { alert("Kayıt bulunamadı (arşive taşınmış veya silinmiş olabilir)."); return; }
+  const updated = { ...row };
+  let etiket = "";
+  if (action === "geldi") {
+    if (row.araciGeldi === "GELDİ") { showToast("ℹ️ Araç zaten 'Geldi' işaretli."); return; }
+    updated.araciGeldi = "GELDİ";
+    etiket = "araç geldi";
+  } else if (action === "baslat") {
+    if (row.durum === "Yükleniyor") { showToast("ℹ️ Kronometre zaten çalışıyor."); return; }
+    updated.durum = "Yükleniyor";
+    applyDurumSideEffects(updated);
+    etiket = "yükleme başlatıldı";
+  } else if (action === "bitir") {
+    updated.durum = "Yükleme Tamamlandı";
+    applyDurumSideEffects(updated);
+    etiket = "yükleme tamamlandı";
+  } else return;
+  try {
+    const saved = await apiUpdate(row.id, updated);
+    rows = rows.map(r => r.id === row.id ? saved : r);
+    setSaveError("");
+    render();
+    renderIslem();
+    await apiLog("guncelleme", row.id, saved.musteri,
+      `📱 QR işlem ekranı: ${etiket}` +
+      (saved.loadingStartedAt && saved.loadingEndedAt ? ` · süre: ${fmtSure(saved.loadingEndedAt - saved.loadingStartedAt)}` : ""));
+    showToast(`✅ ${esc(saved.musteri)}: ${etiket}`);
+  } catch (e) { alert("Kaydedilemedi: " + e.message); }
+}
+document.getElementById("btnIslemClose").addEventListener("click", closeIslem);
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !document.getElementById("islemOverlay").classList.contains("hidden")) closeIslem();
+});
+window.addEventListener("hashchange", parseIslemHash);
+setInterval(() => {
+  if (document.getElementById("islemOverlay").classList.contains("hidden")) return;
+  const d = new Date();
+  document.getElementById("islemClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const el = document.getElementById("islemElapsed");
+  if (el) {
+    const r = rows.find(x => x.id === islemId);
+    if (r && r.durum === "Yükleniyor" && r.loadingStartedAt) el.textContent = fmtSure(Date.now() - r.loadingStartedAt);
+  }
+}, 1000);
+
 /* ================= Olaylar ================= */
 document.getElementById("tbody").addEventListener("click", e => {
   const btn = e.target.closest("button[data-action]");
