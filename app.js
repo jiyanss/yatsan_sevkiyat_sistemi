@@ -2328,7 +2328,6 @@ function renderQrPreview() {
   if (!liste.length) { box.innerHTML = `<p class="hint">Bu gün için etiketlenecek kayıt yok.</p>`; return; }
   box.innerHTML = "";
   liste.forEach(r => {
-    const url = qrUrl(r.id);
     const label = document.createElement("div");
     label.className = "qr-label";
     label.innerHTML = `
@@ -2340,9 +2339,21 @@ function renderQrPreview() {
         <span class="q-id">#${esc(r.id.slice(-6))}</span>
       </div>`;
     box.appendChild(label);
-    new QRCode(label.querySelector(".q-box"), { text: url, width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M });
+    const holder = label.querySelector(".q-box");
+    new QRCode(holder, { text: qrUrl(r.id), width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M });
+    /* Canvas → IMG: canvas pikselleri innerHTML kopyasında taşınmaz, yazdırmada boşalır.
+       Data URL'e çevirince önizleme-kopya-yazıcı üçlüsü güvenli. */
+    const cnv = holder.querySelector("canvas");
+    if (cnv) {
+      const img = document.createElement("img");
+      img.src = cnv.toDataURL("image/png");
+      img.alt = "QR";
+      img.style.width = "96px";
+      img.style.height = "96px";
+      cnv.replaceWith(img);
+    }
   });
-  /* Yazdırma alanı: üretilmiş önizlemenin birebir kopyası (yeniden üretim YOK → çift QR bitti) */
+  /* Yazdırma alanı: birebir kopya (artık img'lerle — güvenli) */
   printArea.innerHTML = `<div class="qr-grid">${box.innerHTML}</div>`;
 }
 function qrYazdir() {
