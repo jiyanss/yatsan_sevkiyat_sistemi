@@ -2374,11 +2374,16 @@ document.getElementById("btnQrPrintGo").addEventListener("click", qrYazdir);
 
 /* --- İşlem ekranı (#islem=<id>) --- */
 function openIslem(id) {
+  const ov = document.getElementById("islemOverlay");
+  if (!ov) {
+    console.error("⚠️ islemOverlay HTML'de yok — index.html ile app.js senkron değil!");
+    showToast("⚠️ İşlem ekranı için sayfa güncel değil — yenile.");
+    return;
+  }
   islemId = id;
-  document.getElementById("islemOverlay").classList.remove("hidden");
+  ov.classList.remove("hidden");
   document.body.classList.add("islem-open");
   renderIslem();
-  /* Giriş yoksa hemen login iste — giriş sonrası bu ekran kaldığı yerden devam eder */
   if (!currentUser) {
     showLogin("İşlem için giriş yap — giriş sonrası bu ekran otomatik devam eder.");
   }
@@ -4255,8 +4260,10 @@ updateUserUI();
   render();
   await load(true);
   if (arsivDahil && !Array.isArray(arsivCache)) {
-    try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
-  parseIslemHash();
+  try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
+  try { parseIslemHash(); } catch (e) { console.error("islem hash hatası:", e); }
+  startLiveSync();
+  otomatikGunlukYedek();
   startLiveSync();}
   otomatikGunlukYedek();
 })();
