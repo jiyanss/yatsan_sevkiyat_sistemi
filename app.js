@@ -2670,11 +2670,12 @@ function opHitHtml(r) {
     <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span>
   </div>`;
 }
+
 /* Haftanın kalanının sonu: Pazar (cumartesi/pazar planlar varsa da kapsanır) */
 function haftaSonuISO(todayISOStr) {
   const d = parseLocalDate(todayISOStr);
   const pazar = new Date(d);
-  pazar.setDate(pazar.getDate() + (7 - ((d.getDay() + 6) % 7))); /* sıradaki Pazar */
+  pazar.setDate(pazar.getDate() + (7 - ((d.getDay() + 6) % 7)));
   return isoFromDate(pazar);
 }
 function opHaftaGunHtml(gunEtiketi, liste) {
