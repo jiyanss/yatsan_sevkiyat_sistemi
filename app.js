@@ -4671,9 +4671,15 @@ function positionMenuDrop() {
   const btn = document.getElementById("btnMenu");
   if (!drop || !btn) return;
   const r = btn.getBoundingClientRect();
-  drop.style.top = (r.bottom + 6) + "px";
-  drop.style.right = Math.max(8, window.innerWidth - r.right) + "px";
-  drop.style.left = "auto";
+  drop.style.visibility = "hidden";
+  drop.classList.remove("hidden");
+  const w = drop.offsetWidth;
+  let left = r.right - w;                                  /* ☰'ün sağına hizala */
+  left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+  drop.style.left = Math.round(left) + "px";
+  drop.style.right = "auto";
+  drop.style.top = Math.round(r.bottom + 6) + "px";
+  drop.style.visibility = "visible";
 }
 function toggleMenu(open) {
   const drop = document.getElementById("menuDrop");
