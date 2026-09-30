@@ -1844,6 +1844,7 @@ function closeDepo() {
 }
 document.getElementById("btnDepoClose").addEventListener("click", closeDepo);
 document.getElementById("btnScanOpen").addEventListener("click", openScanner);
+document.getElementById("btnScanMain").addEventListener("click", openScanner);
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !document.getElementById("depoOverlay").classList.contains("hidden")) closeDepo();
 });
