@@ -4685,11 +4685,24 @@ function positionMenuDrop() {
   drop.style.visibility = "hidden";
   drop.classList.remove("hidden");
   const w = drop.offsetWidth;
-  let left = r.right - w;                                  /* ☰'ün sağına hizala */
+  let left = r.right - w;
   left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
   drop.style.left = Math.round(left) + "px";
   drop.style.right = "auto";
-  drop.style.top = Math.round(r.bottom + 6) + "px";
+  /* ☰'ün altındaki ve üstündeki gerçek boşluk */
+  const spaceBelow = window.innerHeight - r.bottom - 12;
+  const spaceAbove = r.top - 12;
+  if (spaceBelow >= 280 || spaceBelow >= spaceAbove) {
+    /* aşağı aç — yüksekliği boşluğa sığdır */
+    drop.style.top = Math.round(r.bottom + 6) + "px";
+    drop.style.bottom = "auto";
+    drop.style.maxHeight = Math.max(200, Math.min(spaceBelow, window.innerHeight * 0.8)) + "px";
+  } else {
+    /* yukarı aç */
+    drop.style.top = "auto";
+    drop.style.bottom = Math.round(window.innerHeight - r.top + 6) + "px";
+    drop.style.maxHeight = Math.max(200, Math.min(spaceAbove, window.innerHeight * 0.8)) + "px";
+  }
   drop.style.visibility = "visible";
 }
 function toggleMenu(open) {
