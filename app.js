@@ -4651,9 +4651,10 @@ function applyMenuLayout() {
     const b = document.querySelector(`header .btn[data-menu="${k}"]`);
     if (!b) return;
     if (PERM_BTN_IDS.includes(b.id) && b.classList.contains("hidden")) return; /* yetkisi yoksa menüde de yok */
-    const c = b.cloneNode(true);
+   const c = b.cloneNode(true);
     c.id = b.id + "_m";
     c.classList.remove("hidden");
+    c.classList.remove("primary");   /* menü listesinde mor vurgu olmasın */
     drop.appendChild(c);
     c.addEventListener("click", e => {
       e.stopPropagation();
