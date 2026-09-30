@@ -1339,7 +1339,6 @@ document.addEventListener("click", e => {
     document.getElementById("colMenu").classList.add("hidden");
   }
 });
-const MENU_DEFAULT_OUT = ["inline", "depo", "reports", "calendar", "op", "scan"];
 
 /* ================= Yetki kapısı ================= */
 function gate(type, param) {
@@ -4614,6 +4613,88 @@ function updateOfflineBadge() {
 window.addEventListener("offline", updateOfflineBadge);
 window.addEventListener("online", () => { updateOfflineBadge(); load(false, false); });
 updateOfflineBadge();
+
+/* ================= Başlat ================= */
+/* ================= ☰ ÖZELLEŞTİRİLEBİLİR MENÜ ================= */
+const MENU_DEFAULT_OUT = ["inline", "depo", "reports", "calendar", "op", "scan"]; /* varsayılan: üstte kalsın */
+const MENU_KEY = "sevkiyat_menu";
+let menuInDropdown = null;
+
+function loadMenuPrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(MENU_KEY));
+    menuInDropdown = Array.isArray(saved) ? saved : [...MENU_DEFAULT_OUT];
+  } catch (e) { menuInDropdown = [...MENU_DEFAULT_OUT]; }
+}
+function saveMenuPrefs() {
+  try { localStorage.setItem(MENU_KEY, JSON.stringify(menuInDropdown)); } catch (e) {}
+}
+function applyMenuLayout() {
+  const drop = document.getElementById("menuDrop");
+  if (!drop || !menuInDropdown) return;
+  document.querySelectorAll("header .btn[data-menu]").forEach(b => {
+    const inMenu = menuInDropdown.includes(b.dataset.menu);
+    b.classList.toggle("hidden", inMenu && !document.body.classList.contains("menu-editing"));
+  });
+  drop.innerHTML = `
+    <button class="btn" id="btnMenuEdit">⚙️ Menüyü Düzenle</button>
+    <div class="menu-sep"></div>
+    ${[...document.querySelectorAll("header .btn[data-menu]")]
+      .filter(b => menuInDropdown.includes(b.dataset.menu))
+      .map(b => b.outerHTML).join("")}`;
+  drop.querySelectorAll(".btn[data-menu]").forEach(clone => {
+    clone.addEventListener("click", () => {
+      const orig = document.querySelector(`header .btn[data-menu="${clone.dataset.menu}"]`);
+      if (orig) orig.click();
+      toggleMenu(false);
+    });
+  });
+  drop.querySelector("#btnMenuEdit").addEventListener("click", () => toggleMenuEdit());
+}
+function toggleMenu(open) {
+  const drop = document.getElementById("menuDrop");
+  if (!drop) return;
+  const willOpen = open !== undefined ? open : drop.classList.contains("hidden");
+  if (willOpen) { applyMenuLayout(); drop.classList.remove("hidden"); }
+  else {
+    drop.classList.add("hidden");
+    document.body.classList.remove("menu-editing");
+  }
+}
+function toggleMenuEdit() {
+  const drop = document.getElementById("menuDrop");
+  const editing = !document.body.classList.contains("menu-editing");
+  document.body.classList.toggle("menu-editing", editing);
+  if (!editing) { applyMenuLayout(); return; }
+  const all = [...document.querySelectorAll("header .btn[data-menu]")];
+  drop.innerHTML = `<p class="hint" style="margin:4px 8px">Açık = menüde · Kapalı = üstte kalsın</p>` +
+    all.map(b => {
+      const inMenu = menuInDropdown.includes(b.dataset.menu);
+      return `<label class="menu-edit-toggle"><span>${esc(b.textContent.trim().slice(0, 24))}</span>
+        <input type="checkbox" data-mtoggle="${b.dataset.menu}" ${inMenu ? "checked" : ""} /></label>`;
+    }).join("") +
+    `<div class="menu-sep"></div><button class="btn primary" id="btnMenuEditDone" style="width:100%">✔ Bitti</button>`;
+  drop.querySelectorAll("[data-mtoggle]").forEach(cb => cb.addEventListener("change", () => {
+    const k = cb.dataset.mtoggle;
+    if (cb.checked && !menuInDropdown.includes(k)) menuInDropdown.push(k);
+    if (!cb.checked) menuInDropdown = menuInDropdown.filter(x => x !== k);
+    saveMenuPrefs();
+    const orig = document.querySelector(`header .btn[data-menu="${k}"]`);
+    if (orig) orig.classList.toggle("hidden", cb.checked);
+  }));
+  drop.querySelector("#btnMenuEditDone").addEventListener("click", () => {
+    document.body.classList.remove("menu-editing");
+    applyMenuLayout();
+  });
+}
+document.getElementById("btnMenu").addEventListener("click", e => {
+  e.stopPropagation();
+  toggleMenu();
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu")) toggleMenu(false);
+});
+loadMenuPrefs();
 
 /* ================= Başlat ================= */
 updateUserUI();
