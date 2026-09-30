@@ -1293,23 +1293,22 @@ function renderColMenu() {
 }
 document.getElementById("btnCols").addEventListener("click", e => {
   e.stopPropagation();
-  renderColMenu();
   const menu = document.getElementById("colMenu");
   const btn = document.getElementById("btnCols");
+  renderColMenu();
+  /* btnCols üst barda görünmüyorsa (menüye taşındıysa) dropdown'dan aç */
+  const anchor = btn.offsetParent ? btn : document.getElementById("btnMenu");
   menu.classList.toggle("hidden");
   if (!menu.classList.contains("hidden")) {
     menu.style.visibility = "hidden";
     menu.style.display = "block";
     requestAnimationFrame(() => {
-      const r = btn.getBoundingClientRect();
-      const mw = menu.offsetWidth;
-      const mh = menu.offsetHeight;
+      const r = anchor.getBoundingClientRect();
+      const mw = menu.offsetWidth, mh = menu.offsetHeight;
       let left = Math.min(r.right, window.innerWidth - mw - 8);
       left = Math.max(8, left);
       let top = r.bottom + 6;
-      if (top + mh > window.innerHeight - 8) {
-        top = Math.max(8, r.top - mh - 6);
-      }
+      if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
       menu.style.left = left + "px";
       menu.style.top = top + "px";
       menu.style.visibility = "visible";
