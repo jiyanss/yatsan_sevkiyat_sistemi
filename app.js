@@ -2601,12 +2601,14 @@ document.getElementById("btnIslemClose").addEventListener("click", closeIslem);
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !document.getElementById("islemOverlay").classList.contains("hidden")) closeIslem();
 });
-
-/* ================= 📱 OPERASYON EKRANI (depo mobil) — v2 ================= */
+/* ================= 📱 OPERASYON EKRANI (depo mobil) — v3 ================= */
 let currentOpId = null;
 
 function openOperasyon() {
-  if (document.getElementById("opOverlay")) { (document.getElementById("opSearch")?.value || ""); return; }
+  if (document.getElementById("opOverlay")) {
+    renderOpResults(document.getElementById("opSearch")?.value || "");
+    return;
+  }
   const ov = document.createElement("div");
   ov.id = "opOverlay";
   ov.className = "depo-overlay op-overlay";
@@ -2627,14 +2629,14 @@ function openOperasyon() {
   document.body.classList.add("op-open");
   ov.querySelector("#btnOpClose").addEventListener("click", closeOperasyon);
   const inp = ov.querySelector("#opSearch");
-  inp.addEventListener("input", () => (inp.value));
+  inp.addEventListener("input", () => renderOpResults(inp.value));
   inp.addEventListener("keydown", e => {
     if (e.key === "Enter") {
       const hits = opMatches(inp.value);
       if (hits.length) openOpCard(hits[0].id);
     }
   });
-  ("");
+  renderOpResults("");
   setTimeout(() => inp.focus(), 80);
   if (!currentUser) showLogin("Operasyon ekranı için giriş yapın.");
 }
@@ -2645,6 +2647,7 @@ function closeOperasyon() {
   currentOpId = null;
   if (location.hash === "#operasyon") history.replaceState(null, "", location.pathname + location.search);
 }
+/* Sıra: Yükleniyor en üstte → öncelik no → Reel Plan */
 function opSort(list) {
   return list.slice().sort((a, b) => {
     const da = DURUM_SIRA[a.durum] ?? 9, db = DURUM_SIRA[b.durum] ?? 9;
@@ -2670,8 +2673,7 @@ function opHitHtml(r) {
     <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span>
   </div>`;
 }
-
-/* Haftanın kalanının sonu: Pazar (cumartesi/pazar planlar varsa da kapsanır) */
+/* Haftanın kalanının sonu: Pazar (cumartesi/pazar planları da kapsanır) */
 function haftaSonuISO(todayISOStr) {
   const d = parseLocalDate(todayISOStr);
   const pazar = new Date(d);
@@ -2697,7 +2699,7 @@ function opHaftaGunHtml(gunEtiketi, liste) {
   </div>`;
 }
 function renderOpHafta(res, today) {
-    const kalanISO = haftaSonuISO(today);
+  const kalanISO = haftaSonuISO(today);
   const kalanlar = rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
     gecikmeTarihi(r) > today && gecikmeTarihi(r) <= kalanISO);
   const byDate = new Map();
@@ -2724,7 +2726,7 @@ function renderOpHafta(res, today) {
     el.addEventListener("click", () => openOpCard(el.dataset.opid)));
   res.querySelector("#btnOpHaftaGeri").addEventListener("click", () => {
     currentOpId = null;
-    ("");
+    renderOpResults("");
   });
 }
 function renderOpResults(q) {
@@ -2735,12 +2737,12 @@ function renderOpResults(q) {
   if (!s) {
     const today = todayISO();
     hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === today));
-       if (!hits.length) {
+    if (!hits.length) {
       /* Bugün iş bitti — net bildir; isteğe bağlı haftanın kalanını gün gün göster */
-           const kalanISO = haftaSonuISO(today);
+      const kalanISO = haftaSonuISO(today);
       const kalanlar = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
         gecikmeTarihi(r) > today && gecikmeTarihi(r) <= kalanISO));
-      const kalanAd = kalanlar.reduce((s, r) => s + adet(r), 0);
+      const kalanAd = kalanlar.reduce((s2, r) => s2 + adet(r), 0);
       res.innerHTML = `
         <div class="islem-done" style="margin-bottom:10px">🎉 Bugün (${formatDate(today)}) için bekleyen yükleme yok — gün tamam!</div>
         <div style="text-align:center;margin-bottom:10px">
@@ -2848,6 +2850,7 @@ setInterval(() => {
     if (r && r.durum === "Yükleniyor" && r.loadingStartedAt) el.textContent = fmtSure(Date.now() - r.loadingStartedAt);
   }
 }, 1000);
+
 /* ================= 📡 DEPO QR OKUTUCU ================= */
 const barcodeSupported = "BarcodeDetector" in window;
 let scanStream = null;
