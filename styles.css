@@ -596,3 +596,37 @@ body.islem-open #loginModal { z-index: 95; }
 #scanOverlay video { transform: scaleX(1); }
 #scanOverlay .depo-week-row { background:#151f31; border-radius:8px; padding:10px 12px; margin-bottom:6px; }
 #scanOverlay .depo-week-row:hover { background:#1e2749; }
+
+/* 📱 Operasyon ekranı (depo mobil) */
+.op-overlay { display:flex; flex-direction:column; padding:16px 14px 40px; }
+.op-overlay .op-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.op-search-wrap { position:sticky; top:-16px; padding:10px 0; background:#0b1220; z-index:5; }
+.op-search-wrap input {
+  width:100%; padding:14px 16px; font-size:18px; border-radius:12px;
+  background:#151f31; border:2px solid #2b3a52; color:#e2e8f0;
+}
+.op-search-wrap input:focus { border-color:#818cf8; outline:none; box-shadow:none; }
+.op-results { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.op-hit { background:#151f31; border:1px solid #2b3a52; border-radius:12px; padding:12px 14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.op-hit:active, .op-hit:hover { background:#1e2749; }
+.op-hit .op-hit-sub { font-size:12px; color:#8aa0b8; margin-top:2px; }
+.op-card { background:#151f31; border:1px solid #2b3a52; border-radius:16px; padding:18px; max-width:560px; margin:0 auto; width:100%; }
+.op-card .m { font-size:30px; font-weight:800; letter-spacing:-0.02em; color:#e2e8f0; }
+.op-card .sub { font-size:13px; color:#8aa0b8; margin-top:2px; }
+.op-info { display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; margin:14px 0; font-size:14px; color:#e2e8f0; }
+.op-info span { color:#8aa0b8; }
+.op-notes { margin:10px 0; display:flex; flex-direction:column; gap:6px; }
+.op-note-item { background:#1a2338; border-radius:8px; padding:8px 10px; font-size:12.5px; color:#fbbf24; }
+.op-note-item span { display:block; color:#8aa0b8; font-size:10px; margin-top:3px; }
+.op-note { margin-top:14px; }
+.op-note textarea {
+  width:100%; min-height:70px; resize:vertical; font-family:inherit; font-size:14px;
+  padding:10px; border-radius:10px; background:#0f1930; border:1px solid #2b3a52; color:#e2e8f0;
+}
+.op-note textarea:focus { border-color:#818cf8; outline:none; }
+.op-btn-not {
+  width:100%; margin-top:8px; padding:12px; border:none; border-radius:10px;
+  background:#334155; color:#fff; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.op-btn-not:active { transform:scale(.98); }
+body.op-open #loginModal { z-index: 95; }
