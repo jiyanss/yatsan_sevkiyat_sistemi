@@ -2596,6 +2596,11 @@ async function islemAction(action, idOverride = null) {
     showToast(`✅ ${esc(saved.musteri)}: ${etiket}`);
   } catch (e) { alert("Kaydedilemedi: " + e.message); }
 }
+/* --- İşlem ekranı bağlantıları (üst bar + klavye) --- */
+document.getElementById("btnIslemClose").addEventListener("click", closeIslem);
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !document.getElementById("islemOverlay").classList.contains("hidden")) closeIslem();
+});
 
 /* ================= 📱 OPERASYON EKRANI (depo mobil) — v2 ================= */
 let currentOpId = null;
