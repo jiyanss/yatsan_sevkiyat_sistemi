@@ -2670,6 +2670,58 @@ function opHitHtml(r) {
     <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span>
   </div>`;
 }
+function opHaftaGunHtml(gunEtiketi, liste) {
+  const toplamAd = liste.reduce((s, r) => s + adet(r), 0);
+  const satirlar = liste.map(r => {
+    const notlar = (r.comments || []).slice(-2);
+    const notTxt = notlar.length ? `<div class="op-hit-sub" style="color:#fbbf24">💬 ${notlar.map(c => esc(c.text)).join(" · ")}</div>` : "";
+    return `<div class="op-hit" data-opid="${r.id}">
+      <div><b>${esc(r.musteri)}</b>
+        <div class="op-hit-sub">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.oncelikNo ? " · ⭐" + esc(r.oncelikNo) : ""}${r.aciklama ? " · 📝 " + esc(r.aciklama) : ""}</div>
+        ${notTxt}
+      </div>
+      <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span>
+    </div>`;
+  }).join("");
+  return `<div class="depo-week-day" style="margin-bottom:10px">
+    <h4 style="color:#8aa0b8;font-size:14px;margin:0 0 6px;text-transform:uppercase;letter-spacing:.04em">${gunEtiketi} <span style="color:#e2e8f0">· ${liste.length} kayıt / ${toplamAd} yükleme</span></h4>
+    ${satirlar}
+  </div>`;
+}
+function renderOpHafta(res, today) {
+  const bugunDt = parseLocalDate(today);
+  const cumartesi = new Date(bugunDt);
+  cumartesi.setDate(cumartesi.getDate() + (6 - ((bugunDt.getDay() + 6) % 7)));
+  const kalanISO = isoFromDate(cumartesi);
+  const kalanlar = rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
+    gecikmeTarihi(r) > today && gecikmeTarihi(r) <= kalanISO);
+  const byDate = new Map();
+  kalanlar.forEach(r => {
+    const d = gecikmeTarihi(r);
+    if (!byDate.has(d)) byDate.set(d, []);
+    byDate.get(d).push(r);
+  });
+  const gunIdx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
+  let html = `<div style="text-align:center;margin-bottom:10px">
+    <button class="btn" id="btnOpHaftaGeri">↩ Bugüne dön</button>
+  </div>`;
+  if (!kalanlar.length) {
+    html += `<div class="islem-done">📅 Bu haftanın kalanında planlı yükleme yok.</div>`;
+  } else {
+    [...byDate.keys()].sort().forEach(d => {
+      const dt = parseLocalDate(d);
+      const etiket = dt ? `${GUNLER[gunIdx[dt.getDay()]] || ""} ${dt.getDate()} ${AYLAR[dt.getMonth()]}` : d;
+      html += opHaftaGunHtml(etiket, opSort(byDate.get(d)));
+    });
+  }
+  res.innerHTML = html;
+  res.querySelectorAll("[data-opid]").forEach(el =>
+    el.addEventListener("click", () => openOpCard(el.dataset.opid)));
+  res.querySelector("#btnOpHaftaGeri").addEventListener("click", () => {
+    currentOpId = null;
+    renderOpResults("");
+  });
+}
 function renderOpResults(q) {
   const res = document.getElementById("opResults");
   if (!res) return;
@@ -2678,23 +2730,21 @@ function renderOpResults(q) {
   if (!s) {
     const today = todayISO();
     hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === today));
-    if (!hits.length) {
-      /* Bugün iş bitti — sessizce yarının işlerini göstermek yerine net bildir */
+       if (!hits.length) {
+      /* Bugün iş bitti — net bildir; isteğe bağlı haftanın kalanını gün gün göster */
+      const bugunDt = parseLocalDate(today);
+      const cumartesi = new Date(bugunDt);
+      cumartesi.setDate(cumartesi.getDate() + (6 - ((bugunDt.getDay() + 6) % 7))); /* bu haftanın Pazar'ı değil, Cumartesi sonu */
+      const kalanISO = isoFromDate(cumartesi);
+      const kalanlar = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
+        gecikmeTarihi(r) > today && gecikmeTarihi(r) <= kalanISO));
+      const kalanAd = kalanlar.reduce((s, r) => s + adet(r), 0);
       res.innerHTML = `
         <div class="islem-done" style="margin-bottom:10px">🎉 Bugün (${formatDate(today)}) için bekleyen yükleme yok — gün tamam!</div>
         <div style="text-align:center;margin-bottom:10px">
-          <button class="btn" id="btnOpYarin">📅 Yarının planını göster</button>
+          <button class="btn" id="btnOpHafta">📅 Haftanın kalanını göster (${kalanlar.length} kayıt / ${kalanAd} yükleme)</button>
         </div>`;
-      res.querySelector("#btnOpYarin").addEventListener("click", () => {
-        const yarin = new Date(); yarin.setDate(yarin.getDate() + 1);
-        const yISO = isoFromDate(yarin);
-        const yHits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === yISO));
-        res.innerHTML = yHits.length
-          ? yHits.map(r => opHitHtml(r)).join("") || `<p class="hint" style="color:#8aa0b8">Yarın için kayıt yok.</p>`
-          : `<p class="hint" style="color:#8aa0b8">Yarın için kayıt yok.</p>`;
-        res.querySelectorAll("[data-opid]").forEach(el =>
-          el.addEventListener("click", () => openOpCard(el.dataset.opid)));
-      });
+      res.querySelector("#btnOpHafta").addEventListener("click", () => renderOpHafta(res, today));
       return;
     }
   } else hits = opMatches(s);
