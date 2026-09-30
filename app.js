@@ -4706,7 +4706,6 @@ function toggleMenuEdit() {
     if (cb.checked && !menuInDropdown.includes(k)) menuInDropdown.push(k);
     if (!cb.checked) menuInDropdown = menuInDropdown.filter(x => x !== k);
     saveMenuPrefs();
-    updateUserUI(); /* yetki butonlarının görünürlüğünü tazele (Yedek/Admin vb. üstbare çıkarsa düzeltir) */
   }));
   drop.querySelector("#btnMenuEditDone").addEventListener("click", () => {
     document.body.classList.remove("menu-editing");
