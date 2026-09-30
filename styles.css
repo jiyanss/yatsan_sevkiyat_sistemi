@@ -593,3 +593,6 @@ body.qr-printing #qrPrintArea .qr-grid { grid-template-columns: repeat(2, 1fr); 
 /* İşlem ekranı açıkken login penceresi üstte görünsün */
 body.islem-open #loginModal { z-index: 95; }
 .qr-label .q-id { color: var(--muted); font-size: 9px; letter-spacing: .04em; }
+#scanOverlay video { transform: scaleX(1); }
+#scanOverlay .depo-week-row { background:#151f31; border-radius:8px; padding:10px 12px; margin-bottom:6px; }
+#scanOverlay .depo-week-row:hover { background:#1e2749; }
