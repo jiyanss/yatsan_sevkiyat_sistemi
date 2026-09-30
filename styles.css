@@ -630,3 +630,15 @@ body.islem-open #loginModal { z-index: 95; }
 }
 .op-btn-not:active { transform:scale(.98); }
 body.op-open #loginModal { z-index: 95; }
+
+.menu-drop {
+  position: fixed; z-index: 60; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,.22); padding: 6px;
+  min-width: 240px; max-height: 80vh; overflow-y: auto;
+}
+.menu-drop .btn { width: 100%; text-align: left; border: none; background: none; padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; gap: 8px; }
+.menu-drop .btn:hover { background: var(--primary-soft); }
+.menu-sep { height: 1px; background: var(--border); margin: 6px 4px; }
+.menu-edit-toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 12px; font-size: 13px; border-radius: 8px; cursor: pointer; }
+.menu-edit-toggle:hover { background: var(--primary-soft); }
+body.menu-editing [data-menu]:not(.hidden) { outline: 2px dashed var(--primary); outline-offset: 2px; }
