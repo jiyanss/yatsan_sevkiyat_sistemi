@@ -2557,14 +2557,16 @@ function renderIslem() {
   c.querySelectorAll("[data-iact]").forEach(btn => btn.addEventListener("click", () => islemAction(btn.dataset.iact)));
   c.querySelector("#btnIslemYenile").addEventListener("click", async () => { await load(false); renderIslem(); });
 }
-async function islemAction(action) {
+async function islemAction(action, idOverride = null) {
+  const targetId = idOverride || islemId;
   if (!currentUser) {
+    if (document.getElementById("opOverlay")) { showLogin("İşlem için giriş yapın — giriş sonrası tekrar dokunun."); return; }
     pendingAction = { type: "islem-action", param: action };
     showLogin("İşlem için giriş yapın — giriş sonrası otomatik devam eder.");
     return;
   }
   if (!hasPerm("edit")) { alert("Bu işlem için düzenleme yetkiniz yok."); return; }
-  const row = await freshRow(islemId);
+  const row = await freshRow(targetId);
   if (!row) { alert("Kayıt bulunamadı (arşive taşınmış veya silinmiş olabilir)."); return; }
   const updated = { ...row };
   let etiket = "";
@@ -2587,25 +2589,174 @@ async function islemAction(action) {
     rows = rows.map(r => r.id === row.id ? saved : r);
     setSaveError("");
     render();
-    renderIslem();
+    const isOv = document.getElementById("islemOverlay");
+    if (isOv && !isOv.classList.contains("hidden")) renderIslem();
+    if (document.getElementById("opOverlay")) renderOpCard();
     await apiLog("guncelleme", row.id, saved.musteri,
-      `📱 QR işlem ekranı: ${etiket}` +
+      `📱 ${document.getElementById("opOverlay") ? "Operasyon ekranı" : "QR işlem ekranı"}: ${etiket}` +
       (saved.loadingStartedAt && saved.loadingEndedAt ? ` · süre: ${fmtSure(saved.loadingEndedAt - saved.loadingStartedAt)}` : ""));
     showToast(`✅ ${esc(saved.musteri)}: ${etiket}`);
   } catch (e) { alert("Kaydedilemedi: " + e.message); }
 }
-document.getElementById("btnIslemClose").addEventListener("click", closeIslem);
+
+/* ================= 📱 OPERASYON EKRANI (depo mobil) ================= */
+let currentOpId = null;
+
+function openOperasyon() {
+  if (document.getElementById("opOverlay")) return;
+  const ov = document.createElement("div");
+  ov.id = "opOverlay";
+  ov.className = "depo-overlay op-overlay";
+  ov.innerHTML = `
+    <div class="op-head">
+      <div>
+        <div class="depo-clock" id="opClock" style="font-size:32px">--:--</div>
+        <div class="depo-date">Operasyon Ekranı</div>
+      </div>
+      <button class="btn" id="btnOpClose" style="font-size:15px;padding:10px 18px">✖ Kapat</button>
+    </div>
+    <div class="op-search-wrap">
+      <input id="opSearch" placeholder="🔍 Müşteri / #kimlik / konteyner ara…" autocomplete="off" />
+    </div>
+    <div id="opResults" class="op-results"></div>
+    <div id="opCard"></div>`;
+  document.body.appendChild(ov);
+  document.body.classList.add("op-open");
+  ov.querySelector("#btnOpClose").addEventListener("click", closeOperasyon);
+  const inp = ov.querySelector("#opSearch");
+  inp.addEventListener("input", () => renderOpResults(inp.value));
+  inp.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      const hits = opMatches(inp.value);
+      if (hits.length) openOpCard(hits[0].id);
+    }
+  });
+  renderOpResults("");
+  setTimeout(() => inp.focus(), 80);
+  if (!currentUser) showLogin("Operasyon ekranı için giriş yapın.");
+}
+function closeOperasyon() {
+  const ov = document.getElementById("opOverlay");
+  if (ov) ov.remove();
+  document.body.classList.remove("op-open");
+  currentOpId = null;
+  if (location.hash === "#operasyon") history.replaceState(null, "", location.pathname + location.search);
+}
+function opMatches(q) {
+  q = (q || "").trim().toLowerCase().replace(/^#/, "");
+  if (!q) return [];
+  return rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
+    ((r.musteri || "").toLowerCase().includes(q) ||
+     r.id.toLowerCase().endsWith(q) ||
+     (r.aciklama || "").toLowerCase().includes(q)))
+    .sort((a, b) => (oncelikVal(a) - oncelikVal(b)) || tarihCmp(gecikmeTarihi(a), gecikmeTarihi(b)))
+    .slice(0, 8);
+}
+function renderOpResults(q) {
+  const res = document.getElementById("opResults");
+  if (!res) return;
+  const s = (q || "").trim().toLowerCase().replace(/^#/, "");
+  let hits;
+  if (!s) {
+    const today = todayISO();
+    hits = rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === today)
+      .sort((a, b) => (oncelikVal(a) - oncelikVal(b)));
+    if (!hits.length) hits = rows.filter(r => r.durum !== "Yükleme Tamamlandı")
+      .sort((a, b) => tarihCmp(gecikmeTarihi(a), gecikmeTarihi(b))).slice(0, 8);
+  } else hits = opMatches(s);
+  res.innerHTML = hits.map(r => `
+    <div class="op-hit" data-opid="${r.id}">
+      <div><b>${esc(r.musteri)}</b>
+        <div class="op-hit-sub">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.oncelikNo ? " · ⭐" + esc(r.oncelikNo) : ""}${r.aciklama ? " · 📝 " + esc(r.aciklama) : ""}</div>
+      </div>
+      <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span>
+    </div>`).join("") || `<p class="hint" style="color:#8aa0b8">Eşleşme yok.</p>`;
+  res.querySelectorAll("[data-opid]").forEach(el =>
+    el.addEventListener("click", () => openOpCard(el.dataset.opid)));
+}
+function openOpCard(id) {
+  currentOpId = id;
+  renderOpCard();
+  const card = document.getElementById("opCard");
+  if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+async function renderOpCard() {
+  const holder = document.getElementById("opCard");
+  if (!holder || !currentOpId) return;
+  let r = null;
+  try { r = await freshRow(currentOpId); } catch (e) {}
+  if (!r) r = rows.find(x => x.id === currentOpId);
+  if (!r) { holder.innerHTML = `<div class="op-card"><div class="m">Kayıt bulunamadı</div></div>`; return; }
+  const b = sureBilgi(r);
+  const notlar = (r.comments || []).slice(-3).reverse();
+  const btns = r.durum === "Yükleme Tamamlandı" ? `
+    <div class="islem-done">✅ Bu yükleme tamamlandı${r.loadingStartedAt && r.loadingEndedAt ? ` · Baş:${fmtTime(r.loadingStartedAt)} - Bitiş:${fmtTime(r.loadingEndedAt)}` : ""}</div>` : `
+    <button class="islem-btn b-geldi" data-opact="geldi">🚛 Araç Geldi${r.araciGeldi === "GELDİ" ? " ✔" : ""}</button>
+    <button class="islem-btn b-basla" data-opact="baslat">▶️ Yüklemeyi Başlat${r.durum === "Yükleniyor" ? " (çalışıyor)" : ""}</button>
+    <button class="islem-btn b-bitir" data-opact="bitir">✅ Yüklemeyi Bitir</button>`;
+  holder.innerHTML = `
+    <div class="op-card">
+      <div class="m">${esc(r.musteri)}</div>
+      <div class="sub">${esc(r.blm)} · ${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.oncelikNo ? " · ⭐ " + esc(r.oncelikNo) : ""} · #${esc(r.id.slice(-6))}</div>
+      <div class="op-info">
+        <div><span>Reel Plan:</span> <b>${formatDate(gecikmeTarihi(r))}</b></div>
+        <div><span>Durum:</span> <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></div>
+        <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b></div>
+        <div><span>Açıklama:</span> ${r.aciklama ? esc(r.aciklama) : "-"}</div>
+      </div>
+      ${b.durum === "live" ? `<div class="islem-done" style="background:#2d2410;border-color:#fbbf24;color:#fbbf24">⏱ <span id="opElapsed">${fmtSure(Date.now() - r.loadingStartedAt)}</span> geçti · ${fmtTime(r.loadingStartedAt)}'da başladı</div>` : ""}
+      ${notlar.length ? `<div class="op-notes">${notlar.map(cm => `<div class="op-note-item">💬 ${esc(cm.text)}<span>${esc(shortUser(cm.user))} · ${fmtDateTime(cm.ts)}</span></div>`).join("")}</div>` : ""}
+      <div class="islem-btns">${btns}</div>
+      <div class="op-note">
+        <textarea id="opNotText" placeholder="📝 Özel not yaz… (örn. araç 2 sa gecikmeli, evrak eksik)"></textarea>
+        <button class="op-btn-not" id="btnOpNot">+ Not Ekle</button>
+      </div>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn" id="btnOpBack">↩ Listeye dön</button>
+      </div>
+    </div>`;
+  holder.querySelectorAll("[data-opact]").forEach(btn =>
+    btn.addEventListener("click", () => islemAction(btn.dataset.opact, currentOpId)));
+  holder.querySelector("#btnOpNot").addEventListener("click", opNotEkle);
+  holder.querySelector("#btnOpBack").addEventListener("click", () => {
+    currentOpId = null;
+    holder.innerHTML = "";
+    renderOpResults(document.getElementById("opSearch").value);
+  });
+}
+async function opNotEkle() {
+  const ta = document.getElementById("opNotText");
+  if (!ta) return;
+  const text = ta.value.trim();
+  if (!text) { alert("Not metni yaz."); return; }
+  if (!currentUser) { showLogin("Not eklemek için giriş yapın."); return; }
+  if (!hasPerm("edit")) { alert("Bu işlem için düzenleme yetkiniz yok."); return; }
+  try {
+    const row = await freshRow(currentOpId);
+    if (!row) { alert("Kayıt bulunamadı."); return; }
+    const comments = (row.comments || []).slice();
+    comments.push({ ts: Date.now(), user: currentUser.email, text });
+    const saved = await apiUpdate(row.id, { ...row, comments });
+    rows = rows.map(r => r.id === row.id ? saved : r);
+    setSaveError("");
+    await apiLog("yorum", row.id, saved.musteri, `📱 operasyon notu: ${text.length > 70 ? text.slice(0, 70) + "…" : text}`);
+    showToast("✅ Not eklendi.");
+    renderOpCard();
+  } catch (e) { alert("Not kaydedilemedi: " + e.message); }
+}
+document.getElementById("btnOpOpen").addEventListener("click", openOperasyon);
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && !document.getElementById("islemOverlay").classList.contains("hidden")) closeIslem();
+  if (e.key === "Escape" && document.getElementById("opOverlay")) closeOperasyon();
 });
-window.addEventListener("hashchange", parseIslemHash);
 setInterval(() => {
-  if (document.getElementById("islemOverlay").classList.contains("hidden")) return;
+  const ov = document.getElementById("opOverlay");
+  if (!ov) return;
   const d = new Date();
-  document.getElementById("islemClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-  const el = document.getElementById("islemElapsed");
+  const clk = document.getElementById("opClock");
+  if (clk) clk.textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const el = document.getElementById("opElapsed");
   if (el) {
-    const r = rows.find(x => x.id === islemId);
+    const r = rows.find(x => x.id === currentOpId);
     if (r && r.durum === "Yükleniyor" && r.loadingStartedAt) el.textContent = fmtSure(Date.now() - r.loadingStartedAt);
   }
 }, 1000);
@@ -4348,6 +4499,7 @@ async function tryLogin() {
     if (pendingAction) { const pa = pendingAction; pendingAction = null; runAction(pa); }
     else render();
     if (islemId != null) renderIslem();
+    if (document.getElementById("opOverlay")) renderOpCard();
     otomatikGunlukYedek(); /* günün ilk girişinde yedek alınmamışsa arka planda al */
   } catch (e) {
     err.textContent = "Bağlantı hatası: " + e.message;
