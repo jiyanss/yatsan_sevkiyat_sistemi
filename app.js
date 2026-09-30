@@ -525,7 +525,6 @@ async function apiGetOne(id) {
   const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`);
   return await check(res, "Kayıt okunamadı");
 }
-/* Yazma öncesi taze kopya: başka kullanıcının saniyeler önceki değişikliklerini korur */
 async function freshRow(id) {
   const server = await apiGetOne(id);
   if (!server) return null;
@@ -537,7 +536,7 @@ async function freshRow(id) {
   r.ad = (r.ad == null || r.ad === "") ? 1 : (Number(r.ad) || 1);
   r.durum = r.durum || "Yükleme Bekliyor";
   r.comments = Array.isArray(r.comments) ? r.comments : [];
-  rows = rows.map(x => x.id === id ? r : x); /* local cache de tazelensin */
+  rows = rows.map(x => x.id === id ? r : x);
   return r;
 }
 
