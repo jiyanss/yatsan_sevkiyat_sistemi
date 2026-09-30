@@ -2606,7 +2606,7 @@ document.addEventListener("keydown", e => {
 let currentOpId = null;
 
 function openOperasyon() {
-  if (document.getElementById("opOverlay")) { renderOpResults(document.getElementById("opSearch")?.value || ""); return; }
+  if (document.getElementById("opOverlay")) { (document.getElementById("opSearch")?.value || ""); return; }
   const ov = document.createElement("div");
   ov.id = "opOverlay";
   ov.className = "depo-overlay op-overlay";
@@ -2627,7 +2627,7 @@ function openOperasyon() {
   document.body.classList.add("op-open");
   ov.querySelector("#btnOpClose").addEventListener("click", closeOperasyon);
   const inp = ov.querySelector("#opSearch");
-  inp.addEventListener("input", () => renderOpResults(inp.value));
+  inp.addEventListener("input", () => (inp.value));
   inp.addEventListener("keydown", e => {
     if (e.key === "Enter") {
       const hits = opMatches(inp.value);
@@ -2662,6 +2662,14 @@ function opMatches(q) {
      r.id.toLowerCase().endsWith(q) ||
      (r.aciklama || "").toLowerCase().includes(q)))).slice(0, 8);
 }
+function opHitHtml(r) {
+  return `<div class="op-hit" data-opid="${r.id}">
+    <div><b>${esc(r.musteri)}</b>
+      <div class="op-hit-sub">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.oncelikNo ? " · ⭐" + esc(r.oncelikNo) : ""}${r.aciklama ? " · 📝 " + esc(r.aciklama) : ""}</div>
+    </div>
+    <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span>
+  </div>`;
+}
 function renderOpResults(q) {
   const res = document.getElementById("opResults");
   if (!res) return;
@@ -2670,15 +2678,27 @@ function renderOpResults(q) {
   if (!s) {
     const today = todayISO();
     hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === today));
-    if (!hits.length) hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı")).slice(0, 8);
+    if (!hits.length) {
+      /* Bugün iş bitti — sessizce yarının işlerini göstermek yerine net bildir */
+      res.innerHTML = `
+        <div class="islem-done" style="margin-bottom:10px">🎉 Bugün (${formatDate(today)}) için bekleyen yükleme yok — gün tamam!</div>
+        <div style="text-align:center;margin-bottom:10px">
+          <button class="btn" id="btnOpYarin">📅 Yarının planını göster</button>
+        </div>`;
+      res.querySelector("#btnOpYarin").addEventListener("click", () => {
+        const yarin = new Date(); yarin.setDate(yarin.getDate() + 1);
+        const yISO = isoFromDate(yarin);
+        const yHits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === yISO));
+        res.innerHTML = yHits.length
+          ? yHits.map(r => opHitHtml(r)).join("") || `<p class="hint" style="color:#8aa0b8">Yarın için kayıt yok.</p>`
+          : `<p class="hint" style="color:#8aa0b8">Yarın için kayıt yok.</p>`;
+        res.querySelectorAll("[data-opid]").forEach(el =>
+          el.addEventListener("click", () => openOpCard(el.dataset.opid)));
+      });
+      return;
+    }
   } else hits = opMatches(s);
-  res.innerHTML = hits.map(r => `
-    <div class="op-hit" data-opid="${r.id}">
-      <div><b>${esc(r.musteri)}</b>
-        <div class="op-hit-sub">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.oncelikNo ? " · ⭐" + esc(r.oncelikNo) : ""}${r.aciklama ? " · 📝 " + esc(r.aciklama) : ""}</div>
-      </div>
-      <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span>
-    </div>`).join("") || `<p class="hint" style="color:#8aa0b8">Eşleşme yok.</p>`;
+  res.innerHTML = hits.map(r => opHitHtml(r)).join("") || `<p class="hint" style="color:#8aa0b8">Eşleşme yok.</p>`;
   res.querySelectorAll("[data-opid]").forEach(el =>
     el.addEventListener("click", () => openOpCard(el.dataset.opid)));
 }
