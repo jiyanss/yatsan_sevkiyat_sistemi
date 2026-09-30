@@ -2642,15 +2642,23 @@ function closeOperasyon() {
   currentOpId = null;
   if (location.hash === "#operasyon") history.replaceState(null, "", location.pathname + location.search);
 }
+/* Operasyon sırası: Yükleniyor en üstte → öncelik no → Reel Plan */
+function opSort(list) {
+  return list.slice().sort((a, b) => {
+    const da = DURUM_SIRA[a.durum] ?? 9, db = DURUM_SIRA[b.durum] ?? 9;
+    if (da !== db) return da - db;
+    const pa = oncelikVal(a), pb = oncelikVal(b);
+    if (pa !== pb) return pa - pb;
+    return tarihCmp(gecikmeTarihi(a), gecikmeTarihi(b));
+  });
+}
 function opMatches(q) {
   q = (q || "").trim().toLowerCase().replace(/^#/, "");
   if (!q) return [];
-  return rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
+  return opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
     ((r.musteri || "").toLowerCase().includes(q) ||
      r.id.toLowerCase().endsWith(q) ||
-     (r.aciklama || "").toLowerCase().includes(q)))
-    .sort((a, b) => (oncelikVal(a) - oncelikVal(b)) || tarihCmp(gecikmeTarihi(a), gecikmeTarihi(b)))
-    .slice(0, 8);
+     (r.aciklama || "").toLowerCase().includes(q)))).slice(0, 8);
 }
 function renderOpResults(q) {
   const res = document.getElementById("opResults");
@@ -2659,10 +2667,8 @@ function renderOpResults(q) {
   let hits;
   if (!s) {
     const today = todayISO();
-    hits = rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === today)
-      .sort((a, b) => (oncelikVal(a) - oncelikVal(b)));
-    if (!hits.length) hits = rows.filter(r => r.durum !== "Yükleme Tamamlandı")
-      .sort((a, b) => tarihCmp(gecikmeTarihi(a), gecikmeTarihi(b))).slice(0, 8);
+       hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === today));
+    if (!hits.length) hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı")).slice(0, 8);
   } else hits = opMatches(s);
   res.innerHTML = hits.map(r => `
     <div class="op-hit" data-opid="${r.id}">
@@ -2676,17 +2682,18 @@ function renderOpResults(q) {
 }
 function openOpCard(id) {
   currentOpId = id;
-  renderOpCard();
-  const card = document.getElementById("opCard");
-  if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+  renderOpCard(true); /* true = kart çizilince otomatik kaydır */
 }
-async function renderOpCard() {
+async function renderOpCard(scrollToIt = false) {
   const holder = document.getElementById("opCard");
   if (!holder || !currentOpId) return;
   let r = null;
   try { r = await freshRow(currentOpId); } catch (e) {}
   if (!r) r = rows.find(x => x.id === currentOpId);
   if (!r) { holder.innerHTML = `<div class="op-card"><div class="m">Kayıt bulunamadı</div></div>`; return; }
+     if (scrollToIt) {
+    requestAnimationFrame(() => holder.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
   const b = sureBilgi(r);
   const notlar = (r.comments || []).slice(-3).reverse();
   const btns = r.durum === "Yükleme Tamamlandı" ? `
@@ -2715,13 +2722,12 @@ async function renderOpCard() {
         <button class="btn" id="btnOpBack">↩ Listeye dön</button>
       </div>
     </div>`;
-  holder.querySelectorAll("[data-opact]").forEach(btn =>
-    btn.addEventListener("click", () => islemAction(btn.dataset.opact, currentOpId)));
-  holder.querySelector("#btnOpNot").addEventListener("click", opNotEkle);
-  holder.querySelector("#btnOpBack").addEventListener("click", () => {
+   holder.querySelector("#btnOpBack").addEventListener("click", () => {
     currentOpId = null;
     holder.innerHTML = "";
     renderOpResults(document.getElementById("opSearch").value);
+    const ov = document.getElementById("opOverlay");
+    if (ov) ov.scrollTo({ top: 0, behavior: "smooth" });
   });
 }
 async function opNotEkle() {
