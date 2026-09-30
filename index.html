@@ -36,8 +36,8 @@
     <input id="search" placeholder="🔍 Müşteri ara" style="min-width:120px" />
     <select id="dateFilter"></select>
     <label class="arsiv-chk" title="Arşivdeki kayıtları listeye ve raporlara dahil et">
-  <input type="checkbox" id="arsivDahil" /> 🗄️
-</label>
+      <input type="checkbox" id="arsivDahil" /> 🗄️
+    </label>
     <span id="customRange" class="hidden" style="display:flex;gap:4px;align-items:center">
       <input type="date" id="dateFrom" style="padding:5px 6px" />
       <span style="color:var(--muted)">–</span>
@@ -50,32 +50,39 @@
       <option value="yukleniyor">Yükleniyor</option>
       <option value="tamamlandi">Tamamlandı</option>
     </select>
-    <button class="btn" id="btnToggleSummary">Özeti gizle</button>
-    <button class="btn" id="btnReports">📊 Raporlar</button>
-    <button class="btn" id="btnCalendar">📅 Takvim</button>
-    <button class="btn" id="btnDepo">🖥️ Depo</button>
-    <button class="btn" id="btnHistory">🕘 Geçmiş</button>
-    <button class="btn" id="btnPrint">🖨️ Yazdır</button>
-    <button class="btn" id="btnExport">📤 Excel</button>
-    <button class="btn" id="btnImportOpen">📥 Excel Yükle</button>
+
+    <button class="btn" id="btnInlineAdd" data-menu="inline">+ Yeni kayıt</button>
+    <button class="btn primary" id="btnDepo" data-menu="depo">🖥️ Depo</button>
+    <button class="btn" id="btnReports" data-menu="reports">📊 Raporlar</button>
+    <button class="btn" id="btnCalendar" data-menu="calendar">📅 Takvim</button>
+    <button class="btn" id="btnOpOpen" data-menu="op">📱 Operasyon</button>
+    <button class="btn" id="btnScanMain" data-menu="scan">📡 Okut</button>
+
+    <button class="btn" id="btnToggleSummary" data-menu="summary">Özeti gizle</button>
+    <button class="btn" id="btnHistory" data-menu="history">🕘 Geçmiş</button>
+    <button class="btn" id="btnPrint" data-menu="print">🖨️ Yazdır</button>
+    <button class="btn" id="btnExport" data-menu="export">📤 Excel</button>
+    <button class="btn" id="btnImportOpen" data-menu="import">📥 Excel Yükle</button>
+    <button class="btn" id="btnShowForm" data-menu="form">+ Form</button>
+    <button class="btn" id="btnQrPrint" data-menu="qrprint">📱 QR Yazdır</button>
+    <button class="btn" id="btnCols" data-menu="cols" title="Kolonları gizle/göster">▦ Kolonlar</button>
+    <button class="btn" id="btnFit" data-menu="fit" title="Tabloyu ekran genişliğine otomatik sığdır">⤢ Sığdır</button>
+    <button class="btn" id="btnTheme" data-menu="theme">🌙</button>
+    <button class="btn" id="btnReload" data-menu="reload">↻</button>
+
+    <button class="btn hidden" id="btnBackup" data-menu="backup">💾 Yedek</button>
+    <button class="btn hidden" id="btnSurePanel" data-menu="sure">⏱️ Süreler</button>
+    <button class="btn hidden" id="btnArsiv" data-menu="arsiv">🗄️ Arşiv</button>
+    <button class="btn hidden" id="btnAdminPanel" data-menu="admin">🛡️ Admin Panel</button>
+    <button class="btn hidden" id="btnPwaInstall" data-menu="pwa">📲 Uygulamayı Yükle</button>
+
     <div class="colmenu-wrap">
-      <button class="btn" id="btnCols" title="Kolonları gizle/göster">▦ Kolonlar</button>
-      <button class="btn" id="btnFit" title="Tabloyu ekran genişliğine otomatik sığdır">⤢ Sığdır</button>
       <div id="colMenu" class="colmenu hidden"></div>
     </div>
-    <button class="btn hidden" id="btnBackup">💾 Yedek</button>
-    <button class="btn hidden" id="btnSurePanel">⏱️ Süreler</button>
-    <button class="btn hidden" id="btnArsiv">🗄️ Arşiv</button>
-    <button class="btn" id="btnQrPrint">📱 QR Yazdır</button>
-    <button class="depo-tab" id="btnOpOpen" style="background:#059669;border-color:#059669;color:#fff">📱 Operasyon</button>
-    <button class="btn" id="btnScanMain">📡 Okut</button>
-    <button class="btn hidden" id="btnAdminPanel">🛡️ Admin Panel</button>
-    <button class="btn" id="btnTheme">🌙</button>
-    <button class="btn" id="btnReload">↻</button>
-    <button class="btn" id="btnShowForm">+ Form</button>
-    <button class="btn primary" id="btnInlineAdd">+ Yeni kayıt</button>
-    <button class="btn hidden" id="btnPwaInstall">📲 Uygulamayı Yükle</button>
     <div class="user-box" id="userBox"></div>
+
+    <button class="btn" id="btnMenu" title="Menü">☰</button>
+    <div id="menuDrop" class="menu-drop hidden"></div>
   </div>
 </header>
 <main>
