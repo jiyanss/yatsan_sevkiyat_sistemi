@@ -648,4 +648,6 @@ body.menu-editing header .btn[data-menu]:not(.hidden) { outline: 2px dashed var(
   border-color: var(--primary) !important;
   color: #fff !important;
   justify-content: center;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
