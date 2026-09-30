@@ -2835,6 +2835,11 @@ function closeScanner() {
   const ov = document.getElementById("scanOverlay");
   if (ov) ov.remove();
 }
+/* Hash değişimleri: QR tarayıcı set'i + #operasyon + aynı sekmede gelen linkler */
+window.addEventListener("hashchange", () => {
+  if (location.hash === "#operasyon") openOperasyon();
+  parseIslemHash();
+});
 /* Manuel arama: etiketteki #XXXXXX kimliği ya da müşteri adıyla */
 function renderScanFallback() {
   const fb = document.getElementById("scanFallback");
