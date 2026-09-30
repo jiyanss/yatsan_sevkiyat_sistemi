@@ -1339,6 +1339,7 @@ document.addEventListener("click", e => {
     document.getElementById("colMenu").classList.add("hidden");
   }
 });
+const MENU_DEFAULT_OUT = ["inline", "depo", "reports", "calendar", "op", "scan"];
 
 /* ================= Yetki kapısı ================= */
 function gate(type, param) {
