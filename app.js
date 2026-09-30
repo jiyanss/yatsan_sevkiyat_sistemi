@@ -2503,6 +2503,111 @@ setInterval(() => {
   }
 }, 1000);
 
+/* ================= 📡 DEPO QR OKUTUCU ================= */
+const barcodeSupported = "BarcodeDetector" in window;
+let scanStream = null;
+
+function openScanner() {
+  const overlay = document.createElement("div");
+  overlay.id = "scanOverlay";
+  overlay.className = "depo-overlay";
+  overlay.style.zIndex = "92";
+  overlay.innerHTML = `
+    <div class="depo-head">
+      <div>
+        <div class="depo-clock" style="font-size:28px">📡 QR Okut</div>
+        <div class="depo-date" id="scanStatus">Kamera hazırlanıyor…</div>
+      </div>
+      <button class="btn" id="btnScanClose" style="font-size:15px;padding:10px 18px">✖ Kapat</button>
+    </div>
+    <div id="scanBody" style="max-width:640px;margin:0 auto">
+      <div style="position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:4/3">
+        <video id="scanVideo" style="width:100%;height:100%;object-fit:cover" playsinline muted></video>
+        <div style="position:absolute;inset:15%;border:3px solid #818cf8;border-radius:12px;pointer-events:none"></div>
+      </div>
+      <p class="hint" style="margin-top:12px">QR'ı çerçeveye tuttur — otomatik algılanır ve işlem ekranı açılır.</p>
+    </div>
+    <div style="max-width:640px;margin:12px auto 40px" id="scanFallback"></div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector("#btnScanClose").addEventListener("click", closeScanner);
+
+  if (!barcodeSupported) {
+    document.getElementById("scanBody").style.display = "none";
+    document.getElementById("scanStatus").textContent = "Bu cihaz kamera algılamayı desteklemiyor — manuel arama:";
+    renderScanFallback();
+    return;
+  }
+  startCamera();
+}
+async function startCamera() {
+  const video = document.getElementById("scanVideo");
+  const status = document.getElementById("scanStatus");
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    video.srcObject = scanStream;
+    await video.play();
+    status.textContent = "Kamera hazır — QR'ı çerçeveye tuttur.";
+    const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+    const loop = async () => {
+      if (!document.getElementById("scanOverlay")) return;
+      try {
+        const codes = await detector.detect(video);
+        if (codes.length) {
+          const url = codes[0].rawValue;
+          const m = url.match(/#islem=([^&\s]+)/);
+          if (m) {
+            closeScanner();
+            location.hash = "#islem=" + m[1]; /* hashchange → parseIslemHash → openIslem */
+            return;
+          }
+        }
+      } catch (e) {}
+      requestAnimationFrame(() => setTimeout(loop, 250));
+    };
+    loop();
+  } catch (e) {
+    status.textContent = "Kamera açılamadı (" + (e.message || e.name) + ") — manuel arama:";
+    document.getElementById("scanBody").style.display = "none";
+    renderScanFallback();
+  }
+}
+function closeScanner() {
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  const ov = document.getElementById("scanOverlay");
+  if (ov) ov.remove();
+}
+/* Manuel arama: etiketteki #XXXXXX kimliği ya da müşteri adıyla */
+function renderScanFallback() {
+  const fb = document.getElementById("scanFallback");
+  if (!fb) return;
+  fb.innerHTML = `
+    <label style="font-size:12px;color:#8aa0b8">Etiketteki #kimlik veya müşteri adı:</label>
+    <input id="scanManual" placeholder="örn. #t-1027 ya da GOOSSENS"
+      style="width:100%;padding:12px;font-size:16px;margin-top:6px" />
+    <div id="scanResults" style="margin-top:10px"></div>`;
+  const inp = fb.querySelector("#scanManual");
+  inp.addEventListener("input", () => {
+    const res = fb.querySelector("#scanResults");
+    const q = inp.value.trim().toLowerCase().replace("#", "");
+    if (q.length < 2) { res.innerHTML = ""; return; }
+    const hits = rows.filter(r =>
+      (r.id.toLowerCase().endsWith(q) || (r.musteri || "").toLowerCase().includes(q)) && r.durum !== "Yükleme Tamamlandı"
+    ).slice(0, 5);
+    res.innerHTML = hits.map(r => `
+      <div class="depo-week-row" style="cursor:pointer" data-scanid="${r.id}">
+        <div class="w-m">${esc(r.musteri)} <span style="color:#8aa0b8">#${esc(r.id.slice(-6))}</span></div>
+        <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.durum)}</div>
+      </div>`).join("") || `<p class="hint">Eşleşme yok.</p>`;
+    res.querySelectorAll("[data-scanid]").forEach(el =>
+      el.addEventListener("click", () => { closeScanner(); openIslem(el.dataset.scanid); }));
+  });
+  setTimeout(() => inp.focus(), 50);
+}
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("scanOverlay")) closeScanner();
+});
+
 /* ================= Olaylar ================= */
 document.getElementById("tbody").addEventListener("click", e => {
   const btn = e.target.closest("button[data-action]");
