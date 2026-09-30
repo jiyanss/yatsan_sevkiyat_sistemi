@@ -2597,11 +2597,11 @@ async function islemAction(action, idOverride = null) {
   } catch (e) { alert("Kaydedilemedi: " + e.message); }
 }
 
-/* ================= 📱 OPERASYON EKRANI (depo mobil) ================= */
+/* ================= 📱 OPERASYON EKRANI (depo mobil) — v2 ================= */
 let currentOpId = null;
 
 function openOperasyon() {
-  if (document.getElementById("opOverlay")) return;
+  if (document.getElementById("opOverlay")) { renderOpResults(document.getElementById("opSearch")?.value || ""); return; }
   const ov = document.createElement("div");
   ov.id = "opOverlay";
   ov.className = "depo-overlay op-overlay";
@@ -2640,7 +2640,6 @@ function closeOperasyon() {
   currentOpId = null;
   if (location.hash === "#operasyon") history.replaceState(null, "", location.pathname + location.search);
 }
-/* Operasyon sırası: Yükleniyor en üstte → öncelik no → Reel Plan */
 function opSort(list) {
   return list.slice().sort((a, b) => {
     const da = DURUM_SIRA[a.durum] ?? 9, db = DURUM_SIRA[b.durum] ?? 9;
@@ -2665,7 +2664,7 @@ function renderOpResults(q) {
   let hits;
   if (!s) {
     const today = todayISO();
-       hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === today));
+    hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === today));
     if (!hits.length) hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı")).slice(0, 8);
   } else hits = opMatches(s);
   res.innerHTML = hits.map(r => `
@@ -2680,7 +2679,7 @@ function renderOpResults(q) {
 }
 function openOpCard(id) {
   currentOpId = id;
-  renderOpCard(true); /* true = kart çizilince otomatik kaydır */
+  renderOpCard(true);
 }
 async function renderOpCard(scrollToIt = false) {
   const holder = document.getElementById("opCard");
@@ -2689,9 +2688,6 @@ async function renderOpCard(scrollToIt = false) {
   try { r = await freshRow(currentOpId); } catch (e) {}
   if (!r) r = rows.find(x => x.id === currentOpId);
   if (!r) { holder.innerHTML = `<div class="op-card"><div class="m">Kayıt bulunamadı</div></div>`; return; }
-     if (scrollToIt) {
-    requestAnimationFrame(() => holder.scrollIntoView({ behavior: "smooth", block: "start" }));
-  }
   const b = sureBilgi(r);
   const notlar = (r.comments || []).slice(-3).reverse();
   const btns = r.durum === "Yükleme Tamamlandı" ? `
@@ -2720,7 +2716,17 @@ async function renderOpCard(scrollToIt = false) {
         <button class="btn" id="btnOpBack">↩ Listeye dön</button>
       </div>
     </div>`;
-   holder.querySelector("#btnOpBack").addEventListener("click", () => {
+  if (scrollToIt) {
+    requestAnimationFrame(() => holder.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+  holder.querySelectorAll("[data-opact]").forEach(btn =>
+    btn.addEventListener("click", () => {
+      console.log("🖱️ operasyon butonu:", btn.dataset.opact, "→ id:", currentOpId);
+      if (!currentOpId) { alert("Kayıt seçilemedi — sayfayı yenileyip tekrar dene."); return; }
+      islemAction(btn.dataset.opact, currentOpId);
+    }));
+  holder.querySelector("#btnOpNot").addEventListener("click", opNotEkle);
+  holder.querySelector("#btnOpBack").addEventListener("click", () => {
     currentOpId = null;
     holder.innerHTML = "";
     renderOpResults(document.getElementById("opSearch").value);
@@ -2733,6 +2739,7 @@ async function opNotEkle() {
   if (!ta) return;
   const text = ta.value.trim();
   if (!text) { alert("Not metni yaz."); return; }
+  if (!currentOpId) { alert("Önce bir kayıt seç."); return; }
   if (!currentUser) { showLogin("Not eklemek için giriş yapın."); return; }
   if (!hasPerm("edit")) { alert("Bu işlem için düzenleme yetkiniz yok."); return; }
   try {
@@ -2764,7 +2771,6 @@ setInterval(() => {
     if (r && r.durum === "Yükleniyor" && r.loadingStartedAt) el.textContent = fmtSure(Date.now() - r.loadingStartedAt);
   }
 }, 1000);
-
 /* ================= 📡 DEPO QR OKUTUCU ================= */
 const barcodeSupported = "BarcodeDetector" in window;
 let scanStream = null;
