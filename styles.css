@@ -642,3 +642,10 @@ body.op-open #loginModal { z-index: 95; }
 .menu-edit-toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 12px; font-size: 13px; border-radius: 8px; cursor: pointer; }
 .menu-edit-toggle:hover { background: var(--primary-soft); }
 body.menu-editing header .btn[data-menu]:not(.hidden) { outline: 2px dashed var(--primary); outline-offset: 2px; }
+
+.menu-drop .btn.primary {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
+  justify-content: center;
+}
