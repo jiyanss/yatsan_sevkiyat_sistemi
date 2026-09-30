@@ -632,7 +632,7 @@ body.islem-open #loginModal { z-index: 95; }
 body.op-open #loginModal { z-index: 95; }
 
 .menu-drop {
-  position: fixed; z-index: 60; background: var(--surface); border: 1px solid var(--border);
+  position: fixed; z-index: 70; background: var(--surface); border: 1px solid var(--border);
   border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,.22); padding: 6px;
   min-width: 240px; max-height: 80vh; overflow-y: auto;
 }
