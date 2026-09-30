@@ -776,10 +776,10 @@ async function load(withSpinner = true, live = false) {
   } catch (e) {
     setSaveError(e.message);
   }
-  loading = false;
+   loading = false;
   render();
   if (!document.getElementById("depoOverlay").classList.contains("hidden")) renderDepoContent();
-  if (!document.getElementById("islemOverlay").classList.contains("hidden")) renderIslem();
+  if (document.getElementById("opOverlay")) renderOpCard();
 }
 function setSaveError(msg) {
   const el = document.getElementById("saveError");
@@ -4626,7 +4626,8 @@ updateUserUI();
   if (arsivDahil && !Array.isArray(arsivCache)) {
     try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
   }
-  parseIslemHash();   /* ← BU SATIR: QR linki ilk yüklemede işlensin */
+    parseIslemHash();
+  if (location.hash === "#operasyon") openOperasyon();
   startLiveSync();
   otomatikGunlukYedek();
 })();
