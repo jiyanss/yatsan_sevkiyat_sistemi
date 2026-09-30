@@ -28,7 +28,7 @@
       <p class="subtitle">Canlı senkron · süre takibi · kapasite · takvim · depo modu</p>
     </div>
   </div>
-  <div class="toolbar">
+   <div class="toolbar">
     <select id="searchScope" title="Arama kapsamı">
       <option value="musteri">Müşteri</option>
       <option value="wide">Her yerde</option>
@@ -50,28 +50,32 @@
       <option value="yukleniyor">Yükleniyor</option>
       <option value="tamamlandi">Tamamlandı</option>
     </select>
-    <button class="btn" id="btnShowForm" data-menu="form">+ Form</button>
+
     <button class="btn" id="btnInlineAdd" data-menu="inline">+ Yeni kayıt</button>
     <button class="btn primary" id="btnDepo" data-menu="depo">🖥️ Depo</button>
-    <button class="btn" id="btnOpOpen" data-menu="op">📱 Operasyon</button>
     <button class="btn" id="btnReports" data-menu="reports">📊 Raporlar</button>
     <button class="btn" id="btnCalendar" data-menu="calendar">📅 Takvim</button>
-    <button class="btn" id="btnQrPrint" data-menu="qrprint">📱 QR Yazdır</button>
+    <button class="btn" id="btnOpOpen" data-menu="op">📱 Operasyon</button>
     <button class="btn" id="btnScanMain" data-menu="scan">📡 Okut</button>
-    <button class="btn" id="btnFit" data-menu="fit" title="Tabloyu ekran genişliğine otomatik sığdır">⤢ Sığdır</button>
+
+    <button class="btn" id="btnToggleSummary" data-menu="summary">Özeti gizle</button>
     <button class="btn" id="btnHistory" data-menu="history">🕘 Geçmiş</button>
+    <button class="btn" id="btnPrint" data-menu="print">🖨️ Yazdır</button>
     <button class="btn" id="btnExport" data-menu="export">📤 Excel</button>
     <button class="btn" id="btnImportOpen" data-menu="import">📥 Excel Yükle</button>
-    <button class="btn" id="btnPrint" data-menu="print">🖨️ Yazdır</button>
+    <button class="btn" id="btnShowForm" data-menu="form">+ Form</button>
+    <button class="btn" id="btnQrPrint" data-menu="qrprint">📱 QR Yazdır</button>
     <button class="btn" id="btnCols" data-menu="cols" title="Kolonları gizle/göster">▦ Kolonlar</button>
+    <button class="btn" id="btnFit" data-menu="fit" title="Tabloyu ekran genişliğine otomatik sığdır">⤢ Sığdır</button>
     <button class="btn" id="btnTheme" data-menu="theme">🌙</button>
     <button class="btn" id="btnReload" data-menu="reload">↻</button>
-    <button class="btn" id="btnToggleSummary" data-menu="summary">Özeti gizle</button>
+
     <button class="btn hidden" id="btnBackup" data-menu="backup">💾 Yedek</button>
     <button class="btn hidden" id="btnSurePanel" data-menu="sure">⏱️ Süreler</button>
     <button class="btn hidden" id="btnArsiv" data-menu="arsiv">🗄️ Arşiv</button>
     <button class="btn hidden" id="btnAdminPanel" data-menu="admin">🛡️ Admin Panel</button>
     <button class="btn hidden" id="btnPwaInstall" data-menu="pwa">📲 Uygulamayı Yükle</button>
+
     <div class="colmenu-wrap">
       <div id="colMenu" class="colmenu hidden"></div>
     </div>
