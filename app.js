@@ -85,7 +85,9 @@ const ACTION_META = {
   "excel":      { label: "Excel yükleme",   dot: "excel" },
   "yetki":      { label: "Yetki değişti",   dot: "excel" },
   "yorum":      { label: "Yorum eklendi",   dot: "edit" },
-  "yedek":      { label: "Otomatik yedek",  dot: "dup" }
+  "yedek":      { label: "Otomatik yedek",  dot: "dup" },
+  "yorum-duzenleme": { label: "Yorum düzenlendi", dot: "edit" },
+  "yorum-silme":     { label: "Yorum silindi",     dot: "del" }
 };
 
 /* ================= Yardımcılar ================= */
