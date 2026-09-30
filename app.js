@@ -4629,27 +4629,36 @@ function loadMenuPrefs() {
 function saveMenuPrefs() {
   try { localStorage.setItem(MENU_KEY, JSON.stringify(menuInDropdown)); } catch (e) {}
 }
+const PERM_HIDDEN_BTNS = ["btnBackup", "btnSurePanel", "btnArsiv", "btnAdminPanel", "btnPwaInstall"];
 function applyMenuLayout() {
   const drop = document.getElementById("menuDrop");
   if (!drop || !menuInDropdown) return;
+  const editing = document.body.classList.contains("menu-editing");
   document.querySelectorAll("header .btn[data-menu]").forEach(b => {
+    if (PERM_HIDDEN_BTNS.includes(b.id)) return; /* görünürlüğünü updateUserUI yönetir */
     const inMenu = menuInDropdown.includes(b.dataset.menu);
-    b.classList.toggle("hidden", inMenu && !document.body.classList.contains("menu-editing"));
+    b.classList.toggle("hidden", inMenu && !editing);
   });
   drop.innerHTML = `
     <button class="btn" id="btnMenuEdit">⚙️ Menüyü Düzenle</button>
-    <div class="menu-sep"></div>
-    ${[...document.querySelectorAll("header .btn[data-menu]")]
-      .filter(b => menuInDropdown.includes(b.dataset.menu))
-      .map(b => b.outerHTML).join("")}`;
-  drop.querySelectorAll(".btn[data-menu]").forEach(clone => {
-    clone.addEventListener("click", () => {
-      const orig = document.querySelector(`header .btn[data-menu="${clone.dataset.menu}"]`);
-      if (orig) orig.click();
-      toggleMenu(false);
+    <div class="menu-sep"></div>`;
+  [...document.querySelectorAll("header .btn[data-menu]")]
+    .filter(b => menuInDropdown.includes(b.dataset.menu) && !b.classList.contains("hidden"))
+    .forEach(b => {
+      const c = b.cloneNode(true);
+      c.classList.remove("hidden");   /* KRİTİK: kopya menüde görünür olsun */
+      c.id = b.id + "_m";             /* id çakışmasını önle */
+      drop.appendChild(c);
+      c.addEventListener("click", e => {
+        e.stopPropagation();
+        b.click();
+        toggleMenu(false);
+      });
     });
+  drop.querySelector("#btnMenuEdit").addEventListener("click", e => {
+    e.stopPropagation();
+    toggleMenuEdit();
   });
-  drop.querySelector("#btnMenuEdit").addEventListener("click", () => toggleMenuEdit());
 }
 function toggleMenu(open) {
   const drop = document.getElementById("menuDrop");
