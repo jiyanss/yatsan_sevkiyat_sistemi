@@ -1439,11 +1439,20 @@ function renderCommentList() {
     c.innerHTML = `<p class="hint">Henüz yorum yok — ilkini ekle.</p>`;
     return;
   }
-  c.innerHTML = list.map(cm => `
-    <div class="cmt-item">
-      <div class="cmt-meta"><b>${esc(shortUser(cm.user))}</b> · ${fmtDateTime(cm.ts)}</div>
+  c.innerHTML = list.map(cm => {
+    const benim = currentUser && cm.user === currentUser.email;
+    const yetki = currentUser && hasPerm("edit") && (isAdmin() || benim);
+    return `
+    <div class="cmt-item" data-cts="${cm.ts}">
+      <div class="cmt-meta"><b>${esc(shortUser(cm.user))}</b> · ${fmtDateTime(cm.ts)}${cm.duzenlendi ? ` <span title="${cm.duzenleyen ? esc(shortUser(cm.duzenleyen)) + " · " : ""}${fmtDateTime(cm.duzenlendi)}">(düzenlendi)</span>` : ""}
+        ${yetki ? `<span style="float:right">
+          <button class="icon-btn" data-cedit="${cm.ts}" title="Düzenle">✏️</button>
+          <button class="icon-btn del" data-cdel="${cm.ts}" title="Sil">🗑️</button>
+        </span>` : ""}
+      </div>
       <div class="cmt-text">${esc(cm.text)}</div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 async function commentAdd() {
   const ta = document.getElementById("cmtText");
@@ -1474,6 +1483,80 @@ document.getElementById("btnCmtClose").addEventListener("click", () => {
 document.getElementById("commentModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
 });
+
+document.getElementById("cmtList").addEventListener("click", e => {
+  const edBtn = e.target.closest("[data-cedit]");
+  const delBtn = e.target.closest("[data-cdel]");
+  if (edBtn) startCommentEdit(Number(edBtn.dataset.cedit));
+  if (delBtn) commentDelete(Number(delBtn.dataset.cdel));
+});
+
+function startCommentEdit(ts) {
+  const row = rows.find(r => r.id === currentCommentId);
+  const cm = row && (row.comments || []).find(x => x.ts === ts);
+  const item = document.querySelector(`#cmtList .cmt-item[data-cts="${ts}"]`);
+  if (!row || !cm || !item) return;
+  if (!isAdmin() && cm.user !== currentUser.email) {
+    alert("Sadece kendi yorumlarını düzenleyebilirsin.");
+    return;
+  }
+  item.innerHTML = `
+    <textarea class="cmt-textarea" style="width:100%;min-height:60px;font-family:inherit;font-size:12.5px;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">${esc(cm.text)}</textarea>
+    <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px">
+      <button class="btn" data-ccancel>Vazgeç</button>
+      <button class="btn primary" data-csave="${ts}">Kaydet</button>
+    </div>`;
+  const ta = item.querySelector("textarea");
+  ta.focus();
+  item.querySelector("[data-ccancel]").addEventListener("click", renderCommentList);
+  item.querySelector("[data-csave]").addEventListener("click", () => commentEditSave(ts, ta.value.trim()));
+}
+
+async function commentEditSave(ts, yeniMetin) {
+  if (!yeniMetin) { alert("Yorum boş olamaz."); return; }
+  const row = rows.find(r => r.id === currentCommentId);
+  if (!row) return;
+  const eski = (row.comments || []).find(cm => cm.ts === ts);
+  if (!eski) return;
+  const eskiTxt = eski.text;
+  const comments = (row.comments || []).map(cm =>
+    cm.ts === ts ? { ...cm, text: yeniMetin, duzenlendi: Date.now(), duzenleyen: currentUser.email } : cm
+  );
+  try {
+    const saved = await apiUpdate(row.id, { ...row, comments });
+    rows = rows.map(r => r.id === row.id ? saved : r);
+    setSaveError("");
+    renderCommentList();
+    const kısalt = s => s.length > 60 ? s.slice(0, 60) + "…" : s;
+    await apiLog("yorum-duzenleme", row.id, row.musteri,
+      `"${kısalt(eskiTxt)}" → "${kısalt(yeniMetin)}"`);
+    showToast("✅ Yorum güncellendi.");
+  } catch (e) { setSaveError(e.message); }
+}
+
+async function commentDelete(ts) {
+  const row = rows.find(r => r.id === currentCommentId);
+  if (!row) return;
+  const cm = (row.comments || []).find(x => x.ts === ts);
+  if (!cm) return;
+  if (!isAdmin() && cm.user !== currentUser.email) {
+    alert("Sadece kendi yorumlarını silebilirsin.");
+    return;
+  }
+  if (!confirm(`Bu yorum silinsin mi?\n\n"${cm.text.slice(0, 80)}"`)) return;
+  const comments = (row.comments || []).filter(x => x.ts !== ts);
+  try {
+    const saved = await apiUpdate(row.id, { ...row, comments });
+    rows = rows.map(r => r.id === row.id ? saved : r);
+    setSaveError("");
+    renderCommentList();
+    const btn = document.querySelector(`#tbody button[data-action="comments"][data-id="${row.id}"]`);
+    if (btn) btn.innerHTML = `💬${comments.length ? `<span class="cmt-n">${comments.length}</span>` : ""}`;
+    await apiLog("yorum-silme", row.id, row.musteri,
+      `"${cm.text.length > 80 ? cm.text.slice(0, 80) + "…" : cm.text}" silindi`);
+    showToast("🗑️ Yorum silindi.");
+  } catch (e) { setSaveError(e.message); }
+}
 
 /* ================= ⏱️ Süre elle düzenleme ================= */
 function openSureEdit(id) {
