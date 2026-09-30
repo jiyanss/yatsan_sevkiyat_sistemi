@@ -1843,6 +1843,7 @@ function closeDepo() {
    document.body.classList.remove("depo-open");
 }
 document.getElementById("btnDepoClose").addEventListener("click", closeDepo);
+document.getElementById("btnScanOpen").addEventListener("click", openScanner);
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !document.getElementById("depoOverlay").classList.contains("hidden")) closeDepo();
 });
