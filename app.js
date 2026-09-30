@@ -4478,6 +4478,7 @@ function updateUserUI() {
       <button class="btn" id="btnLogout">Çıkış</button>`;
     document.getElementById("btnLogout").addEventListener("click", () => doLogout(""));
     setGuestInfo("");
+   if (typeof applyMenuLayout === "function" && menuInDropdown) applyMenuLayout();
   } else {
     box.innerHTML = `<span class="guest-chip">👁️ Görüntüleme modu</span>
       <button class="btn primary" id="btnLoginOpen">🔐 Giriş yap</button>`;
