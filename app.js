@@ -2634,7 +2634,7 @@ function openOperasyon() {
       if (hits.length) openOpCard(hits[0].id);
     }
   });
-  renderOpResults("");
+  ("");
   setTimeout(() => inp.focus(), 80);
   if (!currentUser) showLogin("Operasyon ekranı için giriş yapın.");
 }
@@ -2670,6 +2670,13 @@ function opHitHtml(r) {
     <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span>
   </div>`;
 }
+/* Haftanın kalanının sonu: Pazar (cumartesi/pazar planlar varsa da kapsanır) */
+function haftaSonuISO(todayISOStr) {
+  const d = parseLocalDate(todayISOStr);
+  const pazar = new Date(d);
+  pazar.setDate(pazar.getDate() + (7 - ((d.getDay() + 6) % 7))); /* sıradaki Pazar */
+  return isoFromDate(pazar);
+}
 function opHaftaGunHtml(gunEtiketi, liste) {
   const toplamAd = liste.reduce((s, r) => s + adet(r), 0);
   const satirlar = liste.map(r => {
@@ -2689,10 +2696,7 @@ function opHaftaGunHtml(gunEtiketi, liste) {
   </div>`;
 }
 function renderOpHafta(res, today) {
-  const bugunDt = parseLocalDate(today);
-  const cumartesi = new Date(bugunDt);
-  cumartesi.setDate(cumartesi.getDate() + (6 - ((bugunDt.getDay() + 6) % 7)));
-  const kalanISO = isoFromDate(cumartesi);
+    const kalanISO = haftaSonuISO(today);
   const kalanlar = rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
     gecikmeTarihi(r) > today && gecikmeTarihi(r) <= kalanISO);
   const byDate = new Map();
@@ -2719,7 +2723,7 @@ function renderOpHafta(res, today) {
     el.addEventListener("click", () => openOpCard(el.dataset.opid)));
   res.querySelector("#btnOpHaftaGeri").addEventListener("click", () => {
     currentOpId = null;
-    renderOpResults("");
+    ("");
   });
 }
 function renderOpResults(q) {
@@ -2732,10 +2736,7 @@ function renderOpResults(q) {
     hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === today));
        if (!hits.length) {
       /* Bugün iş bitti — net bildir; isteğe bağlı haftanın kalanını gün gün göster */
-      const bugunDt = parseLocalDate(today);
-      const cumartesi = new Date(bugunDt);
-      cumartesi.setDate(cumartesi.getDate() + (6 - ((bugunDt.getDay() + 6) % 7))); /* bu haftanın Pazar'ı değil, Cumartesi sonu */
-      const kalanISO = isoFromDate(cumartesi);
+           const kalanISO = haftaSonuISO(today);
       const kalanlar = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
         gecikmeTarihi(r) > today && gecikmeTarihi(r) <= kalanISO));
       const kalanAd = kalanlar.reduce((s, r) => s + adet(r), 0);
