@@ -521,6 +521,26 @@ async function apiUpdate(id, rec) {
   await check(res, "Kayıt güncellenemedi");
   return { id, ...body };
 }
+async function apiGetOne(id) {
+  const res = await fetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`);
+  return await check(res, "Kayıt okunamadı");
+}
+/* Yazma öncesi taze kopya: başka kullanıcının saniyeler önceki değişikliklerini korur */
+async function freshRow(id) {
+  const server = await apiGetOne(id);
+  if (!server) return null;
+  const r = { id, ...server };
+  r.musteri = r.musteri || "";
+  r.blm = r.blm || "EXPORT-1";
+  r.kategori = r.kategori || "PLANLI";
+  r.sevkiyatTipi = r.sevkiyatTipi || "KOMPLE TIR";
+  r.ad = (r.ad == null || r.ad === "") ? 1 : (Number(r.ad) || 1);
+  r.durum = r.durum || "Yükleme Bekliyor";
+  r.comments = Array.isArray(r.comments) ? r.comments : [];
+  rows = rows.map(x => x.id === id ? r : x); /* local cache de tazelensin */
+  return r;
+}
+
 async function apiDelete(id) {
   markLocalOp();
   const res = await authFetch(`${FIREBASE_DB_URL}/${NODE}/${id}.json`, { method: "DELETE" });
@@ -1209,7 +1229,7 @@ async function commitCell() {
   editingCell = null;
   const { id, field } = cur;
   const inp = document.querySelector("#cellEditor [data-cid]");
-  const row = rows.find(r => r.id === id);
+  const row = await freshRow(id);
   if (!inp || !row) { committing = false; closeCellEditor(); return; }
   let val = inp.value;
   if (field === "musteri") val = val.trim();
@@ -1460,7 +1480,7 @@ async function commentAdd() {
   const ta = document.getElementById("cmtText");
   const text = ta.value.trim();
   if (!text || !currentCommentId) return;
-  const row = rows.find(r => r.id === currentCommentId);
+  const row = await freshRow(currentCommentId);
   if (!row) return;
   const comments = (Array.isArray(row.comments) ? row.comments.slice() : []);
   comments.push({ ts: Date.now(), user: currentUser.email, text });
@@ -1516,7 +1536,7 @@ function startCommentEdit(ts) {
 
 async function commentEditSave(ts, yeniMetin) {
   if (!yeniMetin) { alert("Yorum boş olamaz."); return; }
-  const row = rows.find(r => r.id === currentCommentId);
+  const row = await freshRow(currentCommentId);
   if (!row) return;
   const eski = (row.comments || []).find(cm => cm.ts === ts);
   if (!eski) return;
@@ -1537,7 +1557,7 @@ async function commentEditSave(ts, yeniMetin) {
 }
 
 async function commentDelete(ts) {
-  const row = rows.find(r => r.id === currentCommentId);
+  const row = await freshRow(currentCommentId);
   if (!row) return;
   const cm = (row.comments || []).find(x => x.ts === ts);
   if (!cm) return;
@@ -2544,7 +2564,7 @@ async function islemAction(action) {
     return;
   }
   if (!hasPerm("edit")) { alert("Bu işlem için düzenleme yetkiniz yok."); return; }
-  const row = rows.find(r => r.id === islemId);
+  const row = await freshRow(islemId);
   if (!row) { alert("Kayıt bulunamadı (arşive taşınmış veya silinmiş olabilir)."); return; }
   const updated = { ...row };
   let etiket = "";
