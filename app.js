@@ -4687,8 +4687,8 @@ function toggleMenu(open) {
   const willOpen = open !== undefined ? open : drop.classList.contains("hidden");
   if (willOpen) {
     applyMenuLayout();
-    positionMenuDrop();
     drop.classList.remove("hidden");
+    positionMenuDrop();
   } else {
     drop.classList.add("hidden");
     document.body.classList.remove("menu-editing");
