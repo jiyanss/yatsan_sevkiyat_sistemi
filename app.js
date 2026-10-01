@@ -4729,7 +4729,7 @@ updateOfflineBadge();
 
 
 document.addEventListener("click", e => {
-  if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu")) toggleMenu(false);
+  if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu"));
 });
 function applyMenuLayout() {
   const drop = document.getElementById("menuDrop");
