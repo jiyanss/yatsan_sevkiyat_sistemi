@@ -4739,6 +4739,35 @@ function loadMenuPrefs() {
   } else {
     menuInDropdown = all.filter(k => !MENU_DEFAULT_TOP.includes(k));
   }
+function saveMenuPrefs() {
+  try { localStorage.setItem(MENU_KEY, JSON.stringify(menuInDropdown)); } catch (e) {}
+}
+document.getElementById("btnMenu").addEventListener("click", e => {
+  e.stopPropagation();
+  toggleMenu();
+});
+document.getElementById("menuDrop").addEventListener("click", e => {
+  e.stopPropagation();
+  const mact = e.target.closest("[data-maction]");
+  if (!mact) return;
+  const act = mact.dataset.maction;
+  if (act === "edit") { toggleMenuEdit(); return; }
+  if (act === "done") {
+    document.body.classList.remove("menu-editing");
+    applyMenuLayout();
+    return;
+  }
+  if (act.startsWith("clone:")) {
+    const k = act.slice(6);
+    const orig = document.querySelector(`header .btn[data-menu="${k}"]`);
+    if (orig) orig.click();
+    toggleMenu(false);
+  }
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu")) toggleMenu(false);
+});
+loadMenuPrefs();
 }
 function saveMenuPrefs() {
   try { localStorage.setItem(MENU_KEY, JSON.stringify(menuInDropdown)); } catch (e) {}
