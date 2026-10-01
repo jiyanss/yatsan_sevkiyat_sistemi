@@ -1295,25 +1295,32 @@ document.getElementById("btnCols").addEventListener("click", e => {
   const menu = document.getElementById("colMenu");
   const btn = document.getElementById("btnCols");
   renderColMenu();
-  /* btnCols üst barda görünmüyorsa (menüye taşındıysa) dropdown'dan aç */
-   document.getElementById("menuDrop").addEventListener("click", e => {
+  document.getElementById("btnCols").addEventListener("click", e => {
   e.stopPropagation();
-  const mact = e.target.closest("[data-maction]");
-  if (!mact) return;
-  const act = mact.dataset.maction;
-  if (act === "edit") { toggleMenuEdit(); return; }
-  if (act === "done") {
-    document.body.classList.remove("menu-editing");
-    applyMenuLayout();
-    return;
-  }
-  if (act.startsWith("clone:")) {
-    const k = act.slice(6);
-    const orig = document.querySelector(`header .btn[data-menu="${k}"]`);
-    if (orig) orig.click();
-    toggleMenu(false);
+  renderColMenu();
+  const menu = document.getElementById("colMenu");
+  const btn = document.getElementById("btnCols");
+  menu.classList.toggle("hidden");
+  if (!menu.classList.contains("hidden")) {
+    menu.style.visibility = "hidden";
+    menu.style.display = "block";
+    requestAnimationFrame(() => {
+      const r = btn.getBoundingClientRect();
+      const mw = menu.offsetWidth;
+      const mh = menu.offsetHeight;
+      let left = Math.min(r.right, window.innerWidth - mw - 8);
+      left = Math.max(8, left);
+      let top = r.bottom + 6;
+      if (top + mh > window.innerHeight - 8) {
+        top = Math.max(8, r.top - mh - 6);
+      }
+      menu.style.left = left + "px";
+      menu.style.top = top + "px";
+      menu.style.visibility = "visible";
+    });
   }
 });
+  
   const anchor = btn.offsetParent ? btn : document.getElementById("btnMenu");
   menu.classList.toggle("hidden");
   if (!menu.classList.contains("hidden")) {
@@ -4748,42 +4755,7 @@ function applyMenuLayout() {
     drop.appendChild(c);
   });
 }
-function positionMenuDrop() {
-}
-function toggleMenu(open) {
-  const drop = document.getElementById("menuDrop");
-  if (!drop) { console.error("❌ menuDrop yok!"); return; }
-  const willOpen = open !== undefined ? open : drop.classList.contains("hidden");
-  console.log("☰ toggleMenu çağrıldı →", willOpen ? "AÇ" : "KAPAT");
-  if (willOpen) {
-    try {
-      applyMenuLayout();
-      drop.classList.remove("hidden");
-      console.log("✅ menü açıldı, buton sayısı:", drop.querySelectorAll(".btn").length);
-    } catch (err) {
-      console.error("❌ applyMenuLayout patladı:", err.message, err.stack);
-    }
-  } else {
-    drop.classList.add("hidden");
-    document.body.classList.remove("menu-editing");
-    console.log("✅ menü kapandı");
-  }
-}
-function toggleMenuEdit() {
-  const drop = document.getElementById("menuDrop");
-  const editing = !document.body.classList.contains("menu-editing");
-  document.body.classList.toggle("menu-editing", editing);
-  if (!editing) { applyMenuLayout(); return; }
-  drop.innerHTML = `<p class="hint" style="margin:4px 8px">Açık = menüde · Kapalı = üstte kalsın</p>` +
-    allMenuKeys().map(k => {
-      const b = document.querySelector(`header .btn[data-menu="${k}"]`);
-      if (!b) return "";
-      const ad = (b.textContent || "").trim().slice(0, 24);
-      return `<label class="menu-edit-toggle"><span>${esc(ad)}</span>
-        <input type="checkbox" data-mtoggle="${k}" ${menuInDropdown.includes(k) ? "checked" : ""} /></label>`;
-    }).join("") +
-    `<div class="menu-sep"></div><button class="btn primary" data-maction="done">✔ Bitti</button>`;
-}
+
 /* ================= Başlat ================= */
 updateUserUI();
 (async () => {
