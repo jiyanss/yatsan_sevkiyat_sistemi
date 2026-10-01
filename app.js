@@ -1359,7 +1359,7 @@ document.getElementById("colMenu").addEventListener("change", e => {
   render();
 });
 document.addEventListener("click", e => {
-  if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu")) toggleMenu(false);
+  if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu"));
 });
 document.addEventListener("click", e => {
   if (!e.target.closest(".colmenu-wrap")) {
