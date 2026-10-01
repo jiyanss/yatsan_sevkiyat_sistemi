@@ -4744,41 +4744,15 @@ function applyMenuLayout() {
     c.addEventListener("click", e => {
       e.stopPropagation();
       b.click();
-      toggleMenu(false);
+      (false);
     });
   });
   drop.querySelector("#btnMenuEdit").addEventListener("click", e => {
     e.stopPropagation();
-    toggleMenuEdit();
+    Edit();
   });
 }
 function positionMenuDrop() {
-  const drop = document.getElementById("menuDrop");
-  const btn = document.getElementById("btnMenu");
-  if (!drop || !btn) return;
-  const r = btn.getBoundingClientRect();
-  drop.style.visibility = "hidden";
-  drop.classList.remove("hidden");
-  const w = drop.offsetWidth;
-  let left = r.right - w;
-  left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
-  drop.style.left = Math.round(left) + "px";
-  drop.style.right = "auto";
-  /* ☰'ün altındaki ve üstündeki gerçek boşluk */
-  const spaceBelow = window.innerHeight - r.bottom - 12;
-  const spaceAbove = r.top - 12;
-  if (spaceBelow >= 280 || spaceBelow >= spaceAbove) {
-    /* aşağı aç — yüksekliği boşluğa sığdır */
-    drop.style.top = Math.round(r.bottom + 6) + "px";
-    drop.style.bottom = "auto";
-    drop.style.maxHeight = Math.max(200, Math.min(spaceBelow, window.innerHeight * 0.8)) + "px";
-  } else {
-    /* yukarı aç */
-    drop.style.top = "auto";
-    drop.style.bottom = Math.round(window.innerHeight - r.top + 6) + "px";
-    drop.style.maxHeight = Math.max(200, Math.min(spaceAbove, window.innerHeight * 0.8)) + "px";
-  }
-  drop.style.visibility = "visible";
 }
 function toggleMenu(open) {
   const drop = document.getElementById("menuDrop");
@@ -4786,8 +4760,8 @@ function toggleMenu(open) {
   const willOpen = open !== undefined ? open : drop.classList.contains("hidden");
   if (willOpen) {
     applyMenuLayout();
-    drop.classList.remove("hidden");
-    positionMenuDrop();
+    drop.classList.remove("hidden");   /* önce göster */
+    positionMenuDrop();                /* artık no-op — sıra sorunu yok */
   } else {
     drop.classList.add("hidden");
     document.body.classList.remove("menu-editing");
@@ -4822,7 +4796,7 @@ document.getElementById("btnMenu").addEventListener("click", e => {
   toggleMenu();
 });
 document.addEventListener("click", e => {
-  if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu")) toggleMenu(false);
+  if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu")) (false);
 });
 loadMenuPrefs();
 
