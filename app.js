@@ -1296,7 +1296,7 @@ document.getElementById("btnCols").addEventListener("click", e => {
   const btn = document.getElementById("btnCols");
   renderColMenu();
   document.getElementById("btnCols").addEventListener("click", e => {
-  e.stopPropagation();
+  
   renderColMenu();
   const menu = document.getElementById("colMenu");
   const btn = document.getElementById("btnCols");
