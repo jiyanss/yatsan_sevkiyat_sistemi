@@ -4767,11 +4767,7 @@ document.getElementById("menuDrop").addEventListener("click", e => {
 document.addEventListener("click", e => {
   if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu")) toggleMenu(false);
 });
-loadMenuPrefs();
-}
-function saveMenuPrefs() {
-  try { localStorage.setItem(MENU_KEY, JSON.stringify(menuInDropdown)); } catch (e) {}
-}
+loadMenuPrefs();   /* ← KRİTİK: menuInDropdown'u varsayılanlarla doldurur */
 function applyMenuLayout() {
   const drop = document.getElementById("menuDrop");
   if (!drop) return;
