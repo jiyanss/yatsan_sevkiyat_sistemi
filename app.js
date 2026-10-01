@@ -4584,8 +4584,7 @@ function updateUserUI() {
       <button class="btn" id="btnLogout">Çıkış</button>`;
     document.getElementById("btnLogout").addEventListener("click", () => doLogout(""));
     setGuestInfo("");
-   if (typeof applyMenuLayout === "function" && menuInDropdown) applyMenuLayout();
-  } else {
+     } else {
     box.innerHTML = `<span class="guest-chip">👁️ Görüntüleme modu</span>
       <button class="btn primary" id="btnLoginOpen">🔐 Giriş yap</button>`;
     document.getElementById("btnLoginOpen").addEventListener("click", () => showLogin(""));
@@ -4721,15 +4720,6 @@ window.addEventListener("offline", updateOfflineBadge);
 window.addEventListener("online", () => { updateOfflineBadge(); load(false, false); });
 updateOfflineBadge();
 
-/* ================= ☰ ÖZELLEŞTİRİLEBİLİR MENÜ (v2) ================= */
-const MENU_DEFAULT_TOP = ["inline", "depo", "reports", "calendar", "op", "scan"]; /* üstte kalanlar */
-const MENU_KEY = "sevkiyat_menu_v2"; /* v2: eski bozuk tercihleri yok say */
-const PERM_BTN_IDS = ["btnBackup", "btnSurePanel", "btnArsiv", "btnAdminPanel", "btnPwaInstall"];
-let menuInDropdown = [];
-
-function allMenuKeys() {
-  return [...document.querySelectorAll("header .btn[data-menu]")].map(b => b.dataset.menu);
-}
 function loadMenuPrefs() {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(MENU_KEY)); } catch (e) {}
