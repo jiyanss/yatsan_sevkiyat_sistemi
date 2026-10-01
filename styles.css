@@ -692,3 +692,4 @@ body.menu-editing header .btn[data-menu]:not(.hidden) {
   color: #fff !important;
   justify-content: center;
 }
+.menu-drop.hidden { display: none !important; }
