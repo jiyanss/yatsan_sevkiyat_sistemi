@@ -4800,15 +4800,21 @@ function positionMenuDrop() {
 }
 function toggleMenu(open) {
   const drop = document.getElementById("menuDrop");
-  if (!drop) return;
+  if (!drop) { console.error("❌ menuDrop yok!"); return; }
   const willOpen = open !== undefined ? open : drop.classList.contains("hidden");
+  console.log("☰ toggleMenu çağrıldı →", willOpen ? "AÇ" : "KAPAT");
   if (willOpen) {
-    applyMenuLayout();
-    drop.classList.remove("hidden");   /* önce göster */
-    positionMenuDrop();                /* artık no-op — sıra sorunu yok */
+    try {
+      applyMenuLayout();
+      drop.classList.remove("hidden");
+      console.log("✅ menü açıldı, buton sayısı:", drop.querySelectorAll(".btn").length);
+    } catch (err) {
+      console.error("❌ applyMenuLayout patladı:", err.message, err.stack);
+    }
   } else {
     drop.classList.add("hidden");
     document.body.classList.remove("menu-editing");
+    console.log("✅ menü kapandı");
   }
 }
 function toggleMenuEdit() {
