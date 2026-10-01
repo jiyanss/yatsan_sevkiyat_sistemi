@@ -3160,23 +3160,29 @@ document.getElementById("btnPrint").addEventListener("click", () => {
   if (editingCell) commitCell();
   setTimeout(() => window.print(), 100);
 });
-document.getElementById("btnTheme").addEventListener("click", toggleTheme);
 
-/* ================= Karanlık mod ================= */
-const THEME_KEY = "sevkiyat_theme";
-function applyTheme(dark) {
-  document.body.classList.toggle("dark", dark);
-  localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
-  document.getElementById("btnTheme").textContent = dark ? "☀️" : "🌙";
-}
-function toggleTheme() {
-  applyTheme(!document.body.classList.contains("dark"));
-  if (!document.getElementById("reportModal").classList.contains("hidden")) {
-    buildReports();
+/* ================= 🎨 TEMA MOTORU ================= */
+const THEME_KEY = "sevkiyat_theme_v2";
+
+function applyTheme(name) {
+  document.body.classList.toggle("dark", name === "dark");   /* eski CSS uyumu */
+  if (name === "light" || name === "dark") {
+    document.body.removeAttribute("data-theme");             /* klasik temalar attribute'sız */
+  } else {
+    document.body.dataset.theme = name;
   }
+  localStorage.setItem(THEME_KEY, name);
+  const sel = document.getElementById("themeSelect");
+  if (sel) sel.value = name;
 }
-applyTheme(localStorage.getItem(THEME_KEY) === "dark");
-
+function initTheme() {
+  applyTheme(localStorage.getItem(THEME_KEY) || "light");
+}
+document.getElementById("themeSelect").addEventListener("change", e => {
+  applyTheme(e.target.value);
+  if (!document.getElementById("reportModal").classList.contains("hidden")) buildReports();
+});
+initTheme();
 /* ================= Modal form ================= */
 function fillSelect(id, options) {
   document.getElementById(id).innerHTML =
