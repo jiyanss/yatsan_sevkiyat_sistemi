@@ -4739,6 +4739,7 @@ function loadMenuPrefs() {
   } else {
     menuInDropdown = all.filter(k => !MENU_DEFAULT_TOP.includes(k));
   }
+}
 function saveMenuPrefs() {
   try { localStorage.setItem(MENU_KEY, JSON.stringify(menuInDropdown)); } catch (e) {}
 }
