@@ -631,23 +631,64 @@ body.islem-open #loginModal { z-index: 95; }
 .op-btn-not:active { transform:scale(.98); }
 body.op-open #loginModal { z-index: 95; }
 
+/* ☰ Menü — sağdan kayan panel (masaüstü) / alttan sheet (mobil) */
 .menu-drop {
-  position: fixed; z-index: 70; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,.22); padding: 6px;
-  min-width: 240px; max-height: 80vh; overflow-y: auto;
+  position: fixed; z-index: 70;
+  top: 0; right: 0; bottom: 0;
+  width: min(320px, 88vw);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: -12px 0 40px rgba(0,0,0,.25);
+  padding: 12px; overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  animation: menuSlideIn .22s ease-out;
+  border-radius: 0;
 }
-.menu-drop .btn { width: 100%; text-align: left; border: none; background: none; padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; gap: 8px; }
+@keyframes menuSlideIn {
+  from { transform: translateX(40px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.menu-drop .btn {
+  width: 100%; text-align: left; border: none; background: none;
+  padding: 12px 14px; border-radius: 10px;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 14px; font-weight: 600;
+}
 .menu-drop .btn:hover { background: var(--primary-soft); }
-.menu-sep { height: 1px; background: var(--border); margin: 6px 4px; }
-.menu-edit-toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 12px; font-size: 13px; border-radius: 8px; cursor: pointer; }
+.menu-drop .btn:active { transform: scale(.98); }
+.menu-drop .btn.hidden { display: none !important; }
+.menu-sep { height: 1px; background: var(--border); margin: 8px 4px; }
+.menu-edit-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 7px 12px; font-size: 13px; border-radius: 8px; cursor: pointer;
+}
 .menu-edit-toggle:hover { background: var(--primary-soft); }
-body.menu-editing header .btn[data-menu]:not(.hidden) { outline: 2px dashed var(--primary); outline-offset: 2px; }
-
+body.menu-editing header .btn[data-menu]:not(.hidden) {
+  outline: 2px dashed var(--primary); outline-offset: 2px;
+}
+@media (max-width: 720px) {
+  .menu-drop {
+    top: auto; height: auto; max-height: 72vh;
+    left: 0; right: 0; width: 100%;
+    border-radius: 20px 20px 0 0;
+    border-left: none; border-top: 1px solid var(--border);
+    box-shadow: 0 -12px 40px rgba(0,0,0,.3);
+    animation: menuSlideUp .25s ease-out;
+    padding-bottom: 28px;
+  }
+  @keyframes menuSlideUp {
+    from { transform: translateY(60px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .menu-drop::before {
+    content: ""; display: block; width: 44px; height: 4px;
+    background: var(--border); border-radius: 99px; margin: 4px auto 10px;
+  }
+}
 .menu-drop .btn.primary {
   background: var(--primary) !important;
   border-color: var(--primary) !important;
   color: #fff !important;
   justify-content: center;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
 }
