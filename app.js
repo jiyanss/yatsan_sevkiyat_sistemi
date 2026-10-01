@@ -4720,45 +4720,10 @@ window.addEventListener("offline", updateOfflineBadge);
 window.addEventListener("online", () => { updateOfflineBadge(); load(false, false); });
 updateOfflineBadge();
 
-function loadMenuPrefs() {
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(MENU_KEY)); } catch (e) {}
-  const all = allMenuKeys();
-  if (Array.isArray(saved)) {
-    menuInDropdown = all.filter(k => saved.includes(k));
-  } else {
-    menuInDropdown = all.filter(k => !MENU_DEFAULT_TOP.includes(k));
-  }
-}
-function saveMenuPrefs() {
-  try { localStorage.setItem(MENU_KEY, JSON.stringify(menuInDropdown)); } catch (e) {}
-}
-document.getElementById("btnMenu").addEventListener("click", e => {
-  e.stopPropagation();
-  toggleMenu();
-});
-document.getElementById("menuDrop").addEventListener("click", e => {
-  e.stopPropagation();
-  const mact = e.target.closest("[data-maction]");
-  if (!mact) return;
-  const act = mact.dataset.maction;
-  if (act === "edit") { toggleMenuEdit(); return; }
-  if (act === "done") {
-    document.body.classList.remove("menu-editing");
-    applyMenuLayout();
-    return;
-  }
-  if (act.startsWith("clone:")) {
-    const k = act.slice(6);
-    const orig = document.querySelector(`header .btn[data-menu="${k}"]`);
-    if (orig) orig.click();
-    toggleMenu(false);
-  }
-});
+
 document.addEventListener("click", e => {
   if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu")) toggleMenu(false);
 });
-loadMenuPrefs();   /* ← KRİTİK: menuInDropdown'u varsayılanlarla doldurur */
 function applyMenuLayout() {
   const drop = document.getElementById("menuDrop");
   if (!drop) return;
