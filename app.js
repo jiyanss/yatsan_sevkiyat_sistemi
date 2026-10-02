@@ -2676,13 +2676,16 @@ function closeOperasyon() {
   if (location.hash === "#operasyon") history.replaceState(null, "", location.pathname + location.search);
 }
 /* Sıra: Yükleniyor en üstte → öncelik no → Reel Plan */
+/* Operasyon sırası: Durum → Öncelik no → Reel Plan → Müşteri A-Z */
 function opSort(list) {
   return list.slice().sort((a, b) => {
     const da = DURUM_SIRA[a.durum] ?? 9, db = DURUM_SIRA[b.durum] ?? 9;
     if (da !== db) return da - db;
     const pa = oncelikVal(a), pb = oncelikVal(b);
     if (pa !== pb) return pa - pb;
-    return tarihCmp(gecikmeTarihi(a), gecikmeTarihi(b));
+    const t = tarihCmp(gecikmeTarihi(a), gecikmeTarihi(b));
+    if (t) return t;
+    return String(a.musteri || "").localeCompare(String(b.musteri || ""), "tr");
   });
 }
 function opMatches(q) {
