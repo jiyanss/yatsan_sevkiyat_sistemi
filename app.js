@@ -2674,7 +2674,76 @@ document.getElementById("quizAdminModal").addEventListener("click", e => {
 });
 document.getElementById("btnQuizAdd").addEventListener("click", quizAddQuestion);
 
-
+document.getElementById("btnQuizSeed").addEventListener("click", async () => {
+  if (!confirm("50 hazır soru havuza eklenecek. Onaylıyor musun?")) return;
+  const btn = document.getElementById("btnQuizSeed");
+  btn.disabled = true; btn.textContent = "Yükleniyor…";
+  const sorular = [
+    { q: "40 HC konteyner hangi ölçü standartına sahiptir?", opts: ["20 feet uzunluk","40 feet uzunluk ve high cube yükseklik","45 feet uzunluk","30 feet uzunluk"], c: 1, info: "HC = High Cube; 40 feet, tavanı normalden ~30 cm yüksek." },
+    { q: "Yük numarası 3 adet KOMPLE TIR ise toplam M3 kaçtır?", opts: ["180","240","270","300"], c: 2, info: "3 × 90 = 270 m³." },
+    { q: "2 adet 40 HC yüklemesinin M3'ü kaçtır?", opts: ["120","140","150","160"], c: 1, info: "2 × 70 = 140 m³." },
+    { q: "Parsiyel yüklemeyi belirleyen alan hangisidir?", opts: ["AD","Kategori","PRS M3","BLM"], c: 2, info: "PARSIYEL TIR'da M3 = PRS M3." },
+    { q: "Bir yükleme 'Yükleniyor' durumuna geçince ne başlar?", opts: ["Fatura","Kronometre","Sigorta","Gümrük süresi"], c: 1, info: "loadingStartedAt anı kaydedilir." },
+    { q: "Yükleme 'Tamamlandı' olduğunda hangi tarih otomatik yazılır?", opts: ["Reel Plan","Planlanan","Gerçekleşen","Fatura"], c: 2, info: "gerceklesenTarih, yalnızca boşsa bugüne eşitlenir." },
+    { q: "EXW'de en az masrafı hangi taraf üstlenir?", opts: ["Alıcı","Satıcı","Taşıyıcı","Gümrük"], c: 1, info: "Ex Works: satıcı sadece malı fabrikada hazır eder." },
+    { q: "DDP'de gümrük vergileri kime aittir?", opts: ["Alıcı","Satıcı","Taşıyıcı","Aracı"], c: 1, info: "Delivered Duty Paid: vergiler dahil teslim." },
+    { q: "FCL ne demektir?", opts: ["Kısmi yükleme","Tam konteyner yükleme","Soğutmalı yük","Toplu dökme"], c: 1, info: "Full Container Load — tüm konteyner tek yükleyiciye." },
+    { q: "LCL neye karşılık gelir?", opts: ["Kısmi/yığın konteyner","Tam konteyner","Hava kargo","Kara taşıması"], c: 0, info: "Less than Container Load — parsiyel mantığı." },
+    { q: "Bill of Lading (B/L) hangi belgedir?", opts: ["Fatura","Eşya kabu","Gümrük beyanı","Sigorta poliçesi"], c: 1, info: "Deniz taşımacılığında eşya kabu + mülkiyet belgesi." },
+    { q: "CMR hangi taşıma türüne aittir?", opts: ["Deniz","Hava","Karayolu","Demiryolu"], c: 2, info: "Uluslararası karayolu eşya taşıma senedi." },
+    { q: "AWB hangi taşıma türünün senedidir?", opts: ["Deniz","Hava","Karayolu","Demiryolu"], c: 1, info: "Air Waybill." },
+    { q: "ETA ne anlama gelir?", opts: ["Tahmini varış saati","Tahmini kalkış","Gümrük çıkışı","Yükleme başlangıcı"], c: 0, info: "Estimated Time of Arrival." },
+    { q: "ETD ne demektir?", opts: ["Tahmini varış","Tahmini kalkış saati","Beklenen teslim","Erken çıkış"], c: 1, info: "Estimated Time of Departure." },
+    { q: "Yükleme süresi aşımı neyi gösterir?", opts: ["Planlı süre aşıldı","İş kaybedildi","Trafik var","Ekstra ücret"], c: 0, info: "Süre barı kırmızıya döner." },
+    { q: "Kapasite raporu hangi veriye bakar?", opts: ["Reel plan + standart süre","Fatura tarihi","Müşteri adı","Hafta numarası"], c: 0, info: "Gün bazlı gerekli ekip hesabı." },
+    { q: "Standart yükleme süreleri nerede ayarlanır?", opts: ["Depo ekranı","⏱️ Süreler paneli","Takvim","Excel"], c: 1, info: "Müşteri + tip kombinasyonu bazında." },
+    { q: "'Araç yok' notu ne anlama gelir?", opts: ["Yükleme bitti","Gecikme nedeni: araç temin edilemedi","Müşteri iptali","Gümrük bekliyor"], c: 1, info: "📌 butonuyla seçilir." },
+    { q: "Hangi kolon 'Reel Plan'ın haftasını gösterir?", opts: ["Hafta","Ay","YIL","AD"], c: 0, info: "Hafta numarası reel plandan hesaplanır." },
+    { q: "40 HC yüklemesinde 5 adet kaç m³ olur?", opts: ["300","350","400","450"], c: 1, info: "5 × 70 = 350 m³." },
+    { q: "20 DC'de 3 adet kaç m³'tür?", opts: ["70","95","105","125"], c: 2, info: "3 × 35 = 105 m³." },
+    { q: "KOMPLE TIR'da 4 adet kaç m³'tür?", opts: ["320","340","360","380"], c: 2, info: "4 × 90 = 360 m³." },
+    { q: "Parsiyel yüklemeye AD girilse bile M3 neye göre belirlenir?", opts: ["AD × 90","PRS M3","AD × 70","Sabit 100"], c: 1, info: "Parsiyelde AD hesaba katılmaz." },
+    { q: "Hafta numarası ISO standardına göre hangi gün haftanın ilk günüdür?", opts: ["Pazar","Pazartesi","Cumartesi","Salı"], c: 1, info: "ISO-8601: hafta Pazartesi başlar." },
+    { q: "Eşzamanlılık koruması (freshRow) neyi önler?", opts: ["Süre aşımını","Kayıp güncellemeyi","Renk kaymasını","Excel hatasını"], c: 1, info: "Yazmadan önce taze okuma yapılır." },
+    { q: "Depo ekranı varsayılan olarak hangi tarihe göre gruplar?", opts: ["Fatura","Planlanan","Reel Plan","Gerçekleşen"], c: 2, info: "Kalan Yüklemeler reel plandan gruplanır." },
+    { q: "Gecikme nedeni seçimi hangi butonla yapılır?", opts: ["📌","📝","🗓️","🗑️"], c: 0, info: "Gecikmiş satırdaki pin butonu." },
+    { q: "QR etiket ne işe yarar?", opts: ["Fatura yazdırma","Depoda hızlı işlem açma","Reklam","Gümrük beyanı"], c: 1, info: "Okutulunca işlem ekranı açılır." },
+    { q: "Yükleme başlangıç saati nerede görünür?", opts: ["Gerçekleşen sütununda","Kategori","M3","Hafta"], c: 0, info: "Yükleniyor durumunda '08:20'de başladı' yazar." },
+    { q: "Yükleme bitişi hangi veriyle kaydedilir?", opts: ["loadingEndedAt","loadingStartedAt","planlananTarih","reelPlan"], c: 0, info: "Kronometre bitiş alanı." },
+    { q: "Standart süre 150dk, geçen 75dk ise yüzde kaç?", opts: ["%25","%40","%50","%60"], c: 2, info: "75/150 = %50." },
+    { q: "Standart süre 120dk, geçen 180dk ise aşım kaç dakikadır?", opts: ["30","40","60","90"], c: 2, info: "180 − 120 = 60 dk." },
+    { q: "Ekip günlük 9 saat çalışırsa kapasite kaç dakikadır?", opts: ["420","480","540","600"], c: 2, info: "9 × 60 = 540 dk." },
+    { q: "2 ekip × 9 saat = toplam günlük dk?", opts: ["900","1000","1080","1200"], c: 2, info: "2 × 540 = 1080 dk." },
+    { q: "INCOTERM'leri hangi kuruluş yayınlar?", opts: ["WTO","ICC","IATA","IMO"], c: 1, info: "Uluslararası Ticaret Odası, 2020 sürümü güncel." },
+    { q: "Hangisi deniz INCOTERM'lerinden DEĞİLDİR?", opts: ["FOB","CIF","EXW","CFR"], c: 2, info: "EXW her taşıma türünde kullanılır." },
+    { q: "Menşe şahadetnamesi neyi belgeler?", opts: ["Sigorta","Malın üretildiği ülke","Fiyat","Navlun"], c: 1, info: "Origin: tercihli tarife şartlarından." },
+    { q: "Konteyner numarası kaç karakterden oluşur?", opts: ["6","8","11","15"], c: 2, info: "4 harf + 7 rakam = 11 karakter." },
+    { q: "Reefer ne demektir?", opts: ["Açık platform","Soğutmalı konteyner","Tanker","Open top"], c: 1, info: "Soğuk zincir taşımalarında kullanılır." },
+    { q: "Hangi konteyner üstten vinçle yükleme içindir?", opts: ["Open Top","Reefer","Flat Rack","Tank"], c: 0, info: "Open Top: üstü açılabilir." },
+    { q: "Uygulamada 'Kalan' sayacı neyi gösterir?", opts: ["Tamamlananları","Tamamlanmamışları","Bugünkü","Gecikenler"], c: 1, info: "Toplam − tamamlanan." },
+    { q: "Tamamlanma yüzdesi nasıl hesaplanır?", opts: ["Kalan / Toplam","Tamamlanan / Toplam","M3 / Adet","Geciken / Toplam"], c: 1, info: "Özet çubuğundaki 'Tamamlanma'." },
+    { q: "Bir kayıt geciktiğinde hangi ikon belirir?", opts: ["⚠","📌","🔒","🏆"], c: 0, info: "Kaç gün geciktiği ile birlikte." },
+    { q: "Hafta numarası hangi standarda göre hesaplanır?", opts: ["ISO-8601","RFC-1123","UTF-8","ASCII"], c: 0, info: "Uluslararası hafta hesabı." },
+    { q: "Depo modu ekranı hangi amaca hizmet eder?", opts: ["Fatura kesme","Operasyon duvar ekranı","Rapor tasarımı","Yetki yönetimi"], c: 1, info: "Büyük yazı, canlı saat, 3 sekme." },
+    { q: "Arşivlenen kayıt ana listede görünür mü?", opts: ["Evet","Hayır, arşiv raporundadır","Sadece pazar","Otomatik"], c: 1, info: "Arşiv paneli/rapor sekmesi üzerinden erişilir." },
+    { q: "Yeniden planlamada hangi tarih güncellenir?", opts: ["Gerçekleşen","Reel Plan","Fatura","Teslim"], c: 1, info: "Planlanan esastır, Reel Plan güncellenir." },
+    { q: "QR işlem ekranında hangi eylemler vardır?", opts: ["Ekle/Sil/Düzenle","Geldi/Başlat/Bitir","Yazdır/Kopyala","Arşivle/Sil"], c: 1, info: "Sadece operasyonel üçlü — silme yok." },
+    { q: "Kronometre başlangıcı elle düzeltilebilir mi?", opts: ["Hayır","Evet — Süre hücresinden","Sadece admin","Sadece Excel"], c: 1, info: "⏱️ Süre hücresine tıkla → düzelt." },
+    { q: "40 HC 2 adet + KOMPLE TIR 1 adet toplam M3?", opts: ["160","230","250","300"], c: 1, info: "2×70 + 90 = 230 m³." }
+  ];
+  try {
+    let ok = 0;
+    for (const s of sorular) {
+      const res = await authFetch(`${FIREBASE_DB_URL}/${QUIZ_NODE}.json`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s)
+      });
+      if (res.ok) ok++;
+    }
+    showToast(`✅ ${ok}/${sorular.length} soru eklendi.`);
+    await renderQuizAdminTable();
+  } catch (e) { alert("Hata: " + e.message); }
+  btn.disabled = false; btn.textContent = "📦 50 hazır soru yükle";
+});
 
 /* ================= 📱 QR YAZDIRMA + İŞLEM EKRANI ================= */
 let islemId = null;
