@@ -15,7 +15,7 @@ async function startQuiz() {
   const params = new URLSearchParams({ count: 10 });
   if (category) params.set("category", category);
 
-  quiz = await fetch(`/api/quiz?${params}`).then(r => r.json());
+  quiz = await fetch(`/api/game/start?${params}`).then(r => r.json());
   if (!Array.isArray(quiz) || quiz.length === 0) return alert("Soru bulunamadı!");
 
   current = 0; answers = {};
@@ -61,7 +61,7 @@ async function finish() {
   show("result");
   $("result-title").textContent = "Hesaplanıyor... ⏳";
 
-  const res = await fetch("/api/submit", {
+  const res = await fetch("/api/game/submit", {...})
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, category, answers }),
@@ -85,14 +85,14 @@ async function finish() {
 }
 
 async function loadLeaderboard() {
-  const board = await fetch("/api/leaderboard").then(r => r.json());
+  const board = await fetch("/api/game/leaderboard").then(r => r.json());
   $("leaderboard").innerHTML = board.map((s, i) =>
     `<li><span>${["🥇", "🥈", "🥉"][i] || (i + 1) + "."}</span> <b>${s.username}</b> <span>${s.score} puan</span></li>`
   ).join("");
 }
 
 async function init() {
-  const cats = await fetch("/api/categories").then(r => r.json());
+  const cats = await fetch("/api/game/categories").then(r => r.json());
   $("category").innerHTML =
     `<option value="">🎲 Karışık</option>` +
     cats.map(c => `<option value="${c}">${c}</option>`).join("");
