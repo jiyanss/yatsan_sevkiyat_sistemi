@@ -54,6 +54,7 @@
     <button class="btn primary" id="btnOpOpen">📱 Operasyon</button>
     <button class="btn primary" id="btnQrPrint">📱 QR Yazdır</button>
     <button class="btn primary" id="btnScanMain">📡 Okut</button>
+    <div class="modal-actions" style="justify-content:flex-start"><button class="btn" id="btnQuizAdminOpen">🧠 Quiz Soru Yönetimi</button></div>
     <button class="btn" id="btnFit" title="Tabloyu ekran genişliğine otomatik sığdır">⤢ Sığdır</button>
     <button class="btn" id="btnToggleSummary">Özeti gizle</button>
     <button class="btn" id="btnReports">📊 Raporlar</button>
@@ -268,6 +269,7 @@
       <table>
         <thead><tr><th>Kullanıcı</th><th>Rol</th><th>Yetkiler</th><th></th></tr></thead>
         <tbody id="adminUserTable"></tbody>
+        <div class="modal-actions" style="justify-content:flex-start"><button class="btn" id="btnQuizAdminOpen">🧠 Quiz Soru Yönetimi</button></div>
       </table>
     </div>
     <div class="modal-actions"><button class="btn" id="btnCloseAdmin">Kapat</button></div>
@@ -399,6 +401,49 @@
   </div>
   <div id="islemContent"></div>
 </div>
+<div id="quizModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>🧠 Bilgi Yarışması</h2>
+    <div id="quizBody"></div>
+    <div class="modal-actions"><button class="btn" id="btnQuizClose">Kapat</button></div>
+  </div>
+</div>
+
+<div id="quizAdminModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>🧠 Quiz Soru Yönetimi</h2>
+    <p class="hint" id="quizAdminInfo">—</p>
+    <div class="table-wrap" style="max-height:34vh;overflow-y:auto">
+      <table>
+        <thead><tr><th>Soru</th><th>Doğru</th><th></th></tr></thead>
+        <tbody id="quizAdminTable"></tbody>
+      </table>
+    </div>
+    <h3 style="font-size:13px;margin:14px 0 6px">Yeni soru ekle</h3>
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <label><span>Soru</span><input id="qzNewQ" /></label>
+    </div>
+    <div class="form-grid">
+      <label><span>Şık A</span><input id="qzNewO0" /></label>
+      <label><span>Şık B</span><input id="qzNewO1" /></label>
+      <label><span>Şık C</span><input id="qzNewO2" /></label>
+      <label><span>Şık D</span><input id="qzNewO3" /></label>
+    </div>
+    <div class="form-grid">
+      <label><span>Doğru şık</span>
+        <select id="qzNewC"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
+      </label>
+      <label><span>Bilgi notu (opsiyonel)</span><input id="qzNewInfo" /></label>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-start">
+      <button class="btn primary" id="btnQuizAdd">+ Soru Ekle</button>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnQuizAdminClose">Kapat</button></div>
+  </div>
+</div>
+
+
+
   
 <div id="toast" class="toast hidden"></div>
   <script>
