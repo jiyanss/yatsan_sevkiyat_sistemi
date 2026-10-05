@@ -607,3 +607,19 @@ body.op-open #loginModal { z-index: 95; }
   thead tr { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   tr { page-break-inside: avoid; }
 }
+/* 🧠 Quiz */
+.qz-timerbar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; margin: 4px 0; }
+.qz-timerbar > div { height: 100%; width: 100%; background: var(--green); border-radius: 99px; transition: width .1s linear; }
+.qz-timerbar > div.low { background: var(--red); }
+.qz-question { font-size: 16px; font-weight: 700; margin: 10px 0 12px; line-height: 1.5; text-align: center; }
+.qz-opts { display: flex; flex-direction: column; gap: 8px; }
+.qz-opt {
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  border-radius: 10px; padding: 12px 14px; text-align: left; cursor: pointer;
+  font-size: 14px; font-weight: 600; font-family: inherit; transition: all .12s;
+}
+.qz-opt:hover { border-color: var(--primary); background: var(--primary-soft); }
+.qz-opt:disabled { cursor: default; }
+.qz-opt.correct { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+.qz-opt.wrong { background: var(--red-soft); border-color: var(--red); color: var(--red); }
+
