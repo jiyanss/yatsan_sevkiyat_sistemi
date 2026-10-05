@@ -8,6 +8,8 @@ const SURE_NODE = "sevkiyat_suresi";
 const YEDEK_NODE = "sevkiyat_yedek";
 const ARSIV_NODE = "sevkiyat_arsiv";
 const YEDEK_SAKLAMA_GUN = 14;
+const QUIZ_NODE = "sevkiyat_quiz";
+const QUIZ_SCORES_NODE = "sevkiyat_quiz_scores";
 
 /* ============================================================
    ROLLER — ADMİN PANELİNDEN YÖNETİLİR
@@ -2434,6 +2436,245 @@ async function buildArsiv() {
     arsivStatsTable(zengin, r => r.sevkiyatTipi, "🚛 Sevkiyat tipi bazlı (arşiv)", "Tip");
   c.innerHTML = kpiBlock + tablolar;
 }
+
+/* ================= 🧠 BİLGİ YARIŞMASI ================= */
+let quizQuestions = [];
+let quizRun = null;
+let quizTimerIv = null;
+
+function loadQuizQuestions() {
+  return fetch(`${FIREBASE_DB_URL}/${QUIZ_NODE}.json`).then(r => r.json())
+    .then(data => data ? Object.entries(data).map(([id, v]) => ({ id, ...(v || {}) })) : []);
+}
+function sndOk() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .08; o.start(); o.stop(a.currentTime + .12); } catch (e) {} }
+function sndErr() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.type = "square"; o.frequency.value = 160; g.gain.value = .06; o.start(); o.stop(a.currentTime + .2); } catch (e) {} }
+
+function openQuiz() {
+  document.getElementById("quizModal").classList.remove("hidden");
+  quizLoadAndRenderStart();
+}
+async function quizLoadAndRenderStart() {
+  const body = document.getElementById("quizBody");
+  body.innerHTML = `<p class="hint">Sorular yükleniyor…</p>`;
+  try { quizQuestions = await loadQuizQuestions(); }
+  catch (e) { body.innerHTML = `<p class="hint">Sorular yüklenemedi: ${esc(e.message)}</p>`; return; }
+  if (!quizQuestions.length) {
+    body.innerHTML = `<p class="hint">Henüz soru yok — admin panelde 🧠 Quiz Soru Yönetimi bölümünden ekle.</p>`;
+    return;
+  }
+  const lb = currentUser
+    ? `<button class="btn" id="btnQuizLb" style="width:100%">🏆 Liderlik Tablosu</button>`
+    : `<p class="hint">🏆 Liderlik tablosu ve skor kaydı için giriş yap.</p>`;
+  body.innerHTML = `
+    <div style="text-align:center;padding:8px 0">
+      <div style="font-size:44px">🧠</div>
+      <p style="font-weight:700;font-size:15px;margin:8px 0 4px">Havuzda ${quizQuestions.length} soru · her turda rastgele 10 soru</p>
+      <p class="hint">Her soru için 20 saniye · süre biterse yanlış sayılır</p>
+      <button class="btn primary" id="btnQuizStart" style="width:100%;padding:12px;margin-top:10px">▶️ Başla</button>
+      <div style="margin-top:8px">${lb}</div>
+    </div>`;
+  body.querySelector("#btnQuizStart").addEventListener("click", startQuizRun);
+  const lbBtn = body.querySelector("#btnQuizLb");
+  if (lbBtn) lbBtn.addEventListener("click", () => renderLeaderboard(body));
+}
+function startQuizRun() {
+  const shuffled = [...quizQuestions].sort(() => Math.random() - .5).slice(0, Math.min(10, quizQuestions.length));
+  quizRun = { qs: shuffled, idx: 0, correct: 0, timeMs: 0, answered: false };
+  renderQuizQuestion();
+}
+function renderQuizQuestion() {
+  const body = document.getElementById("quizBody");
+  const r = quizRun, q = r.qs[r.idx];
+  r.answered = false;
+  r.qStartTs = Date.now();
+  r.remain = 20;
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <b>Soru ${r.idx + 1} / ${r.qs.length}</b>
+      <span style="color:var(--green);font-weight:700">✔ ${r.correct}</span>
+    </div>
+    <div class="qz-timerbar"><div id="qzTimerFill"></div></div>
+    <div style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:8px"><b id="qzTimerTxt">20</b> sn</div>
+    <div class="qz-question">${esc(q.q)}</div>
+    <div class="qz-opts">
+      ${q.opts.map((o, i) => `<button class="qz-opt" data-qopt="${i}"><b>${"ABCD"[i]}</b> · ${esc(o)}</button>`).join("")}
+    </div>
+    <div id="qzFeedback"></div>`;
+  body.querySelectorAll("[data-qopt]").forEach(b =>
+    b.addEventListener("click", () => quizAnswer(Number(b.dataset.qopt))));
+  clearInterval(quizTimerIv);
+  quizTimerIv = setInterval(() => {
+    r.remain -= 0.1;
+    const fill = document.getElementById("qzTimerFill");
+    if (!fill) { clearInterval(quizTimerIv); return; }
+    fill.style.width = Math.max(0, r.remain / 20 * 100) + "%";
+    fill.classList.toggle("low", r.remain <= 5);
+    const txt = document.getElementById("qzTimerTxt");
+    if (txt) txt.textContent = Math.max(0, Math.ceil(r.remain));
+    if (r.remain <= 0) { clearInterval(quizTimerIv); quizAnswer(-1); }
+  }, 100);
+}
+function quizAnswer(i) {
+  const r = quizRun;
+  if (!r || r.answered) return;
+  r.answered = true;
+  clearInterval(quizTimerIv);
+  const q = r.qs[r.idx];
+  const ok = i === q.c;
+  if (ok) { r.correct++; sndOk(); } else sndErr();
+  r.timeMs += Date.now() - r.qStartTs;
+  document.querySelectorAll("#quizBody [data-qopt]").forEach(b => {
+    b.disabled = true;
+    const bi = Number(b.dataset.qopt);
+    if (bi === q.c) b.classList.add("correct");
+    else if (bi === i) b.classList.add("wrong");
+  });
+  const fb = document.getElementById("qzFeedback");
+  fb.innerHTML = `
+    <div class="islem-done" style="background:${ok ? "var(--green-soft)" : "var(--red-soft)"};border-color:${ok ? "var(--green)" : "var(--red)"};color:${ok ? "var(--green)" : "var(--red)"}">
+      ${i === -1 ? "⏰ Süre bitti!" : ok ? "✅ Doğru!" : "❌ Yanlış"}
+    </div>
+    ${q.info ? `<p class="hint">💡 ${esc(q.info)}</p>` : ""}
+    <button class="btn primary" id="btnQzNext" style="width:100%;padding:10px">${r.idx + 1 < r.qs.length ? "Sonraki Soru →" : "Sonucu Gör 🏁"}</button>`;
+  fb.querySelector("#btnQzNext").addEventListener("click", () => {
+    r.idx++;
+    if (r.idx < r.qs.length) renderQuizQuestion();
+    else finishQuiz();
+  });
+}
+async function finishQuiz() {
+  const r = quizRun;
+  clearInterval(quizTimerIv);
+  const body = document.getElementById("quizBody");
+  const pct = Math.round(r.correct / r.qs.length * 100);
+  body.innerHTML = `<p class="hint">Skor işleniyor…</p>`;
+  let savedMsg = "";
+  if (currentUser) {
+    try {
+      const key = userKey(currentUser.email);
+      const res = await authFetch(`${FIREBASE_DB_URL}/${QUIZ_SCORES_NODE}/${key}.json`);
+      const prev = await res.json();
+      const better = !prev || r.correct > (prev.correct || 0) ||
+        (r.correct === (prev.correct || 0) && r.timeMs < (prev.timeMs || 9e15));
+      const rec = {
+        email: currentUser.email,
+        name: shortUser(currentUser.email),
+        correct: Math.max(r.correct, prev?.correct || 0),
+        total: r.qs.length,
+        timeMs: better ? r.timeMs : (prev?.timeMs || r.timeMs),
+        games: (prev?.games || 0) + 1,
+        ts: Date.now()
+      };
+      await authFetch(`${FIREBASE_DB_URL}/${QUIZ_SCORES_NODE}/${key}.json`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec)
+      });
+      savedMsg = better ? "🏆 Yeni kişisel rekor! Liderlik tablosuna işlendi." : "Oynadın — kişisel rekorun daha yüksek.";
+    } catch (e) { savedMsg = "Skor kaydedilemedi: " + e.message; }
+  } else {
+    savedMsg = "Giriş yaptığında skorun liderlik tablosuna işlenir.";
+  }
+  const madalya = pct === 100 ? "🏆" : pct >= 70 ? "🥇" : pct >= 40 ? "🥈" : "🥉";
+  body.innerHTML = `
+    <div style="text-align:center;padding:6px 0">
+      <div style="font-size:52px">${madalya}</div>
+      <div style="font-size:30px;font-weight:800">${r.correct} / ${r.qs.length}</div>
+      <div class="hint">%${pct} doğruluk · toplam süre ${fmtSure(r.timeMs)}</div>
+      <p class="hint">${savedMsg}</p>
+      <div id="qzLb"></div>
+      <button class="btn primary" id="btnQzAgain" style="width:100%;padding:12px;margin-top:8px">🔁 Tekrar Oyna</button>
+    </div>`;
+  body.querySelector("#btnQzAgain").addEventListener("click", startQuizRun);
+  if (currentUser) renderLeaderboard(body.querySelector("#qzLb"));
+}
+async function renderLeaderboard(container) {
+  if (!container) return;
+  container.innerHTML = `<p class="hint">🏆 Liderlik tablosu yükleniyor…</p>`;
+  try {
+    const res = await authFetch(`${FIREBASE_DB_URL}/${QUIZ_SCORES_NODE}.json`);
+    const data = await res.json();
+    const list = data ? Object.values(data)
+      .sort((a, b) => (b.correct - a.correct) || ((a.timeMs || 9e15) - (b.timeMs || 9e15)))
+      .slice(0, 10) : [];
+    container.innerHTML = `<div class="rpt"><h3>🏆 En İyi 10</h3><div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Oyuncu</th><th>Doğru</th><th>Süre</th><th>Oyun</th></tr></thead>
+      <tbody>${list.length ? list.map((s, i) => `<tr class="${currentUser && s.email === currentUser.email ? "priority" : ""}">
+        <td>${["🥇","🥈","🥉"][i] || (i + 1)}</td>
+        <td class="strong">${esc(s.name || shortUser(s.email))}</td>
+        <td class="center">${s.correct}/${s.total || 10}</td>
+        <td class="center">${fmtSure(s.timeMs || 0)}</td>
+        <td class="center">${s.games || 1}</td>
+      </tr>`).join("") : `<tr><td colspan="5" class="empty">Henüz skor yok — ilk sen ol!</td></tr>`}</tbody>
+    </table></div></div>`;
+  } catch (e) {
+    container.innerHTML = `<p class="hint">Liderlik tablosu için giriş gerekiyor.</p>`;
+  }
+}
+/* --- Admin: soru yönetimi --- */
+async function openQuizAdmin() {
+  if (!isAdmin()) { alert("Sadece yöneticiler."); return; }
+  document.getElementById("quizAdminModal").classList.remove("hidden");
+  await renderQuizAdminTable();
+}
+async function renderQuizAdminTable() {
+  const tb = document.getElementById("quizAdminTable");
+  tb.innerHTML = `<tr><td colspan="3" class="empty">Yükleniyor…</td></tr>`;
+  try {
+    quizQuestions = await loadQuizQuestions();
+    document.getElementById("quizAdminInfo").innerHTML =
+      `Havuzda <b>${quizQuestions.length}</b> soru · yarışmada rastgele 10 soru sorulur.`;
+    tb.innerHTML = quizQuestions.length ? quizQuestions.map(q => `<tr>
+      <td>${esc(q.q)}<div class="muted" style="font-size:10px">${q.opts.map((o, i) => i === q.c ? "✅ " + esc(o) : esc(o)).join(" · ")}</div></td>
+      <td class="center">${"ABCD"[q.c]}</td>
+      <td class="nowrap"><button class="btn" data-qdel="${q.id}">🗑️</button></td>
+    </tr>`).join("") : `<tr><td colspan="3" class="empty">Havuz boş — aşağıdan soru ekle.</td></tr>`;
+    tb.querySelectorAll("[data-qdel]").forEach(b =>
+      b.addEventListener("click", () => quizDeleteQuestion(b.dataset.qdel)));
+  } catch (e) {
+    tb.innerHTML = `<tr><td colspan="3" class="empty">Yüklenemedi: ${esc(e.message)}</td></tr>`;
+  }
+}
+async function quizAddQuestion() {
+  const q = document.getElementById("qzNewQ").value.trim();
+  const opts = [0, 1, 2, 3].map(i => document.getElementById("qzNewO" + i).value.trim());
+  const c = Number(document.getElementById("qzNewC").value);
+  const info = document.getElementById("qzNewInfo").value.trim();
+  if (!q || opts.some(o => !o)) { alert("Soru ve 4 şık doldurulmalı."); return; }
+  try {
+    await authFetch(`${FIREBASE_DB_URL}/${QUIZ_NODE}.json`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ q, opts, c, info: info || "" })
+    });
+    ["qzNewQ","qzNewO0","qzNewO1","qzNewO2","qzNewO3","qzNewInfo"].forEach(id => document.getElementById(id).value = "");
+    showToast("✅ Soru eklendi.");
+    await renderQuizAdminTable();
+  } catch (e) { alert("Eklenemedi: " + e.message); }
+}
+async function quizDeleteQuestion(key) {
+  if (!confirm("Bu soru silinsin mi?")) return;
+  try {
+    await authFetch(`${FIREBASE_DB_URL}/${QUIZ_NODE}/${key}.json`, { method: "DELETE" });
+    showToast("🗑️ Soru silindi.");
+    await renderQuizAdminTable();
+  } catch (e) { alert("Silinemedi: " + e.message); }
+}
+/* --- Bağlantılar --- */
+document.getElementById("btnQuiz").addEventListener("click", openQuiz);
+document.getElementById("btnQuizClose").addEventListener("click", () => {
+  clearInterval(quizTimerIv);
+  document.getElementById("quizModal").classList.add("hidden");
+});
+document.getElementById("quizModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) { clearInterval(quizTimerIv); e.currentTarget.classList.add("hidden"); }
+});
+document.getElementById("btnQuizAdminOpen").addEventListener("click", openQuizAdmin);
+document.getElementById("btnQuizAdminClose").addEventListener("click", () =>
+  document.getElementById("quizAdminModal").classList.add("hidden"));
+document.getElementById("quizAdminModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+});
+document.getElementById("btnQuizAdd").addEventListener("click", quizAddQuestion);
+
+
 
 /* ================= 📱 QR YAZDIRMA + İŞLEM EKRANI ================= */
 let islemId = null;
