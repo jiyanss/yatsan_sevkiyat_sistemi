@@ -4433,7 +4433,7 @@ function autoMap() {
 }
 function parseExcelDate(v) {
   if (v == null || v === "") return "";
-  if (v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${pad2(v.getMonth()+1)}-${pad2(v.getDate())}`;
+  if (v instanceof Date && !isNaN(v)) return `${v.getUTCFullYear()}-${pad2(v.getUTCMonth()+1)}-${pad2(v.getUTCDate())}`;
   if (typeof v === "number" && isFinite(v)) {
     const dc = (window.XLSX && XLSX.SSF) ? XLSX.SSF.parse_date_code(v) : null;
     return dc ? `${dc.y}-${pad2(dc.m)}-${pad2(dc.d)}` : "";
@@ -4520,7 +4520,7 @@ document.getElementById("importFile").addEventListener("change", async e => {
   if (!file) return;
   try {
     const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array", cellDates: true });
+    const wb = XLSX.read(buf, { type: "array" });
     const ws = wb.Sheets[wb.SheetNames[0]];
     importRows = XLSX.utils.sheet_to_json(ws, { defval: "", raw: true });
     importHeaders = Object.keys(importRows[0] || {});
