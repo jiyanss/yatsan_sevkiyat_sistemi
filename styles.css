@@ -623,3 +623,28 @@ body.op-open #loginModal { z-index: 95; }
 .qz-opt.correct { background: var(--green-soft); border-color: var(--green); color: var(--green); }
 .qz-opt.wrong { background: var(--red-soft); border-color: var(--red); color: var(--red); }
 
+/* 🐍 Yılan oyunu */
+.snake-wrap { max-width: 440px; margin: 0 auto; text-align: center; }
+.snake-top { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: #e2e8f0; margin-bottom: 8px; }
+.snake-cv-wrap { position: relative; width: 100%; max-width: 400px; margin: 0 auto; }
+#snakeCanvas {
+  width: 100%; aspect-ratio: 1/1; display: block;
+  background: #0b1220; border: 2px solid #2b3a52; border-radius: 10px;
+  touch-action: none;
+}
+.snake-over {
+  position: absolute; inset: 0; border-radius: 10px;
+  background: rgba(11,18,32,.9);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+}
+.snake-over.hidden { display: none !important; }
+.so-title { font-size: 24px; font-weight: 800; color: #e2e8f0; }
+.so-score { font-size: 15px; color: #8aa0b8; }
+.snake-pad { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 14px; }
+.snake-pad > div { display: flex; gap: 6px; }
+.snake-btn {
+  width: 68px; height: 56px; font-size: 22px; font-weight: 800;
+  border: 1px solid #2b3a52; background: #151f31; color: #e2e8f0;
+  border-radius: 10px; cursor: pointer; font-family: inherit;
+}
+.snake-btn:active { background: #4f46e5; transform: scale(.96); }
