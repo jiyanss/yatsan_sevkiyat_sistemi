@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order Hazır — Yükleme Hazırlık</title>
+<link rel="stylesheet" href="styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>" />
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">📦</div>
+    <div>
+      <h1>Order Hazır — Yükleme Hazırlık</h1>
+      <p class="subtitle">Excel snapshot · kriter bazlı hazır analizi · firma raporu</p>
+    </div>
+  </div>
+  <div class="toolbar">
+    <select id="tarihSec" title="Snapshot tarihi"></select>
+    <select id="kriterSec" title="Gruplama kriteri">
+      <option value="auto">🧠 Otomatik (hatırlanan)</option>
+      <option value="referans">Referans numarası</option>
+      <option value="siparisNo">Orijinal satış siparişi</option>
+      <option value="musteriSipNo">Müşteri sipariş numarası</option>
+      <option value="siparisAdi">Sipariş adı</option>
+    </select>
+    <select id="durumSec">
+      <option value="all">Tüm durumlar</option>
+      <option value="hazir">🟢 Hazır</option>
+      <option value="kismi">🟡 Kısmi</option>
+      <option value="bekliyor">🔴 Bekliyor</option>
+    </select>
+    <input id="musteriSec" list="musteri-list" placeholder="🔍 Müşteri (boş = tümü)" style="min-width:140px" />
+    <datalist id="musteri-list"></datalist>
+    <input id="ara" placeholder="🔍 Ara: madde / sipariş / ref" style="min-width:150px" />
+    <select id="havuzSec" title="Havuz filtresi"><option value="">Havuz: Tümü</option></select>
+    <label class="oh-chk" title="Hazırlık oranı bu eşiğe ulaşan grup HAZIR sayılır">Eşik %
+      <input type="number" id="esik" min="50" max="100" step="5" value="100" /></label>
+    <button class="btn" id="btnGrupView">▦ Gruplar</button>
+    <button class="btn" id="btnFirmaView">👥 Firma Özeti</button>
+    <button class="btn" id="btnGecmis">🕘 Geçmiş Rapor</button>
+    <button class="btn" id="btnExcelRapor">📤 Excel Rapor</button>
+    <button class="btn primary" id="btnYukle">📥 Excel Yükle</button>
+    <a class="btn" href="index.html" title="Sevkiyat Planlama'ya dön">↩ Ana Uygulama</a>
+    <div class="user-box" id="userBox"></div>
+  </div>
+</header>
+
+<main>
+  <div id="ohError" class="error hidden"></div>
+
+  <section class="statbar" id="ohSummary">
+    <div class="stat"><span class="s-label">Satır</span><span class="s-val" id="st-satir">0</span></div>
+    <div class="s-div"></div>
+    <div class="stat"><span class="s-label">Aktif Grup</span><span class="s-val blue" id="st-aktif">0</span></div>
+    <div class="s-div"></div>
+    <div class="stat"><span class="s-label">🟢 Hazır Grup</span><span class="s-val green" id="st-hazir">0</span></div>
+    <div class="s-div"></div>
+    <div class="stat"><span class="s-label">Hazır m³</span><span class="s-val" id="st-m3">0</span></div>
+    <div class="s-div"></div>
+    <div class="stat"><span class="s-label">Hazır Değer</span><span class="s-val" id="st-deger" style="font-size:14px;line-height:1.5">—</span></div>
+  </section>
+
+  <div class="table-wrap" style="max-height:70vh;overflow-y:auto">
+    <table>
+      <thead><tr id="ohThead"></tr></thead>
+      <tbody id="ohTbody"></tbody>
+    </table>
+  </div>
+  <p class="hint" style="margin-top:8px">💡 <b>Satır hazır</b> = Kalan &gt; 0 ve Fabrika Depo Stok ≥ Kalan. <b>Grup HAZIR</b> = tüm aktif satırlar hazır (veya hazırlık % eşiği geçti). Grup satırına tıkla → madde detayı açılır. Kriter seçimi <b>müşteri bazlı hafızaya</b> yazılır; "Otomatik" mod her müşteri için hatırlanan kriteri kullanır. Değerler para birimine göre ayrı toplanır.</p>
+</main>
+
+<div id="yukleModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>📥 Order Hazır — Excel Yükle</h2>
+    <p class="hint">Sütunlar otomatik eşleştirilir (Teslimat adı, Orijinal satış siparişi, Kalan, Fabrika Depo Stok, Kalan m³, Kalan Tutar, Para birimi…). Yükleme <b>bugünün snapshot'ına</b> yazılır; aynı gün tekrar yüklerseniz günü günceller. Son <b>90 gün</b> saklanır, eskisi otomatik silinir.</p>
+    <input type="file" id="ohFile" accept=".xlsx,.xls,.csv" />
+    <div id="ohMapPreview" class="hidden">
+      <h3 style="font-size:13px;margin:14px 0 6px">Eşleşen kolonlar + ilk 5 satır önizleme</h3>
+      <div class="table-wrap"><table id="ohMapTable"></table></div>
+      <div class="modal-actions">
+        <button class="btn" id="btnOhVazgec">Vazgeç</button>
+        <button class="btn primary" id="btnOhKaydet">💾 Kaydet (bugünün snapshot'ı)</button>
+      </div>
+    </div>
+    <div id="ohYukleSonuc" class="success hidden"></div>
+  </div>
+</div>
+
+<div id="gecmisModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>🕘 Geçmiş Rapor — Hangi tarihte ne kadar hazırdı?</h2>
+    <p class="hint">Müşteri filtresi boşsa tüm firmaların günlük hazır özeti listelenir (snapshot özetlerinden — hafif ve hızlı).</p>
+    <input id="gecmisMusteri" list="musteri-list" placeholder="🔍 Müşteri filtrele (boş = tümü)" style="max-width:320px" />
+    <div class="table-wrap" style="margin-top:10px;max-height:52vh;overflow-y:auto">
+      <table><thead><tr>
+        <th>Tarih</th><th>🟢 Hazır Grup</th><th>Hazır Adet</th><th>Hazır m³</th><th>EUR</th><th>TRY</th><th>USD</th>
+      </tr></thead><tbody id="gecmisTbody"></tbody></table>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnGecmisKapat">Kapat</button></div>
+  </div>
+</div>
+
+<div id="loginModal" class="modal-bg hidden">
+  <div class="modal login-card">
+    <div class="logo">📦</div>
+    <h2>Order Hazır</h2>
+    <p class="sub">Excel yükleme için giriş yap. Görüntüleme giriş gerektirmez.</p>
+    <div class="login-form">
+      <label><span>E-posta</span><input id="l-user" type="email" autocomplete="username" /></label>
+      <label><span>Şifre</span><input id="l-pass" type="password" autocomplete="current-password" /></label>
+    </div>
+    <div id="loginError" class="error hidden" style="margin-top:10px;margin-bottom:0"></div>
+    <div class="modal-actions" style="gap:8px">
+      <button class="btn" id="btnLoginCancel">Vazgeç</button>
+      <button class="btn primary" id="btnLogin">Giriş yap</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="order-hazir.js"></script>
+</body>
+</html>
