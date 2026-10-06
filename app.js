@@ -5154,7 +5154,7 @@ function stopSnake() {
 }
 function snakeReset() {
   snakePaused = false;
-  snakeState = { ... };
+  stopSnake();
     body: [{x:10,y:10},{x:9,y:10},{x:8,y:10}],
     dir: {x:1,y:0}, nextDir: {x:1,y:0},
     food: null, score: 0, speed: 150
