@@ -5235,6 +5235,7 @@ function drawSnake() {
   if (!cv) return;
   const ctx = cv.getContext("2d");
   const cell = cv.width / 20;
+  /* Zemin + grid */
   ctx.fillStyle = "#0b1220";
   ctx.fillRect(0, 0, cv.width, cv.height);
   ctx.strokeStyle = "#2b3f66";
@@ -5242,23 +5243,93 @@ function drawSnake() {
     ctx.beginPath(); ctx.moveTo(i*cell, 0); ctx.lineTo(i*cell, cv.height); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, i*cell); ctx.lineTo(cv.width, i*cell); ctx.stroke();
   }
+  /* Yem: kutu 📦 */
   const f = snakeState.food;
   if (f) {
-    ctx.fillStyle = "#f87171";
+    const fx = f.x*cell, fy = f.y*cell;
+    ctx.fillStyle = "#fbbf24";
+    ctx.fillRect(fx + 4, fy + 4, cell - 8, cell - 8);
+    ctx.strokeStyle = "#d97706";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(fx + 4, fy + 4, cell - 8, cell - 8);
+    /* kutu bandı */
+    ctx.strokeStyle = "#92400e";
     ctx.beginPath();
-    ctx.arc(f.x*cell + cell/2, f.y*cell + cell/2, cell/2 - 2, 0, Math.PI*2);
-    ctx.fill();
+    ctx.moveTo(fx + cell/2, fy + 4); ctx.lineTo(fx + cell/2, fy + cell - 4);
+    ctx.moveTo(fx + 4, fy + cell/2); ctx.lineTo(fx + cell - 4, fy + cell/2);
+    ctx.stroke();
+    ctx.lineWidth = 1;
   }
-  snakeState.body.forEach((c, i) => {
-    ctx.fillStyle = i === 0 ? "#34d399" : "#4f46e5";
-    ctx.fillRect(c.x*cell + 1, c.y*cell + 1, cell - 2, cell - 2);
-  });
+  const body = snakeState.body;
+  /* HİZALAMA: zincir yönü — her parça, bir öncekine bakar */
+  const dirOf = i => {
+    const prev = i === 0 ? null : body[i - 1];
+    if (!prev) return snakeState.dir;
+    const dx = prev.x - body[i].x, dy = prev.y - body[i].y;
+    if (Math.abs(dx) >= Math.abs(dy)) return { x: Math.sign(dx) || 1, y: 0 };
+    return { x: 0, y: Math.sign(dy) || 1 };
+  };
+  const roundedRect = (x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  };
+  /* ZİNCİR: body[1..n] = konteynerler (yeşil dorse) */
+  for (let i = body.length - 1; i >= 1; i--) {
+    const d = dirOf(i);
+    const px = body[i].x * cell, py = body[i].y * cell;
+    const horiz = d.x !== 0;
+    /* dorse gövdesi */
+    ctx.fillStyle = i % 2 === 0 ? "#16a34a" : "#15803d";
+    if (horiz) roundedRect(px + 2, py + cell*0.18, cell - 4, cell*0.64, 4);
+    else roundedRect(px + cell*0.18, py + 2, cell*0.64, cell - 4, 4);
+    ctx.fill();
+    ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 1.5; ctx.stroke();
+    /* kapı çizgisi (arka uçta) */
+    ctx.strokeStyle = "#0b1220"; ctx.lineWidth = 2;
+    const bx = horiz ? (d.x > 0 ? px + 5 : px + cell - 5) : px + cell/2;
+    const by = horiz ? py + cell/2 : (d.y > 0 ? py + 5 : py + cell - 5);
+    if (horiz) { ctx.beginPath(); ctx.moveTo(bx, py + cell*0.24); ctx.lineTo(bx, py + cell*0.76); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.moveTo(px + cell*0.24, by); ctx.lineTo(px + cell*0.76, by); ctx.stroke(); }
+    /* tekerlekler */
+    ctx.fillStyle = "#334155";
+    const w1 = horiz ? px + cell*0.3 : px + cell*0.15;
+    const w2 = horiz ? px + cell*0.7 : px + cell*0.85;
+    const wy = horiz ? py + cell*0.85 : py + cell*0.3;
+    const wx2 = horiz ? py + cell*0.15 : py + cell*0.85;
+    if (horiz) { ctx.fillRect(w1, wy, 6, 5); ctx.fillRect(w2, wy, 6, 5); }
+    else { ctx.fillRect(wx2, w1, 5, 6); ctx.fillRect(wx2, w2, 5, 6); }
+    ctx.lineWidth = 1;
+  }
+  /* BAŞ: çekici (kırmızı kabin) */
+  const hd = dirOf(0);
+  const hx = body[0].x * cell, hy = body[0].y * cell;
+  const horizH = hd.x !== 0;
+  /* dorse bağlantısı (kısa) */
+  ctx.fillStyle = "#64748b";
+  if (horizH) ctx.fillRect(hx + (hd.x > 0 ? 2 : cell*0.4), hy + cell*0.32, cell*0.25, cell*0.36);
+  else ctx.fillRect(hx + cell*0.32, hy + (hd.y > 0 ? 2 : cell*0.4), cell*0.36, cell*0.25);
+  /* kabin */
+  ctx.fillStyle = "#dc2626";
+  if (horizH) roundedRect(hx + (hd.x > 0 ? cell*0.28 : 2), hy + cell*0.15, cell*0.7, cell*0.7, 5);
+  else roundedRect(hx + cell*0.15, hy + (hd.y > 0 ? cell*0.28 : 2), cell*0.7, cell*0.7, 5);
+  ctx.fill();
+  ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 1.5; ctx.stroke();
+  /* kabin camı (yön tarafında) */
+  ctx.fillStyle = "#93c5fd";
+  if (horizH) ctx.fillRect(hx + (hd.x > 0 ? cell*0.72 : cell*0.08), hy + cell*0.24, cell*0.18, cell*0.28);
+  else ctx.fillRect(hx + cell*0.24, hy + (hd.y > 0 ? cell*0.72 : cell*0.08), cell*0.28, cell*0.18);
+  /* farlar (ön) */
+  ctx.fillStyle = "#fde68a";
+  if (horizH) { ctx.fillRect(hx + (hd.x > 0 ? cell*0.95 : 0), hy + cell*0.2, 3, 5); ctx.fillRect(hx + (hd.x > 0 ? cell*0.95 : 0), hy + cell*0.65, 3, 5); }
+  else { ctx.fillRect(hx + cell*0.2, hy + (hd.y > 0 ? cell*0.95 : 0), 5, 3); ctx.fillRect(hx + cell*0.65, hy + (hd.y > 0 ? cell*0.95 : 0), 5, 3); }
+  /* çekici tekerlekleri */
+  ctx.fillStyle = "#1e293b";
+  if (horizH) { ctx.fillRect(hx + cell*0.15, hy + cell*0.85, 6, 5); ctx.fillRect(hx + cell*0.55, hy + cell*0.85, 6, 5); }
+  else { ctx.fillRect(hx + cell*0.85, hy + cell*0.15, 5, 6); ctx.fillRect(hx + cell*0.85, hy + cell*0.55, 5, 6); }
+  ctx.lineWidth = 1;
 }
-/* Klavye — yılan sekmesi aktifken çalışır */
-document.addEventListener("keydown", e => {
-  const ov = document.getElementById("depoOverlay");
-  if (!ov || ov.classList.contains("hidden") || depoTab !== "yilan") return;
-  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  const map = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0], w:[0,-1], s:[0,1], a:[-1,0], d:[1,0] };
-  if (map[k]) { e.preventDefault(); snakeDir(map[k][0], map[k][1]); }
-});
