@@ -5333,12 +5333,14 @@ function drawSnake() {
   else { ctx.fillRect(hx + cell*0.85, hy + cell*0.15, 5, 6); ctx.fillRect(hx + cell*0.85, hy + cell*0.55, 5, 6); }
   ctx.lineWidth = 1;
 }
-
 /* Klavye — yılan sekmesi aktifken çalışır */
 document.addEventListener("keydown", e => {
   const ov = document.getElementById("depoOverlay");
   if (!ov || ov.classList.contains("hidden") || depoTab !== "yilan") return;
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   const map = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0], w:[0,-1], s:[0,1], a:[-1,0], d:[1,0] };
-  if (map[k]) { e.preventDefault(); snakeDir(map[k][0], map[k][1]); }
+  if (!map[k]) return;
+  e.preventDefault();
+  if (!snakeState) return;
+  snakeDir(map[k][0], map[k][1]);
 });
