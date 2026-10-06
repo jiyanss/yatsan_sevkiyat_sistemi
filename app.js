@@ -2025,7 +2025,11 @@ function gunEtiketi(iso) {
   return `${GUNLER[idx] || ""} ${dt.getDate()} ${AYLAR[dt.getMonth()]}`;
 }
 function renderDepoContent() {
-  stopSnake();   /* sekme değişince oyun dursun */
+  /* Yılan oyunu korunur: canvas zaten varsa hiçbir şeyi yeniden çizme
+     (sekme değişimi + otomatik yenileme oyunu resetlemesin) */
+  if (depoTab === "yilan" && document.getElementById("snakeCanvas")) return;
+  /* Başka sekmeye geçilirken oyun çalışıyorsa duraklat — durum saklanır */
+  if (depoTab !== "yilan" && snakeTimer) { stopSnake(); snakePaused = true; }
   const today = todayISO();
   const d = new Date();
   /* Depo ekranı tarihi: reel plan varsa o, yoksa planlanan tarih */
@@ -2115,17 +2119,18 @@ function renderDepoContent() {
     c.innerHTML = html;
     return;
   }
-  if (depoTab === "yilan") {
+    if (depoTab === "yilan") {
+    const devam = snakeState && snakePaused;
     c.innerHTML = `
       <div class="depo-sec-title" style="color:#34d399">🐍 YILAN OYUNU</div>
       <div class="snake-wrap">
-        <div class="snake-top"><span>Skor: <b id="snakeScore">0</b></span><span>🏆 Rekor: <b id="snakeBest">${snakeBest}</b></span></div>
+        <div class="snake-top"><span>Skor: <b id="snakeScore">${devam ? snakeState.score : 0}</b></span><span>🏆 Rekor: <b id="snakeBest">${snakeBest}</b></span></div>
         <div class="snake-cv-wrap">
           <canvas id="snakeCanvas" width="400" height="400"></canvas>
           <div class="snake-over" id="snakeOver">
-            <div class="so-title" id="snakeOverTitle">🐍 Yılan Oyunu</div>
+            <div class="so-title" id="snakeOverTitle">${devam ? "⏸ Duraklatıldı" : "🐍 Yılan Oyunu"}</div>
             <div class="so-score" id="snakeOverScore">Rekor: ${snakeBest}</div>
-            <button class="depo-tab active" id="btnSnakeStart">▶️ Başla</button>
+            <button class="depo-tab active" id="btnSnakeStart">${devam ? "▶️ Devam Et" : "▶️ Başla"}</button>
           </div>
         </div>
         <div class="snake-pad">
@@ -2147,8 +2152,7 @@ function renderDepoContent() {
       if (d === "right") snakeDir(1, 0);
     }));
     return;
-  }
-   
+  }   
   /* Operasyonel gecikme: REEL PLAN bugünün gerisinde kalan tamamlanmamışlar.
      Reel planı ileri çekilen kayıt burada GECİKEN görünmez —
      gecikme notları zaten "Kalan Yüklemeler" sekmesinde gösteriliyor. */
@@ -5143,16 +5147,19 @@ updateUserUI();
 let snakeTimer = null;
 let snakeState = null;
 let snakeBest = Number(localStorage.getItem("sevkiyat_yilan_best") || 0);
+let snakePaused = false;
 
 function stopSnake() {
   if (snakeTimer) { clearInterval(snakeTimer); snakeTimer = null; }
 }
 function snakeReset() {
+  snakePaused = false;
+  snakeState = { ... };
   snakeState = {
     body: [{x:10,y:10},{x:9,y:10},{x:8,y:10}],
     dir: {x:1,y:0}, nextDir: {x:1,y:0},
     food: null, score: 0, speed: 150
-  };
+   };
   snakePlaceFood();
   drawSnake();
 }
@@ -5169,13 +5176,21 @@ function snakeDir(nx, ny) {
   snakeState.nextDir = { x: nx, y: ny };
 }
 function snakeStart() {
-  snakeReset();
   const ov = document.getElementById("snakeOver");
   if (ov) ov.classList.add("hidden");
+  if (snakeState && snakePaused) {
+    snakePaused = false;
+    const sc = document.getElementById("snakeScore");
+    if (sc) sc.textContent = snakeState.score;
+    drawSnake();
+  } else {
+    snakeReset();
+  }
   stopSnake();
   snakeTimer = setInterval(snakeTick, snakeState.speed);
 }
 function snakeGameOver() {
+  snakePaused = false;
   stopSnake();
   if (navigator.vibrate) navigator.vibrate(200);
   const ov = document.getElementById("snakeOver");
@@ -5222,7 +5237,7 @@ function drawSnake() {
   const cell = cv.width / 20;
   ctx.fillStyle = "#0b1220";
   ctx.fillRect(0, 0, cv.width, cv.height);
-  ctx.strokeStyle = "#151f31";
+  ctx.strokeStyle = "#2b3f66";
   for (let i = 1; i < 20; i++) {
     ctx.beginPath(); ctx.moveTo(i*cell, 0); ctx.lineTo(i*cell, cv.height); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, i*cell); ctx.lineTo(cv.width, i*cell); ctx.stroke();
