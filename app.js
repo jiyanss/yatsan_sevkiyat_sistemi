@@ -5305,6 +5305,7 @@ function drawSnake() {
       ctx.fillRect(px + cell*0.85, py + cell*0.7, 5, 6);
     }
     ctx.lineWidth = 1;
+  }
   /* BAŞ: çekici (kırmızı kabin) */
   const hd = dirOf(0);
   const hx = body[0].x * cell, hy = body[0].y * cell;
