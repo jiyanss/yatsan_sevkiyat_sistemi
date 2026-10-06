@@ -5295,16 +5295,16 @@ function drawSnake() {
     const by = horiz ? py + cell/2 : (d.y > 0 ? py + 5 : py + cell - 5);
     if (horiz) { ctx.beginPath(); ctx.moveTo(bx, py + cell*0.24); ctx.lineTo(bx, py + cell*0.76); ctx.stroke(); }
     else { ctx.beginPath(); ctx.moveTo(px + cell*0.24, by); ctx.lineTo(px + cell*0.76, by); ctx.stroke(); }
-    /* tekerlekler */
+       /* tekerlekler */
     ctx.fillStyle = "#334155";
-    const w1 = horiz ? px + cell*0.3 : px + cell*0.15;
-    const w2 = horiz ? px + cell*0.7 : px + cell*0.85;
-    const wy = horiz ? py + cell*0.85 : py + cell*0.3;
-    const wx2 = horiz ? py + cell*0.15 : py + cell*0.85;
-    if (horiz) { ctx.fillRect(w1, wy, 6, 5); ctx.fillRect(w2, wy, 6, 5); }
-    else { ctx.fillRect(wx2, w1, 5, 6); ctx.fillRect(wx2, w2, 5, 6); }
+    if (horiz) {
+      ctx.fillRect(px + cell*0.3, py + cell*0.85, 6, 5);
+      ctx.fillRect(px + cell*0.7, py + cell*0.85, 6, 5);
+    } else {
+      ctx.fillRect(px + cell*0.85, py + cell*0.3, 5, 6);
+      ctx.fillRect(px + cell*0.85, py + cell*0.7, 5, 6);
+    }
     ctx.lineWidth = 1;
-  }
   /* BAŞ: çekici (kırmızı kabin) */
   const hd = dirOf(0);
   const hx = body[0].x * cell, hy = body[0].y * cell;
