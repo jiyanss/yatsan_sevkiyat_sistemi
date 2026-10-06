@@ -4915,6 +4915,7 @@ function updateUserUI() {
   document.getElementById("btnSurePanel").classList.toggle("hidden", !isAdmin());
   document.getElementById("btnBackup").classList.toggle("hidden", !isAdmin());
   document.getElementById("btnArsiv").classList.toggle("hidden", !isAdmin());
+  document.getElementById("btnOrderHazir").classList.toggle("hidden", !isAdmin());
   if (currentUser) {
     const admin = isAdmin();
     box.innerHTML = `<span class="user-chip ${admin ? "is-admin" : ""}">${admin ? "🛡️" : "👤"} ${esc(shortUser(currentUser.email))}</span>
