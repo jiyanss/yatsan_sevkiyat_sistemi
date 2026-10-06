@@ -1297,39 +1297,12 @@ document.getElementById("btnCols").addEventListener("click", e => {
   const menu = document.getElementById("colMenu");
   const btn = document.getElementById("btnCols");
   renderColMenu();
-  document.getElementById("btnCols").addEventListener("click", e => {
-  
-  renderColMenu();
-  const menu = document.getElementById("colMenu");
-  const btn = document.getElementById("btnCols");
   menu.classList.toggle("hidden");
   if (!menu.classList.contains("hidden")) {
     menu.style.visibility = "hidden";
     menu.style.display = "block";
     requestAnimationFrame(() => {
       const r = btn.getBoundingClientRect();
-      const mw = menu.offsetWidth;
-      const mh = menu.offsetHeight;
-      let left = Math.min(r.right, window.innerWidth - mw - 8);
-      left = Math.max(8, left);
-      let top = r.bottom + 6;
-      if (top + mh > window.innerHeight - 8) {
-        top = Math.max(8, r.top - mh - 6);
-      }
-      menu.style.left = left + "px";
-      menu.style.top = top + "px";
-      menu.style.visibility = "visible";
-    });
-  }
-});
-  
-  const anchor = btn.offsetParent ? btn : document.getElementById("btnMenu");
-  menu.classList.toggle("hidden");
-  if (!menu.classList.contains("hidden")) {
-    menu.style.visibility = "hidden";
-    menu.style.display = "block";
-    requestAnimationFrame(() => {
-      const r = anchor.getBoundingClientRect();
       const mw = menu.offsetWidth, mh = menu.offsetHeight;
       let left = Math.min(r.right, window.innerWidth - mw - 8);
       left = Math.max(8, left);
@@ -1360,9 +1333,7 @@ document.getElementById("colMenu").addEventListener("change", e => {
   applyHiddenCols();
   render();
 });
-document.addEventListener("click", e => {
-  if (!e.target.closest("#menuDrop") && !e.target.closest("#btnMenu"));
-});
+
 document.addEventListener("click", e => {
   if (!e.target.closest(".colmenu-wrap")) {
     document.getElementById("colMenu").classList.add("hidden");
