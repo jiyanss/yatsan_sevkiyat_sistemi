@@ -1972,8 +1972,8 @@ function openDepo() {
   renderDepoContent();
 }
 function closeDepo() {
+  stopSnake();
   document.getElementById("depoOverlay").classList.add("hidden");
-   document.body.classList.remove("depo-open");
 }
 document.getElementById("btnDepoClose").addEventListener("click", closeDepo);
 document.getElementById("btnScanOpen").addEventListener("click", openScanner);
@@ -2025,6 +2025,7 @@ function gunEtiketi(iso) {
   return `${GUNLER[idx] || ""} ${dt.getDate()} ${AYLAR[dt.getMonth()]}`;
 }
 function renderDepoContent() {
+  stopSnake();   /* sekme değişince oyun dursun */
   const today = todayISO();
   const d = new Date();
   /* Depo ekranı tarihi: reel plan varsa o, yoksa planlanan tarih */
@@ -2114,6 +2115,40 @@ function renderDepoContent() {
     c.innerHTML = html;
     return;
   }
+  if (depoTab === "yilan") {
+    c.innerHTML = `
+      <div class="depo-sec-title" style="color:#34d399">🐍 YILAN OYUNU</div>
+      <div class="snake-wrap">
+        <div class="snake-top"><span>Skor: <b id="snakeScore">0</b></span><span>🏆 Rekor: <b id="snakeBest">${snakeBest}</b></span></div>
+        <div class="snake-cv-wrap">
+          <canvas id="snakeCanvas" width="400" height="400"></canvas>
+          <div class="snake-over" id="snakeOver">
+            <div class="so-title" id="snakeOverTitle">🐍 Yılan Oyunu</div>
+            <div class="so-score" id="snakeOverScore">Rekor: ${snakeBest}</div>
+            <button class="depo-tab active" id="btnSnakeStart">▶️ Başla</button>
+          </div>
+        </div>
+        <div class="snake-pad">
+          <button class="snake-btn" data-sdir="up">▲</button>
+          <div>
+            <button class="snake-btn" data-sdir="left">◀</button>
+            <button class="snake-btn" data-sdir="down">▼</button>
+            <button class="snake-btn" data-sdir="right">▶</button>
+          </div>
+        </div>
+        <p class="depo-empty" style="font-size:12px">Klavye: ok tuşları / WASD · Tablet: aşağıdaki tuşlar</p>
+      </div>`;
+    document.getElementById("btnSnakeStart").addEventListener("click", snakeStart);
+    c.querySelectorAll(".snake-btn").forEach(b => b.addEventListener("click", () => {
+      const d = b.dataset.sdir;
+      if (d === "up") snakeDir(0, -1);
+      if (d === "down") snakeDir(0, 1);
+      if (d === "left") snakeDir(-1, 0);
+      if (d === "right") snakeDir(1, 0);
+    }));
+    return;
+  }
+   
   /* Operasyonel gecikme: REEL PLAN bugünün gerisinde kalan tamamlanmamışlar.
      Reel planı ileri çekilen kayıt burada GECİKEN görünmez —
      gecikme notları zaten "Kalan Yüklemeler" sekmesinde gösteriliyor. */
@@ -2143,6 +2178,7 @@ setInterval(() => {
 }, 1000);
 setInterval(() => {
   if (document.getElementById("depoOverlay").classList.contains("hidden") || document.hidden) return;
+  if (depoTab === "yilan") return;   /* oyun açıkken yenileme yok */
   renderDepoContent();
 }, 30000);
 
@@ -5102,3 +5138,112 @@ updateUserUI();
   startLiveSync();
   otomatikGunlukYedek();
 })();
+
+/* ================= 🐍 YILAN OYUNU ================= */
+let snakeTimer = null;
+let snakeState = null;
+let snakeBest = Number(localStorage.getItem("sevkiyat_yilan_best") || 0);
+
+function stopSnake() {
+  if (snakeTimer) { clearInterval(snakeTimer); snakeTimer = null; }
+}
+function snakeReset() {
+  snakeState = {
+    body: [{x:10,y:10},{x:9,y:10},{x:8,y:10}],
+    dir: {x:1,y:0}, nextDir: {x:1,y:0},
+    food: null, score: 0, speed: 150
+  };
+  snakePlaceFood();
+  drawSnake();
+}
+function snakePlaceFood() {
+  const s = snakeState;
+  let p;
+  do { p = { x: Math.floor(Math.random()*20), y: Math.floor(Math.random()*20) }; }
+  while (s.body.some(c => c.x === p.x && c.y === p.y));
+  s.food = p;
+}
+function snakeDir(nx, ny) {
+  if (!snakeState || snakeTimer === null) return;
+  if (snakeState.dir.x === -nx && snakeState.dir.y === -ny) return; /* geri dönüş yasak */
+  snakeState.nextDir = { x: nx, y: ny };
+}
+function snakeStart() {
+  snakeReset();
+  const ov = document.getElementById("snakeOver");
+  if (ov) ov.classList.add("hidden");
+  stopSnake();
+  snakeTimer = setInterval(snakeTick, snakeState.speed);
+}
+function snakeGameOver() {
+  stopSnake();
+  if (navigator.vibrate) navigator.vibrate(200);
+  const ov = document.getElementById("snakeOver");
+  if (ov) {
+    ov.classList.remove("hidden");
+    document.getElementById("snakeOverTitle").textContent = "💀 Oyun Bitti";
+    document.getElementById("snakeOverScore").textContent = `Skorun: ${snakeState.score} · Rekor: ${snakeBest}`;
+    document.getElementById("btnSnakeStart").textContent = "▶️ Tekrar Oyna";
+  }
+}
+function snakeTick() {
+  const s = snakeState;
+  if (!s) return;
+  s.dir = s.nextDir;
+  const head = { x: s.body[0].x + s.dir.x, y: s.body[0].y + s.dir.y };
+  if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20) return snakeGameOver();
+  if (s.body.some(c => c.x === head.x && c.y === head.y)) return snakeGameOver();
+  s.body.unshift(head);
+  if (s.food && head.x === s.food.x && head.y === s.food.y) {
+    s.score++;
+    const sc = document.getElementById("snakeScore");
+    if (sc) sc.textContent = s.score;
+    if (s.score > snakeBest) {
+      snakeBest = s.score;
+      localStorage.setItem("sevkiyat_yilan_best", snakeBest);
+      const bEl = document.getElementById("snakeBest");
+      if (bEl) bEl.textContent = snakeBest;
+    }
+    if (s.score % 3 === 0 && s.speed > 70) {
+      s.speed -= 10;
+      stopSnake();
+      snakeTimer = setInterval(snakeTick, s.speed);
+    }
+    snakePlaceFood();
+  } else {
+    s.body.pop();
+  }
+  drawSnake();
+}
+function drawSnake() {
+  const cv = document.getElementById("snakeCanvas");
+  if (!cv) return;
+  const ctx = cv.getContext("2d");
+  const cell = cv.width / 20;
+  ctx.fillStyle = "#0b1220";
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.strokeStyle = "#151f31";
+  for (let i = 1; i < 20; i++) {
+    ctx.beginPath(); ctx.moveTo(i*cell, 0); ctx.lineTo(i*cell, cv.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i*cell); ctx.lineTo(cv.width, i*cell); ctx.stroke();
+  }
+  const f = snakeState.food;
+  if (f) {
+    ctx.fillStyle = "#f87171";
+    ctx.beginPath();
+    ctx.arc(f.x*cell + cell/2, f.y*cell + cell/2, cell/2 - 2, 0, Math.PI*2);
+    ctx.fill();
+  }
+  snakeState.body.forEach((c, i) => {
+    ctx.fillStyle = i === 0 ? "#34d399" : "#4f46e5";
+    ctx.fillRect(c.x*cell + 1, c.y*cell + 1, cell - 2, cell - 2);
+  });
+}
+/* Klavye — yılan sekmesi aktifken çalışır */
+document.addEventListener("keydown", e => {
+  const ov = document.getElementById("depoOverlay");
+  if (!ov || ov.classList.contains("hidden") || depoTab !== "yilan") return;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  const map = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0], w:[0,-1], s:[0,1], a:[-1,0], d:[1,0] };
+  if (map[k]) { e.preventDefault(); snakeDir(map[k][0], map[k][1]); }
+});
