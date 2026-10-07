@@ -507,11 +507,12 @@ function hatirlananKriter(musteri) {
   return (e && e.kriter) ? e.kriter : null;
 }
 function cozKriter() {
+  const norm = k => (k === "referans" ? "referansNo" : k); /* eski kayıtlar için */
   const sel = document.getElementById("kriterSec").value;
-  if (sel !== "auto") return sel;
+  if (sel !== "auto") return norm(sel);
   const mus = document.getElementById("musteriSec").value.trim();
-  if (mus) { const k = hatirlananKriter(mus); if (k) return k; }
-  return sonKriter;
+  if (mus) { const k = hatirlananKriter(mus); if (k) return norm(k); }
+  return norm(sonKriter);
 }
 function kriterLabel(k) { const f = KRITERLER.find(x => x.key === k); return f ? f.label : k; }
 
