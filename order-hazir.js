@@ -559,6 +559,16 @@ function render() {
   document.getElementById("st-hazir").textContent = fmtN(hazirGruplar.length);
   document.getElementById("st-m3").textContent = fmtN(hazirGruplar.reduce((s, g) => s + g.hazirM3, 0));
   document.getElementById("st-deger").innerHTML = Object.keys(degerTop).length ? fmtDeger(degerTop) : "—";
+       /* Snapshot toplamları: filtrelenen aktif satırların TÜMÜ (hazır olanlar değil) */
+  const aktifTum = list.filter(r => !satirKapali(r));
+  const tDeger = {};
+  aktifTum.forEach(r => {
+    const c = (r.paraBirimi || "DİĞER").toUpperCase();
+    tDeger[c] = (tDeger[c] || 0) + satirTutar(r);
+  });
+  document.getElementById("st-tkalan").textContent = fmtN(aktifTum.reduce((s, r) => s + numOr(r.kalan, 0), 0));
+  document.getElementById("st-tm3").textContent = fmtN(aktifTum.reduce((s, r) => s + satirM3(r), 0));
+  document.getElementById("st-tdeger").innerHTML = Object.keys(tDeger).length ? fmtDeger(tDeger) : "—";
   if (currentView === "firma") renderFirmaView(gruplar, esik);
   else renderGrupView(list, kriter, esik, gruplar);
 }
