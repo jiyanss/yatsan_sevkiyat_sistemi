@@ -916,8 +916,9 @@ document.getElementById("btnGrupView").addEventListener("click", () => setView("
 document.getElementById("btnFirmaView").addEventListener("click", () => setView("firma"));
 document.getElementById("btnGrupView").classList.add("primary");
 
-/* Grup satırına tıkla → detay aç/kapa */
+/* Grup satırına tıkla → detay aç/kapa (checkbox/buton tıklamaları hariç!) */
 document.getElementById("ohTbody").addEventListener("click", e => {
+  if (e.target.closest("input, button, select, label")) return;
   const tr = e.target.closest("tr.oh-grup");
   if (!tr) return;
   const key = tr.dataset.gkey;
