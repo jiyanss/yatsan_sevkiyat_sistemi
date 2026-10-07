@@ -104,6 +104,7 @@ const FIELDS = [
   { key: "sevkTarihi",     label: "Talep edilen sevk tarihi",           kw: ["talep edilen sevk tarihi", "talep edilen"] },
   { key: "ilkDepo",        label: "İlk depo giriş tarihi",              kw: ["ilk depo", "ilk giris", "ilk tamamlandi"] },
   { key: "sonDepo",        label: "Son depo giriş tarihi",              kw: ["son depo", "son giris", "son tamamlandi"] },
+  { key: "utm",            label: "UTM (Üretim Tamamlanan)",            kw: ["utm", "uretim tamamlanan"] },
   { key: "satisBolgesi",   label: "Satış bölgesi",                      kw: ["satis bolgesi"] },
   { key: "olusturma",      label: "Oluşturulma tarihi",                 kw: ["olusturulma tarihi"] }
 ];
@@ -614,7 +615,10 @@ function renderDetay(g) {
     String(a.olusturma || "9999-12-31").localeCompare(String(b.olusturma || "9999-12-31")) ||
     String(a.partiNo || "").localeCompare(String(b.partiNo || ""), "tr") ||
     (b.kalan || 0) - (a.kalan || 0);
-  const rows = g.satirlar.slice().sort(sira).map(r => `<tr>
+  const rows = g.satirlar.slice().sort(sira).map(r => {
+    /* Eksik satır: kalanı var ama stok yetmiyor → satır kırmızı zemin */
+    const eksik = !satirKapali(r) && !r._hazir;
+    return `<tr${eksik ? ' class="oh-eksik"' : ""}>
     <td class="center"><input type="checkbox" class="oh-sel" data-rid="${esc(String(r._rid))}" ${sepetVar(r._rid) ? "checked" : ""} title="Yükleme listesine ekle/çıkar" /></td>
     <td class="oh-strong">${esc(r.maddeKodu || "-")}</td>
     <td>${esc(r.maddeAdi || "-")}</td>
@@ -626,16 +630,19 @@ function renderDetay(g) {
     <td class="center">${numOr(r.miktar, "-")}</td>
     <td class="center oh-strong">${numOr(r.kalan, "-")}</td>
     <td class="center">${numOr(r.depoStok, "-")}</td>
+    <td class="center"${numOr(r.utm, 0) > 0 ? ' style="color:var(--amber);font-weight:700"' : ""}>${numOr(r.utm, "-")}</td>
     <td class="center">${fmtN(satirBirimM3(r) || 0)}</td>
     <td class="center">${numOr(r.kalanM3, "-")}</td>
     <td class="center">${numOr(r.kalanTutar, "-")}</td>
     <td class="center">${esc((r.paraBirimi || "-").toUpperCase())}</td>
     <td>${esc(r.havuz || "-")}</td>
     <td>${esc(r.sevkTarihi || "-")}</td>
+    <td>${esc(r.olusturma || "-")}</td>
     <td>${satirDurumHtml(r)}</td>
-  </tr>`).join("");
+  </tr>`;
+  }).join("");
   return `<tr class="oh-detay"><td colspan="11"><div class="oh-detay-inner"><table>
-    <thead><tr><th>📦</th><th>Madde kodu</th><th>Madde adı</th><th>Parti</th><th>Konfig</th><th>Satış siparişi</th><th>Referans</th><th>Müşteri sip. no</th><th>Miktar</th><th>Kalan</th><th>Depo Stok</th><th>Birim m³</th><th>Kalan m³</th><th>Kalan Tutar</th><th>PB</th><th>Havuz</th><th>Sevk tarihi</th><th>Sonuç</th></tr></thead>
+    <thead><tr><th>📦</th><th>Madde kodu</th><th>Madde adı</th><th>Parti</th><th>Konfig</th><th>Satış siparişi</th><th>Referans</th><th>Müşteri sip. no</th><th>Miktar</th><th>Kalan</th><th>Depo Stok</th><th title="Üretim tamamlandı, depoya gelmemiş">UTM</th><th>Birim m³</th><th>Kalan m³</th><th>Kalan Tutar</th><th>PB</th><th>Havuz</th><th>Sevk tarihi</th><th>Oluşturma</th><th>Sonuç</th></tr></thead>
     <tbody>${rows}</tbody></table></div></td></tr>`;
 }
 function renderFirmaView(gruplar, esik) {
@@ -701,7 +708,7 @@ async function loadSnapshot(tarih) {
 /* ═══════════════ 📥 EXCEL YÜKLEME ═══════════════ */
 function mapRowToOh(row) {
   const g = k => fieldMap[k] ? row[fieldMap[k]] : "";
-  const NUM = ["miktar", "kalan", "sevkEdilen", "depoStok", "kalanM3", "birimM3", "kalanTutar"];
+  const NUM = ["miktar", "kalan", "sevkEdilen", "depoStok", "utm", "kalanM3", "birimM3", "kalanTutar"];
   const TARIH = ["sevkTarihi", "olusturma", "ilkDepo", "sonDepo"];
   const r = {};
   FIELDS.forEach(f => {
