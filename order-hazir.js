@@ -820,8 +820,7 @@ function renderGecmis() {
       rows.push({ tarih, ...(o || {}) });
     });
   });
-  /* 🔄 Canlı düzeltme: şu an yüklü snapshot'ın tarihiyse özeti bellekteki ham veriden
-     yeniden hesapla — eski formülle yazılmış saklı özetler otomatik düzelir. */
+  /* 🔄 Canlı düzeltme: seçili snapshot'ın tarihiyse özeti ham veriden yeniden hesapla */
   if (snapshot && Array.isArray(snapshot.satirlar) && snapshot.tarih) {
     ozetSatirlariHesapla(snapshot.tarih, snapshot.satirlar).forEach(o => {
       if (q && !normTxt(o.musteri || "").includes(q)) return;
@@ -845,6 +844,14 @@ function renderGecmis() {
       <td>${diger}</td></tr>`;
   }).join("");
 }
+document.getElementById("btnGecmis").addEventListener("click", openGecmis);
+document.getElementById("btnGecmisKapat").addEventListener("click", () =>
+  document.getElementById("gecmisModal").classList.add("hidden"));
+document.getElementById("gecmisModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+});
+document.getElementById("gecmisMusteri").addEventListener("input", debounce(renderGecmis, 250));
+
 /* ═══════════════ 📤 EXCEL RAPOR ═══════════════ */
 const H_FILL = { pattern: "solid", fgColor: { rgb: "1E293B" } };
 const H_FONT = { name: "Calibri", sz: 10, bold: true, color: { rgb: "FFFFFF" } };
