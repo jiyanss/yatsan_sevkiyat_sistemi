@@ -102,6 +102,8 @@ const FIELDS = [
   { key: "kalanTutar",     label: "Kalan Tutar (değer)",                kw: ["kalan tutar"] },
   { key: "paraBirimi",     label: "Para birimi",                        kw: ["para birimi"] },
   { key: "sevkTarihi",     label: "Talep edilen sevk tarihi",           kw: ["talep edilen sevk tarihi", "talep edilen"] },
+  { key: "ilkDepo",        label: "İlk depo giriş tarihi",              kw: ["ilk depo", "ilk giris", "ilk tamamlandi"] },
+  { key: "sonDepo",        label: "Son depo giriş tarihi",              kw: ["son depo", "son giris", "son tamamlandi"] },
   { key: "satisBolgesi",   label: "Satış bölgesi",                      kw: ["satis bolgesi"] },
   { key: "olusturma",      label: "Oluşturulma tarihi",                 kw: ["olusturulma tarihi"] }
 ];
@@ -690,7 +692,7 @@ async function loadSnapshot(tarih) {
 function mapRowToOh(row) {
   const g = k => fieldMap[k] ? row[fieldMap[k]] : "";
   const NUM = ["miktar", "kalan", "sevkEdilen", "depoStok", "kalanM3", "birimM3", "kalanTutar"];
-  const TARIH = ["sevkTarihi", "olusturma"];
+  const TARIH = ["sevkTarihi", "olusturma", "ilkDepo", "sonDepo"];
   const r = {};
   FIELDS.forEach(f => {
     const raw = g(f.key);
