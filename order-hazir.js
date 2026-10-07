@@ -1188,6 +1188,7 @@ function kovaHtml({ kovalar, tarihsiz }) {
     <thead><tr><th>Yaş aralığı</th><th class="center">Satır</th><th class="center">Kalan adet</th><th class="center">m³</th><th>Değer</th></tr></thead>
     <tbody>${kovalar.map(satir).join("")}${tarihsiz.satir ? satir(tarihsiz) : ""}</tbody></table></div>`;
 }
+
 function firmaYasHtml(arr, baslik) {
   const m = new Map();
   arr.forEach(({ r, yas }) => {
@@ -1210,14 +1211,15 @@ function firmaYasHtml(arr, baslik) {
     <td class="center">${fmtN(g.m3)}</td>
     <td>${fmtDeger(g.deger)}</td></tr>`).join("");
   return `<div class="table-wrap"><table>
-     <thead><tr><th>Firma</th><th>Satış siparişi</th><th>Müşteri sip. no</th><th>${esc(kriterLabel(kriter))}</th><th>Madde kodu</th><th>Madde adı</th><th>Parti</th><th class="center">Kalan</th><th class="center">m³</th><th class="center">Oluşturma</th><th class="center">Sipariş yaşı</th><th class="center">Son depo giriş</th><th class="center">Stok yaşı</th><th class="center">Tutar</th><th class="center">PB</th><th>Durum</th></tr></thead>
+    <thead><tr><th>Firma</th><th class="center">Satır</th><th class="center">Ort. yaş</th><th class="center">En eski</th><th class="center">Kalan adet</th><th class="center">m³</th><th>Değer</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
 }
+
 function yasDetayHtml(siparis) {
   const kriter = cozKriter();
   const sira = [...siparis].sort((a, b) => (b.yas ?? -1) - (a.yas ?? -1));
   if (!sira.length) return `<p class="hint">Veri yok.</p>`;
-    const rows = sira.slice(0, 500).map(({ r, yas }) => `<tr>
+  const rows = sira.slice(0, 500).map(({ r, yas }) => `<tr>
     <td class="oh-strong">${esc(r.musteri || "-")}</td>
     <td>${esc(r.siparisNo || "-")}</td>
     <td>${esc(r.musteriSipNo || "-")}</td>
@@ -1236,9 +1238,10 @@ function yasDetayHtml(siparis) {
     <td>${r._hazir ? '<span class="oh-ok">✓ Hazır</span>' : '<span class="oh-no">Bekliyor</span>'}</td>
   </tr>`).join("");
   return `<div class="table-wrap" style="max-height:40vh;overflow-y:auto"><table>
-    <thead><tr><th>Firma</th><th>${esc(kriterLabel(kriter))}</th><th>Madde kodu</th><th>Madde adı</th><th>Parti</th><th class="center">Kalan</th><th class="center">m³</th><th class="center">Oluşturma</th><th class="center">Sipariş yaşı</th><th class="center">Son depo giriş</th><th class="center">Stok yaşı</th><th class="center">Tutar</th><th class="center">PB</th><th>Durum</th></tr></thead>
+    <thead><tr><th>Firma</th><th>Satış siparişi</th><th>Müşteri sip. no</th><th>${esc(kriterLabel(kriter))}</th><th>Madde kodu</th><th>Madde adı</th><th>Parti</th><th class="center">Kalan</th><th class="center">m³</th><th class="center">Oluşturma</th><th class="center">Sipariş yaşı</th><th class="center">Son depo giriş</th><th class="center">Stok yaşı</th><th class="center">Tutar</th><th class="center">PB</th><th>Durum</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
 }
+
 function renderYaslandirma() {
   const box = document.getElementById("yasIcerik");
   if (!snapshot) { box.innerHTML = `<p class="hint">Snapshot yok — önce Excel yükleyin.</p>`; return; }
