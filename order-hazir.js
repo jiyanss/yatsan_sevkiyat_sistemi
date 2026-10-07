@@ -326,11 +326,12 @@ function satirDurumHtml(r) {
 /* Kriter değeri bazlı gruplama; durum/kapalı satırlar detayda kalır */
 /* Birim m³: Excel'deki Birim m³ yoksa Kalan m³ ÷ Kalan'dan türet */
 function satirBirimM3(r) {
-  /* Birim m³ = Kalan m³ ÷ Kalan (tanım bu). Kalan m³ yoksa Excel'in Birim m ³ kolonuna düş. */
+  /* Öncelik: Excel "Birim m ³" kolonu. Yoksa türet: Kalan m³ ÷ Kalan */
+  const b = numOr(r.birimM3, null);
+  if (b != null && isFinite(b) && b !== 0) return b;
   const k = numOr(r.kalan, 0), m3 = numOr(r.kalanM3, null);
   if (m3 != null && k > 0) return m3 / k;
-  const b = numOr(r.birimM3, null);
-  return (b != null && isFinite(b)) ? b : 0;
+  return 0;
 }
 /* X adet sevk edilecekse m³ (adet boşsa tam kalan) */
 function satirM3(r, adet) {
