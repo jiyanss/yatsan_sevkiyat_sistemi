@@ -1345,6 +1345,34 @@ document.getElementById("yasKapsam").addEventListener("change", renderYaslandirm
 document.getElementById("yasSadeceUzun").addEventListener("change", renderYaslandirma);
 document.getElementById("btnYasExcel").addEventListener("click", yasExcel);
 
+/* ═══════════════ ⤢ SIĞDIR + ✖ TÜMÜNÜ KAPAT ═══════════════ */
+let fitMode = localStorage.getItem("oh_fit") === "1";
+function applyFit() {
+  const wrap = document.getElementById("ohTableWrap");
+  if (!wrap) return;
+  const tbl = wrap.querySelector("table");
+  if (!tbl) return;
+  wrap.style.zoom = "";
+  if (!fitMode) return;
+  const need = tbl.scrollWidth;
+  const have = wrap.clientWidth - 2;
+  const z = Math.max(0.5, Math.min(1, have / need));
+  if (z < 0.99) wrap.style.zoom = z.toFixed(3);
+}
+function setFit(on) {
+  fitMode = on;
+  localStorage.setItem("oh_fit", on ? "1" : "0");
+  document.getElementById("btnFit").classList.toggle("primary", on);
+  applyFit();
+}
+document.getElementById("btnFit").addEventListener("click", () => setFit(!fitMode));
+window.addEventListener("resize", () => { if (fitMode) applyFit(); });
+if (fitMode) document.getElementById("btnFit").classList.add("primary");
+
+document.getElementById("btnTumunuKapat").addEventListener("click", () => {
+  document.querySelectorAll(".modal-bg").forEach(m => m.classList.add("hidden"));
+});
+
 /* ═══════════════ 🚀 BAŞLAT ═══════════════ */
 (async () => {
   const s = getAuthState();
