@@ -684,3 +684,9 @@ tr.oh-grup:hover td { box-shadow: inset 0 0 0 1.5px var(--primary); }
 .oh-cur { display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; margin-right:4px; border-radius:6px; background:var(--surface); border:1px solid var(--border); }
 .oh-muted { color:var(--muted); }
 .oh-strong { font-weight:700; }
+
+/* Order Hazır — seçim & liste */
+.oh-sel { width:15px; height:15px; cursor:pointer; accent-color: var(--primary); }
+#ohBulk .btn { padding:6px 10px; font-size:12px; }
+#sepetModal table { font-size:11px; }
+a.btn { text-decoration: none; display: inline-flex; align-items: center; }
