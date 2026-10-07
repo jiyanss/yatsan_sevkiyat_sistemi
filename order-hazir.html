@@ -46,6 +46,8 @@
     </select>
     <button class="btn" id="btnGecmis">🕘 Geçmiş Rapor</button><button class="btn" id="btnYaslandirma">⏳ Yaşlandırma</button>
     <button class="btn" id="btnExcelRapor">📤 Excel Rapor</button>
+    <button class="btn" id="btnFit" title="Tabloyu ekran genişliğine sığdır">⤢ Sığdır</button>
+    <button class="btn" id="btnTumunuKapat" title="Açık tüm pencereleri kapat">✖ Tümü</button>
     <button class="btn primary" id="btnYukle">📥 Excel Yükle</button>
     <a class="btn" href="index.html" title="Sevkiyat Planlama'ya dön">↩ Ana Uygulama</a>
     <div class="user-box" id="userBox"></div>
@@ -73,7 +75,7 @@
     <div class="stat"><span class="s-label">Toplam Değer</span><span class="s-val" id="st-tdeger" style="font-size:14px;line-height:1.5">—</span></div>
   </section>
 
-  <div class="table-wrap" style="max-height:70vh;overflow-y:auto">
+  <div class="table-wrap" id="ohTableWrap" style="max-height:70vh;overflow-y:auto">
     <table>
       <thead><tr id="ohThead"></tr></thead>
       <tbody id="ohTbody"></tbody>
