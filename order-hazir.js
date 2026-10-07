@@ -573,7 +573,7 @@ function render() {
   document.getElementById("st-tdeger").innerHTML = Object.keys(tDeger).length ? fmtDeger(tDeger) : "—";
   if (currentView === "firma") renderFirmaView(gruplar, esik);
   else renderGrupView(list, kriter, esik, gruplar);
-}
+  applyFit();}
 
 function renderGrupView(list, kriter, esik, gruplar) {
   const th = document.getElementById("ohThead");
