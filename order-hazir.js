@@ -454,40 +454,43 @@ function hesaplaGenelOzet(satirlar) {
   };
 }
 
-/* Bir tarihin müşteri bazlı özetlerini ham satırlardan hesaplar */
+/* Bir tarihin müşteri bazlı özetlerini ham satırlardan, ana tablonun grup mantığıyla hesaplar */
 function ozetSatirlariHesapla(tarih, satirlar) {
   const kriter = cozKriter();
+  const esik = getEsik();
   const musteriler = [...new Set(satirlar.map(r => (r.musteri || "").trim()).filter(Boolean))];
-  return musteriler.map(m => mOzet(m, satirlar, tarih, kriter));
+  return musteriler.map(m => mOzet(m, satirlar, tarih, kriter, esik));
 }
-
-
-
 /* Günlük müşteri özeti (_ozet düğümü — geçmiş raporu bunda okur) */
-function mOzet(musteri, satirlar, tarih, kriter = "referansNo") {
+function mOzet(musteri, satirlar, tarih, kriter = "referansNo", esik = 100) {
   const rs = satirlar.filter(r => (r.musteri || "").trim().toLowerCase() === String(musteri).trim().toLowerCase());
   const aktif = rs.filter(r => !satirKapali(r));
-  const hazir = aktif.filter(r => r._hazir);
+  /* ⬇ ANA TABLOYLA BİREBİR: sadece TAMAMEN hazır gruplar (oran ≥ eşik) sayılır.
+     Kısmi gruplardaki hazır satırlar m³/adet/değere DAHİL EDİLMEZ. */
   const gMap = new Map();
   aktif.forEach(r => {
     const key = String(r[kriter] || "").trim() || "(boş)";
-    if (!gMap.has(key)) gMap.set(key, { toplam: 0, hazir: 0 });
-    const g = gMap.get(key);
-    g.toplam += numOr(r.kalan, 0);
-    if (r._hazir) g.hazir += numOr(r.kalan, 0);
+    if (!gMap.has(key)) gMap.set(key, []);
+    gMap.get(key).push(r);
   });
-  let hazirGrup = 0;
-  gMap.forEach(g => { if (g.toplam > 0 && g.hazir >= g.toplam) hazirGrup++; });
+  let hazirGrup = 0, hazirAdet = 0, hazirM3 = 0, hazirSatir = 0;
   const deger = {};
-  hazir.forEach(r => {
-    const cur = (r.paraBirimi || "").trim().toUpperCase() || "DİĞER";
-    deger[cur] = (deger[cur] || 0) + satirTutar(r);
+  gMap.forEach(rows => {
+    const toplamKalan = rows.reduce((s, r) => s + numOr(r.kalan, 0), 0);
+    const hazirKalan = rows.filter(r => r._hazir).reduce((s, r) => s + numOr(r.kalan, 0), 0);
+    const oran = toplamKalan > 0 ? Math.round(hazirKalan / toplamKalan * 100) : 0;
+    if (toplamKalan > 0 && oran >= esik) {
+      hazirGrup++;
+      rows.filter(r => r._hazir).forEach(r => {
+        hazirSatir++; hazirAdet += numOr(r.kalan, 0); hazirM3 += satirM3(r);
+        const cur = (r.paraBirimi || "").trim().toUpperCase() || "DİĞER";
+        deger[cur] = (deger[cur] || 0) + satirTutar(r);
+      });
+    }
   });
   return {
-    musteri, tarih, satir: rs.length, aktifSatir: aktif.length, hazirSatir: hazir.length,
-    hazirAdet: hazir.reduce((s, r) => s + numOr(r.kalan, 0), 0),
-    hazirM3: +(hazir.reduce((s, r) => s + satirM3(r), 0)).toFixed(2),
-    hazirGrup, deger
+    musteri, tarih, satir: rs.length, aktifSatir: aktif.length, hazirSatir,
+    hazirAdet, hazirM3: +hazirM3.toFixed(2), hazirGrup, deger
   };
 }
 /* ═══════════════ 🧠 KRİTER (müşteri bazlı hafıza) ═══════════════ */
