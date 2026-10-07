@@ -690,3 +690,12 @@ tr.oh-grup:hover td { box-shadow: inset 0 0 0 1.5px var(--primary); }
 #ohBulk .btn { padding:6px 10px; font-size:12px; }
 #sepetModal table { font-size:11px; }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+
+/* ⏳ Yaşlandırma rozetleri */
+.yas-badge { padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; white-space:nowrap; display:inline-block; }
+.yas-badge.ok { background:#a7f3d0; color:#065f46; }
+.yas-badge.warn { background:#fde68a; color:#92400e; }
+.yas-badge.danger { background:#fecaca; color:#991b1b; }
+body.dark .yas-badge.ok, body[data-theme="forest"] .yas-badge.ok, body[data-theme="grape"] .yas-badge.ok { background:#064e3b; color:#6ee7b7; }
+body.dark .yas-badge.warn, body[data-theme="forest"] .yas-badge.warn, body[data-theme="grape"] .yas-badge.warn { background:#78350f; color:#fcd34d; }
+body.dark .yas-badge.danger, body[data-theme="forest"] .yas-badge.danger, body[data-theme="grape"] .yas-badge.danger { background:#7f1d1d; color:#fca5a5; }
