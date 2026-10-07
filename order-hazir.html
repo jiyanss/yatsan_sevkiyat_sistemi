@@ -40,6 +40,10 @@
       <input type="number" id="esik" min="50" max="100" step="5" value="100" /></label>
     <button class="btn" id="btnGrupView">▦ Gruplar</button>
     <button class="btn" id="btnFirmaView">👥 Firma Özeti</button>
+        <select id="siraSec" title="Liste sıralaması">
+      <option value="firma">Sıra: Firma → Tarih → Parti</option>
+      <option value="durum">Sıra: Durum → Hazırlık</option>
+    </select>
     <button class="btn" id="btnGecmis">🕘 Geçmiş Rapor</button>
     <button class="btn" id="btnExcelRapor">📤 Excel Rapor</button>
     <button class="btn primary" id="btnYukle">📥 Excel Yükle</button>
@@ -119,7 +123,34 @@
     </div>
   </div>
 </div>
+<div id="ohBulk" class="bulkbar hidden">
+  <span id="ohBulkCount">0 satır</span>
+  <button class="btn primary" id="btnSepetGoster">📋 Liste</button>
+  <button class="btn primary" id="btnSepetExcel">📤 Excel</button>
+  <button class="btn" id="btnSepetTemizle">🗑️ Temizle</button>
+</div>
 
+<div id="sepetModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>📦 Yükleme Listesi (Havuz)</h2>
+    <p class="hint">Hazır listeden işaretlediğin satırlar. Toplamlar para birimine göre ayrı hesaplanır. Liste tarayıcıda saklanır, sayfa kapanınca kaybolmaz.</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <label style="font-size:12px">Liste adı:</label>
+      <input id="sepetAd" placeholder="örn. Konteyner 1 · Hafta 41" style="min-width:220px" />
+    </div>
+    <div class="table-wrap" style="max-height:46vh;overflow-y:auto">
+      <table>
+        <thead><tr id="sepetHead"></tr></thead>
+        <tbody id="sepetTbody"></tbody>
+        <tfoot id="sepetFoot"></tfoot>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="btnSepetKapat">Kapat</button>
+      <button class="btn primary" id="btnSepetExcelModal">📤 Excel'e Aktar</button>
+    </div>
+  </div>
+</div>
 <div id="toast" class="toast hidden"></div>
 <script src="order-hazir.js"></script>
 </body>
