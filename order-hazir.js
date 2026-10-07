@@ -1210,7 +1210,7 @@ function firmaYasHtml(arr, baslik) {
     <td class="center">${fmtN(g.m3)}</td>
     <td>${fmtDeger(g.deger)}</td></tr>`).join("");
   return `<div class="table-wrap"><table>
-    <thead><tr><th>Firma</th><th class="center">Satır</th><th class="center">Ort. yaş</th><th class="center">En eski</th><th class="center">Kalan adet</th><th class="center">m³</th><th>Değer</th></tr></thead>
+     <thead><tr><th>Firma</th><th>Satış siparişi</th><th>Müşteri sip. no</th><th>${esc(kriterLabel(kriter))}</th><th>Madde kodu</th><th>Madde adı</th><th>Parti</th><th class="center">Kalan</th><th class="center">m³</th><th class="center">Oluşturma</th><th class="center">Sipariş yaşı</th><th class="center">Son depo giriş</th><th class="center">Stok yaşı</th><th class="center">Tutar</th><th class="center">PB</th><th>Durum</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
 }
 function yasDetayHtml(siparis) {
