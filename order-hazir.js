@@ -1132,6 +1132,196 @@ document.getElementById("btnSepetExcel").addEventListener("click", sepetExcel);
 document.getElementById("btnSepetExcelModal").addEventListener("click", sepetExcel);
 updateBulkBar();
 
+/* ═══════════════ ⏳ YAŞLANDIRMA RAPORU ═══════════════ */
+const YAS_KOVA = [
+  { label: "0–30 gün",   min: 0,   max: 30,  cls: "ok" },
+  { label: "31–60 gün",  min: 31,  max: 60,  cls: "warn" },
+  { label: "61–90 gün",  min: 61,  max: 90,  cls: "warn" },
+  { label: "91–180 gün", min: 91,  max: 180, cls: "danger" },
+  { label: "180+ gün",   min: 181, max: 1e9, cls: "danger" }
+];
+function yasGun(iso) {
+  if (!iso) return null;
+  const m = String(iso).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return null;
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return Math.max(0, Math.round((Date.now() - d.getTime()) / 86400000));
+}
+function yasBadge(g) {
+  if (g == null) return `<span class="oh-muted">—</span>`;
+  const cls = g <= 30 ? "ok" : g <= 90 ? "warn" : "danger";
+  return `<span class="yas-badge ${cls}">${g} gün</span>`;
+}
+function yasVeri() {
+  const kapsam = document.getElementById("yasKapsam").value;
+  const sadeceUzun = document.getElementById("yasSadeceUzun").checked;
+  const list = aktifSatirlar().filter(r => !satirKapali(r));
+  let siparis = list.map(r => ({ r, yas: yasGun(r.olusturma) }));
+  let stok = list.filter(r => (kapsam === "hazir" ? r._hazir : true) && r.sonDepo)
+                 .map(r => ({ r, yas: yasGun(r.sonDepo) }));
+  if (sadeceUzun) {
+    siparis = siparis.filter(x => x.yas != null && x.yas >= 90);
+    stok = stok.filter(x => x.yas != null && x.yas >= 90);
+  }
+  return { siparis, stok };
+}
+/* Kova dağılımı (render + excel ortak) */
+function kovaHesapla(arr) {
+  const kovalar = YAS_KOVA.map(k => ({ ...k, satir: 0, adet: 0, m3: 0, deger: {} }));
+  const tarihsiz = { label: "Tarihsiz (tarih yok)", satir: 0, adet: 0, m3: 0, deger: {}, cls: "muted" };
+  arr.forEach(({ r, yas }) => {
+    const h = (yas == null) ? tarihsiz : kovalar.find(k => yas >= k.min && yas <= k.max);
+    h.satir++; h.adet += numOr(r.kalan, 0); h.m3 += satirM3(r);
+    const c = (r.paraBirimi || "DİĞER").toUpperCase();
+    h.deger[c] = (h.deger[c] || 0) + satirTutar(r);
+  });
+  return { kovalar, tarihsiz };
+}
+function kovaHtml({ kovalar, tarihsiz }) {
+  const satir = k => `<tr>
+    <td>${k.cls === "muted" ? `<span class="oh-muted">${k.label}</span>` : `<span class="yas-badge ${k.cls}">${k.label}</span>`}</td>
+    <td class="center">${k.satir || "-"}</td>
+    <td class="center">${k.adet ? fmtN(k.adet) : "-"}</td>
+    <td class="center">${k.m3 ? fmtN(k.m3) : "-"}</td>
+    <td>${fmtDeger(k.deger)}</td></tr>`;
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Yaş aralığı</th><th class="center">Satır</th><th class="center">Kalan adet</th><th class="center">m³</th><th>Değer</th></tr></thead>
+    <tbody>${kovalar.map(satir).join("")}${tarihsiz.satir ? satir(tarihsiz) : ""}</tbody></table></div>`;
+}
+function firmaYasHtml(arr, baslik) {
+  const m = new Map();
+  arr.forEach(({ r, yas }) => {
+    if (yas == null) return;
+    const f = r.musteri || "-";
+    if (!m.has(f)) m.set(f, { n: 0, top: 0, max: 0, adet: 0, m3: 0, deger: {} });
+    const g = m.get(f);
+    g.n++; g.top += yas; g.max = Math.max(g.max, yas);
+    g.adet += numOr(r.kalan, 0); g.m3 += satirM3(r);
+    const c = (r.paraBirimi || "DİĞER").toUpperCase();
+    g.deger[c] = (g.deger[c] || 0) + satirTutar(r);
+  });
+  if (!m.size) return `<p class="hint">${esc(baslik)}: veri yok.</p>`;
+  const rows = [...m.entries()].sort((a, b) => b[1].top / b[1].n - a[1].top / a[1].n).map(([f, g]) => `<tr>
+    <td class="oh-strong">${esc(f)}</td>
+    <td class="center">${g.n}</td>
+    <td class="center">${yasBadge(Math.round(g.top / g.n))}</td>
+    <td class="center">${yasBadge(g.max)}</td>
+    <td class="center">${fmtN(g.adet)}</td>
+    <td class="center">${fmtN(g.m3)}</td>
+    <td>${fmtDeger(g.deger)}</td></tr>`).join("");
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Firma</th><th class="center">Satır</th><th class="center">Ort. yaş</th><th class="center">En eski</th><th class="center">Kalan adet</th><th class="center">m³</th><th>Değer</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+function yasDetayHtml(siparis) {
+  const kriter = cozKriter();
+  const sira = [...siparis].sort((a, b) => (b.yas ?? -1) - (a.yas ?? -1));
+  if (!sira.length) return `<p class="hint">Veri yok.</p>`;
+  const rows = sira.slice(0, 500).map(({ r, yas }) => `<tr>
+    <td class="oh-strong">${esc(r.musteri || "-")}</td>
+    <td>${esc(r[kriter] || "-")}</td>
+    <td>${esc(r.maddeKodu || "-")}</td>
+    <td>${esc(r.maddeAdi || "-")}</td>
+    <td>${esc(r.partiNo || "-")}</td>
+    <td class="center oh-strong">${numOr(r.kalan, "-")}</td>
+    <td class="center">${fmtN(satirM3(r))}</td>
+    <td class="center">${esc(r.olusturma || "-")}</td>
+    <td class="center">${yasBadge(yas)}</td>
+    <td class="center">${esc(r.sonDepo || "-")}</td>
+    <td class="center">${yasBadge(yasGun(r.sonDepo))}</td>
+    <td class="center">${fmtN(satirTutar(r))}</td>
+    <td class="center">${esc((r.paraBirimi || "-").toUpperCase())}</td>
+    <td>${r._hazir ? '<span class="oh-ok">✓ Hazır</span>' : '<span class="oh-no">Bekliyor</span>'}</td>
+  </tr>`).join("");
+  return `<div class="table-wrap" style="max-height:40vh;overflow-y:auto"><table>
+    <thead><tr><th>Firma</th><th>${esc(kriterLabel(kriter))}</th><th>Madde kodu</th><th>Madde adı</th><th>Parti</th><th class="center">Kalan</th><th class="center">m³</th><th class="center">Oluşturma</th><th class="center">Sipariş yaşı</th><th class="center">Son depo giriş</th><th class="center">Stok yaşı</th><th class="center">Tutar</th><th class="center">PB</th><th>Durum</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+function renderYaslandirma() {
+  const box = document.getElementById("yasIcerik");
+  if (!snapshot) { box.innerHTML = `<p class="hint">Snapshot yok — önce Excel yükleyin.</p>`; return; }
+  const v = yasVeri();
+  const ort = a => { const x = a.filter(y => y.yas != null); return x.length ? Math.round(x.reduce((s, y) => s + y.yas, 0) / x.length) : null; };
+  const enEski = a => a.length ? Math.max(0, ...a.map(x => x.yas ?? 0)) : 0;
+  const kpi = `<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+    <div class="kpi c-primary"><div class="kpi-head">📦 Aktif satır</div><div class="kpi-val">${fmtN(v.siparis.length)}</div><div class="kpi-sub">ort. sipariş yaşı: ${ort(v.siparis) ?? "—"} gün</div></div>
+    <div class="kpi c-amber"><div class="kpi-head">🏭 Stok yaşlı satır</div><div class="kpi-val">${fmtN(v.stok.length)}</div><div class="kpi-sub">ort. stok yaşı: ${ort(v.stok) ?? "—"} gün</div></div>
+    <div class="kpi c-red"><div class="kpi-head">🔴 Sipariş 90+</div><div class="kpi-val">${v.siparis.filter(x => (x.yas ?? 0) >= 90).length}</div><div class="kpi-sub">en eski: ${enEski(v.siparis)} gün</div></div>
+    <div class="kpi c-red"><div class="kpi-head">🔴 Stok 90+</div><div class="kpi-val">${v.stok.filter(x => (x.yas ?? 0) >= 90).length}</div><div class="kpi-sub">en eski: ${enEski(v.stok)} gün</div></div>
+  </div>`;
+  box.innerHTML = kpi
+    + `<div class="rpt"><h3>📦 Sipariş yaşı — oluşturmadan bugüne</h3>${kovaHtml(kovaHesapla(v.siparis))}</div>`
+    + `<div class="rpt"><h3>🏭 Stok yaşı — son depo girişinden bugüne</h3>${kovaHtml(kovaHesapla(v.stok))}</div>`
+    + `<div class="rpt"><h3>👥 Firma bazlı — sipariş yaşı</h3>${firmaYasHtml(v.siparis, "Sipariş yaşı")}</div>`
+    + `<div class="rpt"><h3>👥 Firma bazlı — stok yaşı</h3>${firmaYasHtml(v.stok, "Stok yaşı")}</div>`
+    + `<div class="rpt"><h3>📋 Satır detayı (en eskiden itibaren · ilk 500)</h3>${yasDetayHtml(v.siparis)}</div>`;
+}
+function yasExcel() {
+  if (typeof XLSX === "undefined") { alert("Excel kütüphanesi yüklenemedi."); return; }
+  if (!snapshot) { alert("Snapshot yok."); return; }
+  const v = yasVeri();
+  const kriter = cozKriter();
+  const kovaRows = arr => {
+    const { kovalar, tarihsiz } = kovaHesapla(arr);
+    const satir = k => [k.label, k.satir, k.adet, +k.m3.toFixed(2),
+      k.deger["EUR"] ?? "", k.deger["TRY"] ?? "", k.deger["USD"] ?? "",
+      Object.entries(k.deger).filter(([c]) => !["EUR","TRY","USD"].includes(c)).map(([c, x]) => `${c} ${fmtN(x)}`).join(" · ")];
+    return [["Yaş aralığı", "Satır", "Kalan adet", "m³", "EUR", "TRY", "USD", "Diğer"],
+            ...kovalar.map(satir), ...(tarihsiz.satir ? [satir(tarihsiz)] : [])];
+  };
+  const firmaRows = (arr, etiket) => {
+    const m = new Map();
+    arr.forEach(({ r, yas }) => {
+      if (yas == null) return;
+      const f = r.musteri || "-";
+      if (!m.has(f)) m.set(f, { n: 0, top: 0, max: 0, adet: 0, m3: 0, deger: {} });
+      const g = m.get(f);
+      g.n++; g.top += yas; g.max = Math.max(g.max, yas);
+      g.adet += numOr(r.kalan, 0); g.m3 += satirM3(r);
+      const c = (r.paraBirimi || "DİĞER").toUpperCase();
+      g.deger[c] = (g.deger[c] || 0) + satirTutar(r);
+    });
+    const rows = [...m.entries()].sort((a, b) => b[1].top / b[1].n - a[1].top / a[1].n).map(([f, g]) => [f, g.n, Math.round(g.top / g.n), g.max, g.adet, +g.m3.toFixed(2),
+      g.deger["EUR"] != null ? +g.deger["EUR"].toFixed(2) : "", g.deger["TRY"] != null ? +g.deger["TRY"].toFixed(2) : "",
+      g.deger["USD"] != null ? +g.deger["USD"].toFixed(2) : "",
+      Object.entries(g.deger).filter(([c]) => !["EUR","TRY","USD"].includes(c)).map(([c, x]) => `${c} ${fmtN(x)}`).join(" · ")]);
+    return [[etiket + " — Firma", "Satır", "Ort. yaş (gün)", "En eski (gün)", "Kalan adet", "m³", "EUR", "TRY", "USD", "Diğer"], ...rows];
+  };
+  const detayRows = [...v.siparis].sort((a, b) => (b.yas ?? -1) - (a.yas ?? -1)).map(({ r, yas }) => [
+    r.musteri, r[kriter], r.maddeKodu, r.maddeAdi, r.partiNo, numOr(r.kalan, 0), satirM3(r),
+    r.olusturma || "", yas ?? "", r.sonDepo || "", yasGun(r.sonDepo) ?? "", satirTutar(r),
+    (r.paraBirimi || "").toUpperCase(), r._hazir ? "Hazır" : "Bekliyor"
+  ]);
+  const mk = rr => { const ws = XLSX.utils.aoa_to_sheet(rr); ws["!cols"] = rr[0].map(() => ({ wch: 16 })); styleHeader(ws); return ws; };
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, mk([
+    ["SİPARİŞ YAŞI DAĞILIMI"], ...kovaRows(v.siparis), [""],
+    ["STOK YAŞI DAĞILIMI"], ...kovaRows(v.stok)
+  ]), "Yas Dagilimi");
+  XLSX.utils.book_append_sheet(wb, mk([
+    ...firmaRows(v.siparis, "Sipariş yaşı"), [""],
+    ...firmaRows(v.stok, "Stok yaşı")
+  ]), "Firmalar");
+  XLSX.utils.book_append_sheet(wb, mk([
+    ["Firma", kriterLabel(kriter), "Madde Kodu", "Madde Adı", "Parti", "Kalan", "m³", "Oluşturma", "Sipariş Yaşı", "Son Depo Giriş", "Stok Yaşı", "Tutar", "PB", "Durum"],
+    ...detayRows
+  ]), "Detay");
+  XLSX.writeFile(wb, `yaslandirma_${todayISO()}.xlsx`);
+  toastMsg("📤 Yaşlandırma raporu indirildi.");
+}
+document.getElementById("btnYaslandirma").addEventListener("click", () => {
+  document.getElementById("yasModal").classList.remove("hidden");
+  renderYaslandirma();
+});
+document.getElementById("btnYasKapat").addEventListener("click", () =>
+  document.getElementById("yasModal").classList.add("hidden"));
+document.getElementById("yasModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+});
+document.getElementById("yasKapsam").addEventListener("change", renderYaslandirma);
+document.getElementById("yasSadeceUzun").addEventListener("change", renderYaslandirma);
+document.getElementById("btnYasExcel").addEventListener("click", yasExcel);
+
 /* ═══════════════ 🚀 BAŞLAT ═══════════════ */
 (async () => {
   const s = getAuthState();
