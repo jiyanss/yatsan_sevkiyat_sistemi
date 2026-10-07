@@ -699,3 +699,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 body.dark .yas-badge.ok, body[data-theme="forest"] .yas-badge.ok, body[data-theme="grape"] .yas-badge.ok { background:#064e3b; color:#6ee7b7; }
 body.dark .yas-badge.warn, body[data-theme="forest"] .yas-badge.warn, body[data-theme="grape"] .yas-badge.warn { background:#78350f; color:#fcd34d; }
 body.dark .yas-badge.danger, body[data-theme="forest"] .yas-badge.danger, body[data-theme="grape"] .yas-badge.danger { background:#7f1d1d; color:#fca5a5; }
+
+/* Eksik (stok yetersiz) satır zemin boyama */
+tr.oh-eksik td { background: var(--red-soft); }
+tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
