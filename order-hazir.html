@@ -44,7 +44,7 @@
       <option value="firma">Sıra: Firma → Tarih → Parti</option>
       <option value="durum">Sıra: Durum → Hazırlık</option>
     </select>
-    <button class="btn" id="btnGecmis">🕘 Geçmiş Rapor</button>
+    <button class="btn" id="btnGecmis">🕘 Geçmiş Rapor</button><button class="btn" id="btnYaslandirma">⏳ Yaşlandırma</button>
     <button class="btn" id="btnExcelRapor">📤 Excel Rapor</button>
     <button class="btn primary" id="btnYukle">📥 Excel Yükle</button>
     <a class="btn" href="index.html" title="Sevkiyat Planlama'ya dön">↩ Ana Uygulama</a>
@@ -149,6 +149,25 @@
       <button class="btn" id="btnSepetKapat">Kapat</button>
       <button class="btn primary" id="btnSepetExcelModal">📤 Excel'e Aktar</button>
     </div>
+  </div>
+</div>
+<div id="yasModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>⏳ Yaşlandırma Raporu</h2>
+    <p class="hint"><b>Sipariş yaşı</b> = bugün − oluşturma tarihi · <b>Stok yaşı</b> = bugün − son depo giriş tarihi. Yüklü snapshot verisiyle, <b>bugün</b> baz alınarak hesaplanır. 🟢 0–30 · 🟡 31–90 · 🔴 91+ gün. Aktif (kalanı olan) satırlar dahildir; üstteki filtreler (müşteri/havuz/arama) rapora yansır.</p>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <label style="font-size:12px">Stok yaşı kapsamı:</label>
+      <select id="yasKapsam" style="width:auto">
+        <option value="hazir">Sadece hazır satırlar</option>
+        <option value="all">Depo girişi olan tüm satırlar</option>
+      </select>
+      <label style="font-size:12px;display:inline-flex;gap:5px;align-items:center">
+        <input type="checkbox" id="yasSadeceUzun" /> Sadece 90+ gün
+      </label>
+      <button class="btn primary" id="btnYasExcel" style="margin-left:auto">📤 Excel</button>
+    </div>
+    <div id="yasIcerik" style="max-height:56vh;overflow-y:auto"></div>
+    <div class="modal-actions"><button class="btn" id="btnYasKapat">Kapat</button></div>
   </div>
 </div>
 <div id="toast" class="toast hidden"></div>
