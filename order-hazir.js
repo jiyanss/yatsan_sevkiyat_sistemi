@@ -453,6 +453,15 @@ function hesaplaGenelOzet(satirlar) {
   };
 }
 
+/* Bir tarihin müşteri bazlı özetlerini ham satırlardan hesaplar */
+function ozetSatirlariHesapla(tarih, satirlar) {
+  const kriter = cozKriter();
+  const musteriler = [...new Set(satirlar.map(r => (r.musteri || "").trim()).filter(Boolean))];
+  return musteriler.map(m => mOzet(m, satirlar, tarih, kriter));
+}
+
+
+
 /* Günlük müşteri özeti (_ozet düğümü — geçmiş raporu bunda okur) */
 function mOzet(musteri, satirlar, tarih, kriter = "referansNo") {
   const rs = satirlar.filter(r => (r.musteri || "").trim().toLowerCase() === String(musteri).trim().toLowerCase());
@@ -480,7 +489,6 @@ function mOzet(musteri, satirlar, tarih, kriter = "referansNo") {
     hazirGrup, deger
   };
 }
-
 /* ═══════════════ 🧠 KRİTER (müşteri bazlı hafıza) ═══════════════ */
 let ayarlar = {};
 let snapshotKeys = [];
@@ -812,6 +820,15 @@ function renderGecmis() {
       rows.push({ tarih, ...(o || {}) });
     });
   });
+  /* 🔄 Canlı düzeltme: şu an yüklü snapshot'ın tarihiyse özeti bellekteki ham veriden
+     yeniden hesapla — eski formülle yazılmış saklı özetler otomatik düzelir. */
+  if (snapshot && Array.isArray(snapshot.satirlar) && snapshot.tarih) {
+    ozetSatirlariHesapla(snapshot.tarih, snapshot.satirlar).forEach(o => {
+      if (q && !normTxt(o.musteri || "").includes(q)) return;
+      const i = rows.findIndex(x => x.tarih === o.tarih && x.musteri === o.musteri);
+      if (i >= 0) rows[i] = o; else rows.push(o);
+    });
+  }
   rows.sort((a, b) => String(b.tarih).localeCompare(String(a.tarih)));
   const tb = document.getElementById("gecmisTbody");
   if (!rows.length) { tb.innerHTML = `<tr><td colspan="10" class="empty">Kayıt yok — önce Excel yükleyin.</td></tr>`; return; }
@@ -828,14 +845,6 @@ function renderGecmis() {
       <td>${diger}</td></tr>`;
   }).join("");
 }
-document.getElementById("btnGecmis").addEventListener("click", openGecmis);
-document.getElementById("btnGecmisKapat").addEventListener("click", () =>
-  document.getElementById("gecmisModal").classList.add("hidden"));
-document.getElementById("gecmisModal").addEventListener("click", e => {
-  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
-});
-document.getElementById("gecmisMusteri").addEventListener("input", debounce(renderGecmis, 250));
-
 /* ═══════════════ 📤 EXCEL RAPOR ═══════════════ */
 const H_FILL = { pattern: "solid", fgColor: { rgb: "1E293B" } };
 const H_FONT = { name: "Calibri", sz: 10, bold: true, color: { rgb: "FFFFFF" } };
@@ -863,7 +872,7 @@ function exportExcelRapor() {
     const tri = d["TRY"] ?? ""; delete d["TRY"];
     const usd = d["USD"] ?? ""; delete d["USD"];
     const diger = Object.entries(d).map(([c, v]) => `${c} ${fmtN(v)}`).join(" · ");
-    return [durumLabel(g.durum), g.key, g.musteri, g.satirlar.length, g.aktif.length,
+    return [durumLabel(g.durum), g.ck, g.musteri, g.satirlar.length, g.aktif.length,
       g.hazirAdet, g.toplamKalan, g.oran, g.hazirM3, eur, tri, usd, diger, g.cakismaMadde.join(", ")];
   });
 
