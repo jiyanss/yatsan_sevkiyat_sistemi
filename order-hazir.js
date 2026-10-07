@@ -326,11 +326,10 @@ function satirDurumHtml(r) {
 /* Kriter değeri bazlı gruplama; durum/kapalı satırlar detayda kalır */
 /* Birim m³: Excel'deki Birim m³ yoksa Kalan m³ ÷ Kalan'dan türet */
 function satirBirimM3(r) {
-  let b = numOr(r.birimM3, null);
-  if (b == null) {
-    const k = numOr(r.kalan, 0), m3 = numOr(r.kalanM3, null);
-    if (m3 != null && k > 0) b = m3 / k;
-  }
+  /* Birim m³ = Kalan m³ ÷ Kalan (tanım bu). Kalan m³ yoksa Excel'in Birim m ³ kolonuna düş. */
+  const k = numOr(r.kalan, 0), m3 = numOr(r.kalanM3, null);
+  if (m3 != null && k > 0) return m3 / k;
+  const b = numOr(r.birimM3, null);
   return (b != null && isFinite(b)) ? b : 0;
 }
 /* X adet sevk edilecekse m³ (adet boşsa tam kalan) */
@@ -450,7 +449,7 @@ function hesaplaGenelOzet(satirlar) {
   return {
     satir: satirlar.length, aktifSatir: aktif.length, hazirSatir: hazir.length,
     hazirAdet: hazir.reduce((s, r) => s + numOr(r.kalan, 0), 0),
-    hazirM3: +(hazir.reduce((s, r) => s + numOr(r.kalanM3, 0), 0)).toFixed(2)
+    hazirM3: +(hazir.reduce((s, r) => s + satirM3(r), 0)).toFixed(2)
   };
 }
 
@@ -472,12 +471,12 @@ function mOzet(musteri, satirlar, tarih, kriter = "referansNo") {
   const deger = {};
   hazir.forEach(r => {
     const cur = (r.paraBirimi || "").trim().toUpperCase() || "DİĞER";
-    deger[cur] = (deger[cur] || 0) + numOr(r.kalanTutar, 0);
+    deger[cur] = (deger[cur] || 0) + satirTutar(r);
   });
   return {
     musteri, tarih, satir: rs.length, aktifSatir: aktif.length, hazirSatir: hazir.length,
     hazirAdet: hazir.reduce((s, r) => s + numOr(r.kalan, 0), 0),
-    hazirM3: +(hazir.reduce((s, r) => s + numOr(r.kalanM3, 0), 0)).toFixed(2),
+    hazirM3: +(hazir.reduce((s, r) => s + satirM3(r), 0)).toFixed(2),
     hazirGrup, deger
   };
 }
@@ -1345,7 +1344,7 @@ document.getElementById("yasKapsam").addEventListener("change", renderYaslandirm
 document.getElementById("yasSadeceUzun").addEventListener("change", renderYaslandirma);
 document.getElementById("btnYasExcel").addEventListener("click", yasExcel);
 
-/* ═══════════════ ⤢ SIĞDIR + ✖ TÜMÜNÜ KAPAT ═══════════════ */
+/* ═══════════════ ⤢ SIĞDIR + ✖ TÜMÜNÜ KAPAT (v2) ═══════════════ */
 let fitMode = localStorage.getItem("oh_fit") === "1";
 function applyFit() {
   const wrap = document.getElementById("ohTableWrap");
@@ -1354,23 +1353,29 @@ function applyFit() {
   if (!tbl) return;
   wrap.style.zoom = "";
   if (!fitMode) return;
-  const need = tbl.scrollWidth;
-  const have = wrap.clientWidth - 2;
+  const need = tbl.scrollWidth, have = wrap.clientWidth - 2;
   const z = Math.max(0.5, Math.min(1, have / need));
   if (z < 0.99) wrap.style.zoom = z.toFixed(3);
 }
 function setFit(on) {
   fitMode = on;
   localStorage.setItem("oh_fit", on ? "1" : "0");
-  document.getElementById("btnFit").classList.toggle("primary", on);
+  const b = document.getElementById("btnFit");
+  if (b) b.classList.toggle("primary", on);
   applyFit();
 }
-document.getElementById("btnFit").addEventListener("click", () => setFit(!fitMode));
+const _btnFit = document.getElementById("btnFit");
+if (_btnFit) {
+  _btnFit.addEventListener("click", () => setFit(!fitMode));
+  if (fitMode) _btnFit.classList.add("primary");
+}
 window.addEventListener("resize", () => { if (fitMode) applyFit(); });
-if (fitMode) document.getElementById("btnFit").classList.add("primary");
 
-document.getElementById("btnTumunuKapat").addEventListener("click", () => {
+const _btnTum = document.getElementById("btnTumunuKapat");
+if (_btnTum) _btnTum.addEventListener("click", () => {
+  expandedGrup.clear();   /* açık tüm grup detaylarını kapat */
   document.querySelectorAll(".modal-bg").forEach(m => m.classList.add("hidden"));
+  render();
 });
 
 /* ═══════════════ 🚀 BAŞLAT ═══════════════ */
