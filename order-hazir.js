@@ -1217,8 +1217,10 @@ function yasDetayHtml(siparis) {
   const kriter = cozKriter();
   const sira = [...siparis].sort((a, b) => (b.yas ?? -1) - (a.yas ?? -1));
   if (!sira.length) return `<p class="hint">Veri yok.</p>`;
-  const rows = sira.slice(0, 500).map(({ r, yas }) => `<tr>
+    const rows = sira.slice(0, 500).map(({ r, yas }) => `<tr>
     <td class="oh-strong">${esc(r.musteri || "-")}</td>
+    <td>${esc(r.siparisNo || "-")}</td>
+    <td>${esc(r.musteriSipNo || "-")}</td>
     <td>${esc(r[kriter] || "-")}</td>
     <td>${esc(r.maddeKodu || "-")}</td>
     <td>${esc(r.maddeAdi || "-")}</td>
@@ -1287,10 +1289,10 @@ function yasExcel() {
       Object.entries(g.deger).filter(([c]) => !["EUR","TRY","USD"].includes(c)).map(([c, x]) => `${c} ${fmtN(x)}`).join(" · ")]);
     return [[etiket + " — Firma", "Satır", "Ort. yaş (gün)", "En eski (gün)", "Kalan adet", "m³", "EUR", "TRY", "USD", "Diğer"], ...rows];
   };
-  const detayRows = [...v.siparis].sort((a, b) => (b.yas ?? -1) - (a.yas ?? -1)).map(({ r, yas }) => [
-    r.musteri, r[kriter], r.maddeKodu, r.maddeAdi, r.partiNo, numOr(r.kalan, 0), satirM3(r),
-    r.olusturma || "", yas ?? "", r.sonDepo || "", yasGun(r.sonDepo) ?? "", satirTutar(r),
-    (r.paraBirimi || "").toUpperCase(), r._hazir ? "Hazır" : "Bekliyor"
+   const detayRows = [...v.siparis].sort((a, b) => (b.yas ?? -1) - (a.yas ?? -1)).map(({ r, yas }) => [
+    r.musteri, r.siparisNo || "", r.musteriSipNo || "", r[kriter] || "", r.maddeKodu, r.maddeAdi, r.partiNo,
+    numOr(r.kalan, 0), satirM3(r), r.olusturma || "", yas ?? "", r.sonDepo || "", yasGun(r.sonDepo) ?? "",
+    satirTutar(r), (r.paraBirimi || "").toUpperCase(), r._hazir ? "Hazır" : "Bekliyor"
   ]);
   const mk = rr => { const ws = XLSX.utils.aoa_to_sheet(rr); ws["!cols"] = rr[0].map(() => ({ wch: 16 })); styleHeader(ws); return ws; };
   const wb = XLSX.utils.book_new();
@@ -1302,8 +1304,8 @@ function yasExcel() {
     ...firmaRows(v.siparis, "Sipariş yaşı"), [""],
     ...firmaRows(v.stok, "Stok yaşı")
   ]), "Firmalar");
-  XLSX.utils.book_append_sheet(wb, mk([
-    ["Firma", kriterLabel(kriter), "Madde Kodu", "Madde Adı", "Parti", "Kalan", "m³", "Oluşturma", "Sipariş Yaşı", "Son Depo Giriş", "Stok Yaşı", "Tutar", "PB", "Durum"],
+   XLSX.utils.book_append_sheet(wb, mk([
+    ["Firma", "Satış Siparişi", "Müşteri Sip. No", kriterLabel(kriter), "Madde Kodu", "Madde Adı", "Parti", "Kalan", "m³", "Oluşturma", "Sipariş Yaşı", "Son Depo Giriş", "Stok Yaşı", "Tutar", "PB", "Durum"],
     ...detayRows
   ]), "Detay");
   XLSX.writeFile(wb, `yaslandirma_${todayISO()}.xlsx`);
