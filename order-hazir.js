@@ -114,17 +114,17 @@ const KRITERLER = [
 function normTxt(s) {
   return String(s ?? "").toLowerCase()
     .replace(/ı/g, "i").replace(/İ/g, "i").replace(/ş/g, "s").replace(/ğ/g, "g")
-    .replace(/ü/g, "u").replace(/ö/g, "o").replace(/ç/g, "c")
+    .replace(/ü/g, "u").replace(/ö/g, "o").replace(/ç/g, "c").replace(/³/g, "3")
     .replace(/\s+/g, " ").trim();
 }
 /* Başlıkları alanlara otomatik eşleştir → { alan: excelBaslik | "" } */
 function autoMap(headers) {
   const map = {};
   const used = new Set();
-  const H = headers.map(h => ({ raw: h, n: normTxt(h) }));
+  const H = headers.map(h => ({ raw: h, n: normTxt(h).replace(/\s+/g, "") }));
   FIELDS.forEach(f => {
-    let hit = H.find(h => !used.has(h.raw) && f.kw.some(k => h.n === k));
-    if (!hit) hit = H.find(h => !used.has(h.raw) && f.kw.some(k => k.length > 4 && h.n.includes(k)));
+    let hit = H.find(h => !used.has(h.raw) && f.kw.some(k => h.n === k.replace(/\s+/g, "")));
+    if (!hit) hit = H.find(h => !used.has(h.raw) && f.kw.some(k => k.length > 4 && h.n.includes(k.replace(/\s+/g, ""))));
     map[f.key] = hit ? hit.raw : "";
     if (hit) used.add(hit.raw);
   });
@@ -199,7 +199,8 @@ async function loadSnapshotKeys() {
 }
 async function saveSnapshot(tarih, satirlar, meta) {
   const ozet = hesaplaGenelOzet(satirlar);
-  const body = { tarih, ts: Date.now(), uploadedBy: currentUser ? currentUser.email : "", meta: meta || {}, ozet, satirlar };
+    const sid = Date.now().toString(36);
+  const body = { tarih, ts: Date.now(), uploadedBy: currentUser ? currentUser.email : "", meta: { ...(meta || {}), sid }, ozet, satirlar };
   await authFetch(`${FIREBASE_DB_URL}/${OH_NODE}/${tarih}.json`, {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
@@ -526,6 +527,7 @@ function render() {
   const kriter = cozKriter();
   const esik = getEsik();
   const { gruplar } = hesaplaGruplar(list, kriter, esik);
+  siralaGruplar(gruplar, document.getElementById("siraSec").value);
   /* Özet şeridi */
   const hazirGruplar = gruplar.filter(g => g.durum === "hazir");
   const degerTop = {};
@@ -578,17 +580,19 @@ function renderGrupView(list, kriter, esik, gruplar) {
 }
 
 function renderDetay(g) {
-  const sira = (a, b) => {
-    const ka = satirKapali(a) ? 2 : (a._hazir ? 0 : 1);
-    const kb = satirKapali(b) ? 2 : (b._hazir ? 0 : 1);
-    return ka - kb || (b.kalan || 0) - (a.kalan || 0);
-  };
+  const sira = (a, b) =>
+    String(a.musteri || "").localeCompare(String(b.musteri || ""), "tr") ||
+    String(a.olusturma || "9999-12-31").localeCompare(String(b.olusturma || "9999-12-31")) ||
+    String(a.partiNo || "").localeCompare(String(b.partiNo || ""), "tr") ||
+    (b.kalan || 0) - (a.kalan || 0);
   const rows = g.satirlar.slice().sort(sira).map(r => `<tr>
+    <td class="center"><input type="checkbox" class="oh-sel" data-rid="${esc(String(r._rid))}" ${sepetVar(r._rid) ? "checked" : ""} title="Yükleme listesine ekle/çıkar" /></td>
     <td class="oh-strong">${esc(r.maddeKodu || "-")}</td>
     <td>${esc(r.maddeAdi || "-")}</td>
     <td>${esc(r.partiNo || "-")}</td>
     <td>${esc(r.konfigNo || "-")}</td>
     <td>${esc(r.siparisNo || "-")}</td>
+    <td>${esc(r.referansNo || "-")}</td>
     <td>${esc(r.musteriSipNo || "-")}</td>
     <td class="center">${numOr(r.miktar, "-")}</td>
     <td class="center oh-strong">${numOr(r.kalan, "-")}</td>
@@ -598,16 +602,13 @@ function renderDetay(g) {
     <td class="center">${numOr(r.kalanTutar, "-")}</td>
     <td class="center">${esc((r.paraBirimi || "-").toUpperCase())}</td>
     <td>${esc(r.havuz || "-")}</td>
-    <td>${esc(r.sevkTarihi ? r.sevkTarihi : "-")}</td>
+    <td>${esc(r.sevkTarihi || "-")}</td>
     <td>${satirDurumHtml(r)}</td>
   </tr>`).join("");
   return `<tr class="oh-detay"><td colspan="10"><div class="oh-detay-inner"><table>
-    <thead><tr><th>Madde kodu</th><th>Madde adı</th><th>Parti</th><th>Konfig</th><th>Satış siparişi</th>
-    <th>Müşteri sip. no</th><th>Miktar</th><th>Kalan</th><th>Sevk Edilen</th><th>Depo Stok</th>
-    <th>Kalan m³</th><th>Kalan Tutar</th><th>PB</th><th>Havuz</th><th>Sevk tarihi</th><th>Sonuç</th></tr></thead>
+    <thead><tr><th>📦</th><th>Madde kodu</th><th>Madde adı</th><th>Parti</th><th>Konfig</th><th>Satış siparişi</th><th>Referans</th><th>Müşteri sip. no</th><th>Miktar</th><th>Kalan</th><th>Sevk Edilen</th><th>Depo Stok</th><th>Kalan m³</th><th>Kalan Tutar</th><th>PB</th><th>Havuz</th><th>Sevk tarihi</th><th>Sonuç</th></tr></thead>
     <tbody>${rows}</tbody></table></div></td></tr>`;
 }
-
 function renderFirmaView(gruplar, esik) {
   const th = document.getElementById("ohThead");
   th.innerHTML = `<th>Firma (Teslimat Adı)</th><th class="center">🟢 Hazır Grup</th><th class="center">🟡 Kısmi</th>
@@ -660,7 +661,8 @@ async function loadSnapshot(tarih) {
     const data = await loadSnapshotByTarih(tarih);
     if (!data) { snapshot = null; render(); return; }
     snapshot = data;
-    (snapshot.satirlar || []).forEach(r => { r._hazir = satirHazir(r); });
+     const sid = (snapshot.meta && snapshot.meta.sid) ? snapshot.meta.sid : snapshot.tarih;
+    (snapshot.satirlar || []).forEach((r, i) => { r._hazir = satirHazir(r); r._rid = sid + "#" + i; });
     expandedGrup.clear();
     buildFiltreSecenekleri();
     render();
@@ -909,6 +911,156 @@ document.getElementById("btnLoginCancel").addEventListener("click", hideLogin);
 document.getElementById("loginModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) hideLogin();
 });
+
+/* ═══════════════ 🔀 SIRALAMA (firma → tarih → parti) ═══════════════ */
+function siralaGruplar(gruplar, mod) {
+  if (mod === "durum") {
+    gruplar.sort((a, b) => (DURUM_SIRA_OH[a.durum] - DURUM_SIRA_OH[b.durum]) ||
+      (b.oran - a.oran) || (b.hazirM3 - a.hazirM3) ||
+      String(a.key).localeCompare(String(b.key), "tr"));
+    return;
+  }
+  /* firma: Teslimat adı A-Z → en eski sipariş oluşturma tarihi → en küçük parti no */
+  const minO = g => g.aktif.reduce((m, r) => (r.olusturma && r.olusturma < m ? r.olusturma : m), "9999-12-31");
+  const minP = g => g.aktif.reduce((m, r) => {
+    const p = String(r.partiNo || "").trim();
+    return (p && p < m) ? p : m;
+  }, "￿");
+  gruplar.sort((a, b) =>
+    String(a.musteri).localeCompare(String(b.musteri), "tr") ||
+    String(minO(a)).localeCompare(String(minO(b))) ||
+    String(minP(a)).localeCompare(String(minP(b)), "tr") ||
+    String(a.key).localeCompare(String(b.key), "tr"));
+}
+document.getElementById("siraSec").addEventListener("change", e => {
+  localStorage.setItem("oh_sira", e.target.value);
+  render();
+});
+const _savedSira = localStorage.getItem("oh_sira");
+if (_savedSira) document.getElementById("siraSec").value = _savedSira;
+
+/* ═══════════════ 📦 YÜKLEME LİSTESİ (SEPET) ═══════════════ */
+const SEPET_KEY = "oh_sepet_v1";
+let sepet = [];
+try { sepet = JSON.parse(localStorage.getItem(SEPET_KEY) || "[]"); } catch (e) { sepet = []; }
+function sepetKaydet() {
+  try { localStorage.setItem(SEPET_KEY, JSON.stringify(sepet)); } catch (e) {}
+  updateBulkBar();
+}
+function sepetVar(rid) { return sepet.some(s => s.rid === rid); }
+function sepetEkle(rid) {
+  if (sepetVar(rid) || !snapshot) return;
+  const row = (snapshot.satirlar || []).find(r => r._rid === rid);
+  if (!row) return;
+  sepet.push({ rid, tarih: snapshot.tarih, row: { ...row } });
+  sepetKaydet();
+}
+function sepetCikar(rid) { sepet = sepet.filter(s => s.rid !== rid); sepetKaydet(); }
+function updateBulkBar() {
+  const bar = document.getElementById("ohBulk");
+  if (!sepet.length) { bar.classList.add("hidden"); return; }
+  document.getElementById("ohBulkCount").textContent = `📦 ${sepet.length} satır listeleniyor`;
+  bar.classList.remove("hidden");
+}
+document.getElementById("ohTbody").addEventListener("change", e => {
+  const cb = e.target.closest("input.oh-sel");
+  if (!cb) return;
+  if (cb.checked) sepetEkle(cb.dataset.rid); else sepetCikar(cb.dataset.rid);
+});
+
+function renderSepet() {
+  document.getElementById("sepetHead").innerHTML =
+    `<th>Snapshot</th><th>Firma</th><th>Madde kodu</th><th>Madde adı</th><th>Parti</th><th>Satış siparişi</th><th>Referans</th><th>Müşteri sip. no</th><th class="center">Kalan</th><th class="center">Kalan m³</th><th class="center">Tutar</th><th class="center">PB</th><th></th>`;
+  const tb = document.getElementById("sepetTbody");
+  if (!sepet.length) {
+    tb.innerHTML = `<tr><td colspan="13" class="empty">Liste boş — grup detaylarındaki 📦 kutucuğuyla satır ekleyin.</td></tr>`;
+    document.getElementById("sepetFoot").innerHTML = "";
+    return;
+  }
+  tb.innerHTML = sepet.map(s => { const r = s.row; return `<tr>
+    <td>${esc(s.tarih)}</td><td class="oh-strong">${esc(r.musteri || "-")}</td>
+    <td>${esc(r.maddeKodu || "-")}</td><td>${esc(r.maddeAdi || "-")}</td>
+    <td>${esc(r.partiNo || "-")}</td><td>${esc(r.siparisNo || "-")}</td>
+    <td>${esc(r.referansNo || "-")}</td><td>${esc(r.musteriSipNo || "-")}</td>
+    <td class="center">${numOr(r.kalan, "-")}</td><td class="center">${numOr(r.kalanM3, "-")}</td>
+    <td class="center">${numOr(r.kalanTutar, "-")}</td><td class="center">${esc((r.paraBirimi || "-").toUpperCase())}</td>
+    <td><button class="icon-btn del" data-sdel="${esc(String(s.rid))}" title="Listeden çıkar">🗑️</button></td>
+  </tr>`; }).join("");
+  const adet = sepet.reduce((s, x) => s + numOr(x.row.kalan, 0), 0);
+  const m3 = sepet.reduce((s, x) => s + numOr(x.row.kalanM3, 0), 0);
+  const deger = {};
+  sepet.forEach(x => { const c = (x.row.paraBirimi || "DİĞER").toUpperCase(); deger[c] = (deger[c] || 0) + numOr(x.row.kalanTutar, 0); });
+  document.getElementById("sepetFoot").innerHTML =
+    `<tr><td colspan="8"><b>TOPLAM (${sepet.length} satır)</b></td>
+     <td class="center oh-strong">${fmtN(adet)}</td><td class="center oh-strong">${fmtN(m3)}</td>
+     <td colspan="2">${fmtDeger(deger)}</td><td></td></tr>`;
+}
+document.getElementById("sepetTbody").addEventListener("click", e => {
+  const b = e.target.closest("[data-sdel]");
+  if (!b) return;
+  sepetCikar(b.dataset.sdel);
+  renderSepet(); render();
+});
+document.getElementById("btnSepetGoster").addEventListener("click", () => {
+  renderSepet();
+  document.getElementById("sepetModal").classList.remove("hidden");
+});
+document.getElementById("btnSepetKapat").addEventListener("click", () =>
+  document.getElementById("sepetModal").classList.add("hidden"));
+document.getElementById("sepetModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+});
+document.getElementById("btnSepetTemizle").addEventListener("click", () => {
+  if (!sepet.length) return;
+  if (confirm(`${sepet.length} satır listeden temizlenecek. Emin misiniz?`)) { sepet = []; sepetKaydet(); render(); }
+});
+
+function sepetExcel() {
+  if (typeof XLSX === "undefined") { alert("Excel kütüphanesi yüklenemedi."); return; }
+  if (!sepet.length) { alert("Liste boş."); return; }
+  const ad = (document.getElementById("sepetAd").value || "").trim();
+  const H = ["Sıra", "Snapshot Tarihi", "Firma", "Referans", "Satış Siparişi", "Müşteri Sip. No",
+    "Madde Kodu", "Madde Adı", "Parti", "Konfig", "Miktar", "Kalan", "Depo Stok",
+    "Kalan m³", "Kalan Tutar", "PB", "Havuz", "Sevk Tarihi"];
+  const rows = sepet.map((s, i) => { const r = s.row; return [
+    i + 1, s.tarih, r.musteri, r.referansNo, r.siparisNo, r.musteriSipNo, r.maddeKodu, r.maddeAdi,
+    r.partiNo, r.konfigNo, r.miktar, r.kalan, r.depoStok, r.kalanM3, r.kalanTutar,
+    (r.paraBirimi || "").toUpperCase(), r.havuz, r.sevkTarihi
+  ];});
+  const fm = new Map();
+  sepet.forEach(s => {
+    const m = s.row.musteri || "-";
+    if (!fm.has(m)) fm.set(m, { n: 0, adet: 0, m3: 0, d: {} });
+    const f = fm.get(m);
+    f.n++; f.adet += numOr(s.row.kalan, 0); f.m3 += numOr(s.row.kalanM3, 0);
+    const c = (s.row.paraBirimi || "DİĞER").toUpperCase();
+    f.d[c] = (f.d[c] || 0) + numOr(s.row.kalanTutar, 0);
+  });
+  const ozet = [...fm.entries()].sort((a, b) => a[0].localeCompare(b[0], "tr")).map(([m, f]) => {
+    const d = { ...f.d };
+    const g = c => { const v = d[c]; delete d[c]; return (v != null) ? v : ""; };
+    const diger = Object.entries(d).map(([c, v]) => `${c} ${fmtN(v)}`).join(" · ");
+    return [m, f.n, f.adet, +f.m3.toFixed(2), g("EUR"), g("TRY"), g("USD"), diger];
+  });
+  const tD = {};
+  sepet.forEach(s => { const c = (s.row.paraBirimi || "DİĞER").toUpperCase(); tD[c] = (tD[c] || 0) + numOr(s.row.kalanTutar, 0); });
+  const digerT = Object.entries(tD).filter(([c]) => !["EUR", "TRY", "USD"].includes(c)).map(([c, v]) => `${c} ${fmtN(v)}`).join(" · ");
+  ozet.push(["TOPLAM", sepet.length,
+    sepet.reduce((s, x) => s + numOr(x.row.kalan, 0), 0),
+    +sepet.reduce((s, x) => s + numOr(x.row.kalanM3, 0), 0).toFixed(2),
+    tD["EUR"] ?? "", tD["TRY"] ?? "", tD["USD"] ?? "", digerT]);
+  const mk = (h, rr) => { const ws = XLSX.utils.aoa_to_sheet([h, ...rr]);
+    ws["!cols"] = h.map((_, i) => ({ wch: i < 9 ? 20 : 12 })); styleHeader(ws); return ws; };
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, mk(H, rows), "Yukleme Listesi");
+  XLSX.utils.book_append_sheet(wb, mk(["Firma", "Satır", "Kalan Adet", "Kalan m³", "EUR", "TRY", "USD", "Diğer"], ozet), "Ozet");
+  const guvenli = ad.replace(/[\\\/:*?"<>|]/g, "").replace(/\s+/g, "_") || todayISO();
+  XLSX.writeFile(wb, `yukleme_listesi_${guvenli}.xlsx`);
+  toastMsg("📤 Yükleme listesi indirildi.");
+}
+document.getElementById("btnSepetExcel").addEventListener("click", sepetExcel);
+document.getElementById("btnSepetExcelModal").addEventListener("click", sepetExcel);
+updateBulkBar();
 
 /* ═══════════════ 🚀 BAŞLAT ═══════════════ */
 (async () => {
