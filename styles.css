@@ -734,3 +734,36 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 .dm-table th.center, .dm-table td.center { text-align:center; }
 .dm-empty { color:#8aa0b8 !important; text-align:center; font-style:italic; background:transparent !important; }
 #snakeModal .modal { max-width:460px; }
+
+/* 📊 Depo mini dashboard — okunabilirlik düzeltmeleri (tüm temalarda sabit) */
+#depoMini,
+#depoMini * {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+  text-shadow: none !important;
+  border-color: #2b3a52 !important;
+}
+#depoMini .dm-week { color: #818cf8 !important; font-weight: 800; }
+#depoMini .dm-pct { color: #34d399 !important; font-weight: 800; }
+#depoMini .dm-nums b { color: #f1f5f9 !important; font-size: 20px; }
+#depoMini .dm-nums span { color: #8aa0b8 !important; }
+#depoMini .dm-bitti { color: #34d399 !important; }
+#depoMini .dm-kalan2 { color: #fbbf24 !important; }
+#depoMini .dm-bar { background: #2b3a52 !important; }
+#depoMini .dm-bar-fill { background: linear-gradient(90deg,#059669,#34d399) !important; }
+#depoMini .dm-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+#depoMini .dm-table thead tr { background: #1c2942 !important; color: #93a6c4 !important; }
+#depoMini .dm-table th {
+  background: #1c2942 !important; color: #93a6c4 !important;
+  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+  padding: 4px 5px; border-bottom: 1px solid #2b3a52 !important;
+}
+#depoMini .dm-table td {
+  background: transparent !important; color: #e2e8f0 !important;
+  padding: 5px; border-bottom: 1px solid #1c2942 !important; white-space: nowrap;
+}
+#depoMini .dm-table td.center { text-align: center; }
+#depoMini .dm-kalan { color: #fbbf24 !important; font-weight: 700; }
+#depoMini .dm-ok { color: #34d399 !important; font-weight: 700; }
+#depoMini .dm-empty { color: #8aa0b8 !important; font-style: italic; text-align: center; }
+#depoMini .dm-table tr:hover td { background: #1e2a44 !important; }
