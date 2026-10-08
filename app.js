@@ -781,7 +781,7 @@ async function load(withSpinner = true, live = false) {
   }
    loading = false;
   render();
-  if (!document.getElementById("depoOverlay").classList.contains("hidden")) renderDepoContent();
+  if (!document.getElementById("depoOverlay").classList.contains("hidden")) ();
   if (document.getElementById("opOverlay")) renderOpCard();
 }
 function setSaveError(msg) {
@@ -1942,7 +1942,7 @@ function openDepo() {
   document.querySelectorAll(".depo-tab").forEach(x => x.classList.toggle("active", x.dataset.dtab === "anlik"));
   document.getElementById("depoOverlay").classList.remove("hidden");
   document.body.classList.add("depo-open");
-  renderDepoContent();
+  ();
 }
 function closeDepo() {
   stopSnake();
@@ -1958,7 +1958,7 @@ document.querySelectorAll(".depo-tab").forEach(b => {
   b.addEventListener("click", () => {
     depoTab = b.dataset.dtab;
     document.querySelectorAll(".depo-tab").forEach(x => x.classList.toggle("active", x.dataset.dtab === depoTab));
-    renderDepoContent();
+    ();
   });
 });
 function depoCmtLine(r) {
@@ -1997,6 +1997,11 @@ function gunEtiketi(iso) {
   const idx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[dt.getDay()];
   return `${GUNLER[idx] || ""} ${dt.getDate()} ${AYLAR[dt.getMonth()]}`;
 }
+
+renderDepoMini();
+
+
+
 function renderDepoContent() {
   /* Yılan oyunu korunur: canvas zaten varsa hiçbir şeyi yeniden çizme
      (sekme değişimi + otomatik yenileme oyunu resetlemesin) */
@@ -2092,40 +2097,7 @@ function renderDepoContent() {
     c.innerHTML = html;
     return;
   }
-    if (depoTab === "yilan") {
-    const devam = snakeState && snakePaused;
-    c.innerHTML = `
-      <div class="depo-sec-title" style="color:#34d399">🐍 YILAN OYUNU</div>
-      <div class="snake-wrap">
-        <div class="snake-top"><span>Skor: <b id="snakeScore">${devam ? snakeState.score : 0}</b></span><span>🏆 Rekor: <b id="snakeBest">${snakeBest}</b></span></div>
-        <div class="snake-cv-wrap">
-          <canvas id="snakeCanvas" width="400" height="400"></canvas>
-          <div class="snake-over" id="snakeOver">
-            <div class="so-title" id="snakeOverTitle">${devam ? "⏸ Duraklatıldı" : "🐍 Yılan Oyunu"}</div>
-            <div class="so-score" id="snakeOverScore">Rekor: ${snakeBest}</div>
-            <button class="depo-tab active" id="btnSnakeStart">${devam ? "▶️ Devam Et" : "▶️ Başla"}</button>
-          </div>
-        </div>
-        <div class="snake-pad">
-          <button class="snake-btn" data-sdir="up">▲</button>
-          <div>
-            <button class="snake-btn" data-sdir="left">◀</button>
-            <button class="snake-btn" data-sdir="down">▼</button>
-            <button class="snake-btn" data-sdir="right">▶</button>
-          </div>
-        </div>
-        <p class="depo-empty" style="font-size:12px">Klavye: ok tuşları / WASD · Tablet: aşağıdaki tuşlar</p>
-      </div>`;
-    document.getElementById("btnSnakeStart").addEventListener("click", snakeStart);
-    c.querySelectorAll(".snake-btn").forEach(b => b.addEventListener("click", () => {
-      const d = b.dataset.sdir;
-      if (d === "up") snakeDir(0, -1);
-      if (d === "down") snakeDir(0, 1);
-      if (d === "left") snakeDir(-1, 0);
-      if (d === "right") snakeDir(1, 0);
-    }));
-    return;
-  }   
+    
   /* Operasyonel gecikme: REEL PLAN bugünün gerisinde kalan tamamlanmamışlar.
      Reel planı ileri çekilen kayıt burada GECİKEN görünmez —
      gecikme notları zaten "Kalan Yüklemeler" sekmesinde gösteriliyor. */
@@ -2806,6 +2778,8 @@ async function quizDeleteQuestion(key) {
 }
 /* --- Bağlantılar --- */
 document.getElementById("btnQuiz").addEventListener("click", openQuiz);
+document.getElementById("btnSnake").addEventListener("click", openSnakeGame);
+document.getElementById("btnSnakeClose").addEventListener("click", closeSnakeGame);
 document.getElementById("btnQuizClose").addEventListener("click", () => {
   clearInterval(quizTimerIv);
   document.getElementById("quizModal").classList.add("hidden");
@@ -5257,6 +5231,85 @@ let snakeState = null;
 let snakeBest = Number(localStorage.getItem("sevkiyat_yilan_best") || 0);
 let snakePaused = false;
 
+/* ═══════════════ 🐍 YILAN — ana sayfa modalı + depo mini dashboard ═══════════════ */
+function openSnakeGame() {
+  renderSnakeGameBody();
+  document.getElementById("snakeModal").classList.remove("hidden");
+}
+function closeSnakeGame() {
+  stopSnake();
+  snakePaused = false;
+  document.getElementById("snakeModal").classList.add("hidden");
+}
+function renderSnakeGameBody() {
+  const c = document.getElementById("snakeBody");
+  const devam = snakeState && snakePaused;
+  c.innerHTML = `
+    <div class="snake-top"><span>Skor: <b id="snakeScore">${devam ? snakeState.score : 0}</b></span><span>🏆 Rekor: <b id="snakeBest">${snakeBest}</b></span></div>
+    <div class="snake-cv-wrap">
+      <canvas id="snakeCanvas" width="400" height="400"></canvas>
+      <div class="snake-over" id="snakeOver">
+        <div class="so-title" id="snakeOverTitle">${devam ? "⏸ Duraklatıldı" : "🐍 Yılan Oyunu"}</div>
+        <div class="so-score" id="snakeOverScore">Rekor: ${snakeBest}</div>
+        <button class="depo-tab active" id="btnSnakeStart">${devam ? "▶️ Devam Et" : "▶️ Başla"}</button>
+      </div>
+    </div>
+    <div class="snake-pad">
+      <button class="snake-btn" data-sdir="up">▲</button>
+      <div>
+        <button class="snake-btn" data-sdir="left">◀</button>
+        <button class="snake-btn" data-sdir="down">▼</button>
+        <button class="snake-btn" data-sdir="right">▶</button>
+      </div>
+    </div>
+    <p class="hint" style="margin-top:10px">Klavye: ok tuşları / WASD</p>`;
+  document.getElementById("btnSnakeStart").addEventListener("click", snakeStart);
+  c.querySelectorAll(".snake-btn").forEach(b => b.addEventListener("click", () => {
+    const d = b.dataset.sdir;
+    if (d === "up") snakeDir(0, -1);
+    if (d === "down") snakeDir(0, 1);
+    if (d === "left") snakeDir(-1, 0);
+    if (d === "right") snakeDir(1, 0);
+  }));
+}
+/* 📊 Depo mini dashboard — bu hafta (+ gecikenler) özeti */
+function renderDepoMini() {
+  const el = document.getElementById("depoMini");
+  if (!el) return;
+  const hafta = getISOWeek(new Date());
+  const bugun = todayISO();
+  const havuz = enriched(rows).filter(r => {
+    if (String(r.hafta) === String(hafta)) return true;
+    const t = gecikmeTarihi(r);
+    return r.durum !== "Yükleme Tamamlandı" && t && t < bugun;
+  });
+  const plan = havuz.reduce((s, r) => s + adet(r), 0);
+  const bitti = havuz.filter(r => r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + adet(r), 0);
+  const kalan = plan - bitti;
+  const oran = plan ? Math.round(bitti / plan * 100) : 0;
+  const tipSatirlar = TIPLER.map(tip => {
+    const g = havuz.filter(r => r.sevkiyatTipi === tip);
+    const p = g.reduce((s, r) => s + adet(r), 0);
+    if (!p) return "";
+    const b = g.filter(r => r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + adet(r), 0);
+    const k = p - b;
+    return `<tr><td>${esc(tip)}</td><td class="center">${b}/${p}</td>
+      <td class="center ${k > 0 ? "dm-kalan" : "dm-ok"}">${k}</td></tr>`;
+  }).join("");
+  el.innerHTML = `
+    <div class="dm-head"><span class="dm-week">📅 HAFTA ${hafta}</span><span class="dm-pct">%${oran}</span></div>
+    <div class="dm-nums">
+      <div><b>${plan}</b><span>Planlanan</span></div>
+      <div><b class="dm-bitti">${bitti}</b><span>Bitti</span></div>
+      <div><b class="dm-kalan2">${kalan}</b><span>Kaldı</span></div>
+    </div>
+    <div class="dm-bar"><div class="dm-bar-fill" style="width:${oran}%"></div></div>
+    <table class="dm-table">
+      <thead><tr><th>Tip</th><th class="center">Bitti/Plan</th><th class="center">Kalan</th></tr></thead>
+      <tbody>${tipSatirlar || `<tr><td colspan="3" class="dm-empty">Bu hafta kayıt yok</td></tr>`}</tbody>
+    </table>`;
+}
+
 function stopSnake() {
   if (snakeTimer) { clearInterval(snakeTimer); snakeTimer = null; }
 }
@@ -5444,12 +5497,15 @@ function drawSnake() {
 }
 /* Klavye — yılan sekmesi aktifken çalışır */
 document.addEventListener("keydown", e => {
-  const ov = document.getElementById("depoOverlay");
-  if (!ov || ov.classList.contains("hidden") || depoTab !== "yilan") return;
+  const ov = document.getElementById("snakeModal");
+  if (!ov || ov.classList.contains("hidden")) return;
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   const map = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0], w:[0,-1], s:[0,1], a:[-1,0], d:[1,0] };
   if (!map[k]) return;
   e.preventDefault();
   if (!snakeState) return;
   snakeDir(map[k][0], map[k][1]);
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !document.getElementById("snakeModal").classList.contains("hidden")) closeSnakeGame();
 });
