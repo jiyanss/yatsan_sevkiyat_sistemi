@@ -55,6 +55,7 @@
     <button class="btn primary" id="btnQrPrint">📱 QR Yazdır</button>
     <button class="btn primary" id="btnScanMain">📡 Okut</button>
     <button class="btn" id="btnQuiz">🧠 Yarışma</button>
+    <button class="btn" id="btnSnake" title="Yılan oyunu">🐍 Yılan</button>
     <button class="btn" id="btnFit" title="Tabloyu ekran genişliğine otomatik sığdır">⤢ Sığdır</button>
     <button class="btn" id="btnToggleSummary">Özeti gizle</button>
     <button class="btn" id="btnReports">📊 Raporlar</button>
@@ -343,18 +344,20 @@
 </div>
 
 <div id="depoOverlay" class="depo-overlay hidden">
-  <div class="depo-head">
+<div class="depo-head">
     <div>
       <div class="depo-clock" id="depoClock">--:--</div>
       <div class="depo-date" id="depoDate">—</div>
     </div>
-    <button class="btn" id="btnDepoClose" style="font-size:15px;padding:10px 18px">✖ Kapat (ESC)</button>
+    <div class="depo-right">
+      <button class="btn" id="btnDepoClose" style="font-size:15px;padding:10px 18px">✖ Kapat (ESC)</button>
+      <div class="depo-mini" id="depoMini"></div>
+    </div>
   </div>
   <div class="depo-tabs">
     <button class="depo-tab active" data-dtab="anlik">⚡ Anlık Durum</button>
     <button class="depo-tab" data-dtab="kalan">📅 Kalan Yüklemeler</button>
     <button class="depo-tab" data-dtab="bitmis">✅ Bitmiş Yüklemeler</button>
-    <button class="depo-tab" data-dtab="yilan">🐍 Yılan</button>
     <button class="depo-tab" id="btnScanOpen" style="background:#0ea5e9;border-color:#0ea5e9;color:#fff">📡 QR Okut</button>
   </div>
   <div id="depoContent"></div>
@@ -447,7 +450,13 @@
       </div>
 </div>
 
-
+<div id="snakeModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>🐍 Yılan Oyunu</h2>
+    <div id="snakeBody"></div>
+    <div class="modal-actions"><button class="btn" id="btnSnakeClose">Kapat</button></div>
+  </div>
+</div>
 
   
 <div id="toast" class="toast hidden"></div>
