@@ -1998,11 +1998,12 @@ function gunEtiketi(iso) {
   return `${GUNLER[idx] || ""} ${dt.getDate()} ${AYLAR[dt.getMonth()]}`;
 }
 
-renderDepoMini();
+();
 
 
 
 function renderDepoContent() {
+   renderDepoMini();
   /* Yılan oyunu korunur: canvas zaten varsa hiçbir şeyi yeniden çizme
      (sekme değişimi + otomatik yenileme oyunu resetlemesin) */
   if (depoTab === "yilan" && document.getElementById("snakeCanvas")) return;
@@ -5273,13 +5274,18 @@ function renderSnakeGameBody() {
   }));
 }
 /* 📊 Depo mini dashboard — bu hafta (+ gecikenler) özeti */
+/* 📊 Depo mini dashboard — bu hafta (+ gecikenler) özeti v2 */
 function renderDepoMini() {
   const el = document.getElementById("depoMini");
   if (!el) return;
   const hafta = getISOWeek(new Date());
   const bugun = todayISO();
-  const havuz = enriched(rows).filter(r => {
-    if (String(r.hafta) === String(hafta)) return true;
+  const haftaOf = r => {
+    const d = parseLocalDate(depoTarih(r));
+    return d ? getISOWeek(d) : null;
+  };
+  const havuz = (rows || []).filter(r => {
+    if (haftaOf(r) === hafta) return true;
     const t = gecikmeTarihi(r);
     return r.durum !== "Yükleme Tamamlandı" && t && t < bugun;
   });
