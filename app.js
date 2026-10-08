@@ -781,7 +781,7 @@ async function load(withSpinner = true, live = false) {
   }
    loading = false;
   render();
-  if (!document.getElementById("depoOverlay").classList.contains("hidden")) ();
+  if (!document.getElementById("depoOverlay").classList.contains("hidden")) renderDepoContent();
   if (document.getElementById("opOverlay")) renderOpCard();
 }
 function setSaveError(msg) {
