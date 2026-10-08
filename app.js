@@ -1998,10 +1998,6 @@ function gunEtiketi(iso) {
   return `${GUNLER[idx] || ""} ${dt.getDate()} ${AYLAR[dt.getMonth()]}`;
 }
 
-();
-
-
-
 function renderDepoContent() {
    renderDepoMini();
   /* Yılan oyunu korunur: canvas zaten varsa hiçbir şeyi yeniden çizme
