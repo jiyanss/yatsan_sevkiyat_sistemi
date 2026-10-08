@@ -1958,7 +1958,7 @@ document.querySelectorAll(".depo-tab").forEach(b => {
   b.addEventListener("click", () => {
     depoTab = b.dataset.dtab;
     document.querySelectorAll(".depo-tab").forEach(x => x.classList.toggle("active", x.dataset.dtab === depoTab));
-    ();
+    renderDepoContent();
   });
 });
 function depoCmtLine(r) {
