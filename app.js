@@ -10,6 +10,8 @@ const ARSIV_NODE = "sevkiyat_arsiv";
 const YEDEK_SAKLAMA_GUN = 14;
 const QUIZ_NODE = "sevkiyat_quiz";
 const QUIZ_SCORES_NODE = "sevkiyat_quiz_scores";
+const QUIZ_GAMES_NODE = "sevkiyat_quiz_oyunlar";
+const QUIZ_GUEST_KEY = "sevkiyat_quiz_guest";
 
 /* ============================================================
    ROLLER — ADMİN PANELİNDEN YÖNETİLİR
@@ -2460,6 +2462,80 @@ function loadQuizQuestions() {
 function sndOk() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .08; o.start(); o.stop(a.currentTime + .12); } catch (e) {} }
 function sndErr() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.type = "square"; o.frequency.value = 160; g.gain.value = .06; o.start(); o.stop(a.currentTime + .2); } catch (e) {} }
 
+/* ═══════════════ 🧠 Quiz — kimlik, oyun kaydı, dönem liderlikleri ═══════════════ */
+function quizKimlik() {
+  if (currentUser) return { tip: "email", id: currentUser.email, isim: shortUser(currentUser.email) };
+  let g = null;
+  try { g = JSON.parse(localStorage.getItem(QUIZ_GUEST_KEY)); } catch (e) {}
+  if (!g || !g.id) g = { id: "g-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), isim: "" };
+  return { tip: "guest", id: g.id, isim: (g.isim || "").trim() };
+}
+function quizIsimKaydet(isim) {
+  const k = quizKimlik();
+  if (k.tip !== "guest") return;
+  try {
+    const g = JSON.parse(localStorage.getItem(QUIZ_GUEST_KEY)) || { id: k.id };
+    g.isim = String(isim).trim().slice(0, 30);
+    localStorage.setItem(QUIZ_GUEST_KEY, JSON.stringify(g));
+  } catch (e) {}
+}
+function haftaBaslangicTs(d = new Date()) {
+  const gun = (d.getDay() + 6) % 7; /* Pazartesi = 0 */
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - gun).getTime();
+}
+function ayBaslangicTs(d = new Date()) { return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); }
+let quizGamesCache = null;
+async function quizGamesYukle(force = false) {
+  if (!force && quizGamesCache) return quizGamesCache;
+  const res = await fetch(`${FIREBASE_DB_URL}/${QUIZ_GAMES_NODE}.json`);
+  const data = await res.json();
+  quizGamesCache = data ? Object.values(data) : [];
+  return quizGamesCache;
+}
+function periyotFiltre(games, per) {
+  if (per === "tum") return games;
+  const bas = per === "hafta" ? haftaBaslangicTs() : ayBaslangicTs();
+  return games.filter(g => (g.ts || 0) >= bas);
+}
+function liderlikHesapla(games) {
+  const m = new Map();
+  games.forEach(g => {
+    if (!g.oyuncu || !g.oyuncu.id) return;
+    if (!m.has(g.oyuncu.id)) m.set(g.oyuncu.id,
+      { id: g.oyuncu.id, isim: g.oyuncu.isim || shortUser(g.oyuncu.email || g.oyuncu.id), best: null, games: 0 });
+    const p = m.get(g.oyuncu.id);
+    if (g.oyuncu.isim) p.isim = g.oyuncu.isim;
+    p.games++;
+    if (!p.best || (g.correct || 0) > p.best.correct ||
+        ((g.correct || 0) === p.best.correct && (g.timeMs || 9e15) < (p.best.timeMs || 9e15))) {
+      p.best = { correct: g.correct || 0, total: g.total || 10, timeMs: g.timeMs || 0 };
+    }
+  });
+  return [...m.values()].sort((a, b) =>
+    (b.best.correct - a.best.correct) ||
+    ((a.best.timeMs || 9e15) - (b.best.timeMs || 9e15)) ||
+    (b.games - a.games));
+}
+let quizLbTab = "hafta";
+function lbTabHtml() {
+  const t = (k, lbl) => `<button class="btn ${quizLbTab === k ? "primary" : ""}" data-lbt="${k}" style="flex:1">${lbl}</button>`;
+  return `<div style="display:flex;gap:6px;margin:10px 0">
+    ${t("hafta", "🗓️ Hafta")}${t("ay", "📆 Ay")}${t("tum", "♾️ Tüm Zamanlar")}</div>`;
+}
+function lbTabloHtml(list, benimId) {
+  if (!list.length) return `<p class="hint">Bu dönemde henüz skor yok — ilk sen ol!</p>`;
+  return `<div class="rpt"><div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Oyuncu</th><th class="center">Doğru</th><th class="center">Süre</th><th class="center">Oyun</th></tr></thead>
+    <tbody>${list.map((s, i) => `<tr class="${s.id === benimId ? "priority" : ""}">
+      <td>${["🥇","🥈","🥉"][i] || (i + 1)}</td>
+      <td class="strong">${esc(s.isim)}${s.id?.startsWith("g-") ? ' <span class="muted" style="font-size:9px">misafir</span>' : ""}</td>
+      <td class="center">${s.best.correct}/${s.best.total}</td>
+      <td class="center">${fmtSure(s.best.timeMs || 0)}</td>
+      <td class="center">${s.games}</td></tr>`).join("")}</tbody>
+  </table></div></div>`;
+}
+
+
 function openQuiz() {
   document.getElementById("quizModal").classList.remove("hidden");
   quizLoadAndRenderStart();
@@ -2473,20 +2549,34 @@ async function quizLoadAndRenderStart() {
     body.innerHTML = `<p class="hint">Henüz soru yok — admin panelde 🧠 Quiz Soru Yönetimi bölümünden ekle.</p>`;
     return;
   }
-  const lb = currentUser
-    ? `<button class="btn" id="btnQuizLb" style="width:100%">🏆 Liderlik Tablosu</button>`
-    : `<p class="hint">🏆 Liderlik tablosu ve skor kaydı için giriş yap.</p>`;
+  const k = quizKimlik();
+  const isimKutusu = k.tip === "guest"
+    ? `<input id="qzGuestName" placeholder="✍️ Yarışmacı adın (skor tablosunda görünür)" maxlength="30"
+        value="${esc(k.isim)}" style="width:100%;padding:10px 12px;font-size:14px;text-align:center" />
+       <p class="hint" style="margin:6px 0 0">Giriş yapmadan oynuyorsun — adını yaz, skorun bu isimle kaydedilir ve cihazında saklanır.</p>`
+    : `<p class="hint" style="margin:6px 0">👤 <b>${esc(k.isim)}</b> olarak oynuyorsun.</p>`;
   body.innerHTML = `
     <div style="text-align:center;padding:8px 0">
       <div style="font-size:44px">🧠</div>
       <p style="font-weight:700;font-size:15px;margin:8px 0 4px">Havuzda ${quizQuestions.length} soru · her turda rastgele 10 soru</p>
       <p class="hint">Her soru için 20 saniye · süre biterse yanlış sayılır</p>
+      ${isimKutusu}
       <button class="btn primary" id="btnQuizStart" style="width:100%;padding:12px;margin-top:10px">▶️ Başla</button>
-      <div style="margin-top:8px">${lb}</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" id="btnQuizLb" style="flex:1">🏆 Liderlik</button>
+        <button class="btn" id="btnQuizStats" style="flex:1">📊 İstatistiklerim</button>
+      </div>
     </div>`;
-  body.querySelector("#btnQuizStart").addEventListener("click", startQuizRun);
-  const lbBtn = body.querySelector("#btnQuizLb");
-  if (lbBtn) lbBtn.addEventListener("click", () => renderLeaderboard(body));
+  body.querySelector("#btnQuizStart").addEventListener("click", () => {
+    if (quizKimlik().tip === "guest") {
+      const v = body.querySelector("#qzGuestName").value.trim();
+      if (!v) { alert("Yarışmacı adını yaz — skorun bu isimle kaydedilir."); return; }
+      quizIsimKaydet(v);
+    }
+    startQuizRun();
+  });
+  body.querySelector("#btnQuizLb").addEventListener("click", () => renderLeaderboard(body));
+  body.querySelector("#btnQuizStats").addEventListener("click", () => renderQuizStats(body));
 }
 function startQuizRun() {
   const shuffled = [...quizQuestions].sort(() => Math.random() - .5).slice(0, Math.min(10, quizQuestions.length));
@@ -2559,30 +2649,24 @@ async function finishQuiz() {
   const body = document.getElementById("quizBody");
   const pct = Math.round(r.correct / r.qs.length * 100);
   body.innerHTML = `<p class="hint">Skor işleniyor…</p>`;
+  const k = quizKimlik();
   let savedMsg = "";
-  if (currentUser) {
-    try {
-      const key = userKey(currentUser.email);
-      const res = await authFetch(`${FIREBASE_DB_URL}/${QUIZ_SCORES_NODE}/${key}.json`);
-      const prev = await res.json();
-      const better = !prev || r.correct > (prev.correct || 0) ||
-        (r.correct === (prev.correct || 0) && r.timeMs < (prev.timeMs || 9e15));
-      const rec = {
-        email: currentUser.email,
-        name: shortUser(currentUser.email),
-        correct: Math.max(r.correct, prev?.correct || 0),
-        total: r.qs.length,
-        timeMs: better ? r.timeMs : (prev?.timeMs || r.timeMs),
-        games: (prev?.games || 0) + 1,
-        ts: Date.now()
-      };
-      await authFetch(`${FIREBASE_DB_URL}/${QUIZ_SCORES_NODE}/${key}.json`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec)
-      });
-      savedMsg = better ? "🏆 Yeni kişisel rekor! Liderlik tablosuna işlendi." : "Oynadın — kişisel rekorun daha yüksek.";
-    } catch (e) { savedMsg = "Skor kaydedilemedi: " + e.message; }
+  if (k.tip === "guest" && !k.isim) {
+    savedMsg = "İsimsiz oynadın — skor kaydedilmedi. Başla ekranında adını yaz.";
   } else {
-    savedMsg = "Giriş yaptığında skorun liderlik tablosuna işlenir.";
+    try {
+      const res = await fetch(`${FIREBASE_DB_URL}/${QUIZ_GAMES_NODE}.json`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ts: Date.now(),
+          oyuncu: { tip: k.tip, id: k.id, isim: k.isim, email: k.tip === "email" ? k.id : "" },
+          correct: r.correct, total: r.qs.length, timeMs: r.timeMs
+        })
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      quizGamesCache = null;
+      savedMsg = "✅ Skor kaydedildi — haftalık/aylık liderliğe işlendi.";
+    } catch (e) { savedMsg = "Skor kaydedilemedi: " + e.message; }
   }
   const madalya = pct === 100 ? "🏆" : pct >= 70 ? "🥇" : pct >= 40 ? "🥈" : "🥉";
   body.innerHTML = `
@@ -2591,34 +2675,86 @@ async function finishQuiz() {
       <div style="font-size:30px;font-weight:800">${r.correct} / ${r.qs.length}</div>
       <div class="hint">%${pct} doğruluk · toplam süre ${fmtSure(r.timeMs)}</div>
       <p class="hint">${savedMsg}</p>
-      <div id="qzLb"></div>
-      <button class="btn primary" id="btnQzAgain" style="width:100%;padding:12px;margin-top:8px">🔁 Tekrar Oyna</button>
+      <div id="qzMiniLb"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn primary" id="btnQzAgain" style="flex:1;padding:12px">🔁 Tekrar Oyna</button>
+        <button class="btn" id="btnQzLb2" style="flex:1">🏆 Liderlik</button>
+        <button class="btn" id="btnQzSt2" style="flex:1">📊 İstatistik</button>
+      </div>
     </div>`;
   body.querySelector("#btnQzAgain").addEventListener("click", startQuizRun);
-  if (currentUser) renderLeaderboard(body.querySelector("#qzLb"));
+  body.querySelector("#btnQzLb2").addEventListener("click", () => renderLeaderboard(body));
+  body.querySelector("#btnQzSt2").addEventListener("click", () => renderQuizStats(body));
+  /* Bu haftanın ilk 5'i — küçük önizleme */
+  try {
+    const games = periyotFiltre(await quizGamesYukle(), "hafta");
+    const top5 = liderlikHesapla(games).slice(0, 5);
+    document.getElementById("qzMiniLb").innerHTML =
+      `<p class="hint" style="margin:10px 0 4px">🗓️ Bu hafta ilk 5</p>` + lbTabloHtml(top5, k.id);
+  } catch (e) {}
 }
 async function renderLeaderboard(container) {
-  if (!container) return;
-  container.innerHTML = `<p class="hint">🏆 Liderlik tablosu yükleniyor…</p>`;
-  try {
-    const res = await authFetch(`${FIREBASE_DB_URL}/${QUIZ_SCORES_NODE}.json`);
-    const data = await res.json();
-    const list = data ? Object.values(data)
-      .sort((a, b) => (b.correct - a.correct) || ((a.timeMs || 9e15) - (b.timeMs || 9e15)))
-      .slice(0, 10) : [];
-    container.innerHTML = `<div class="rpt"><h3>🏆 En İyi 10</h3><div class="table-wrap"><table>
-      <thead><tr><th>#</th><th>Oyuncu</th><th>Doğru</th><th>Süre</th><th>Oyun</th></tr></thead>
-      <tbody>${list.length ? list.map((s, i) => `<tr class="${currentUser && s.email === currentUser.email ? "priority" : ""}">
-        <td>${["🥇","🥈","🥉"][i] || (i + 1)}</td>
-        <td class="strong">${esc(s.name || shortUser(s.email))}</td>
-        <td class="center">${s.correct}/${s.total || 10}</td>
-        <td class="center">${fmtSure(s.timeMs || 0)}</td>
-        <td class="center">${s.games || 1}</td>
-      </tr>`).join("") : `<tr><td colspan="5" class="empty">Henüz skor yok — ilk sen ol!</td></tr>`}</tbody>
-    </table></div></div>`;
-  } catch (e) {
-    container.innerHTML = `<p class="hint">Liderlik tablosu için giriş gerekiyor.</p>`;
+  container.innerHTML = `<p class="hint">🏆 Liderlik yükleniyor…</p>`;
+  let games;
+  try { games = await quizGamesYukle(); }
+  catch (e) { container.innerHTML = `<p class="hint">Liderlik yüklenemedi: ${esc(e.message)}</p>`; return; }
+  const k = quizKimlik();
+  const ciz = () => {
+    const list = liderlikHesapla(periyotFiltre(games, quizLbTab)).slice(0, 10);
+    container.innerHTML = `<div class="rpt"><h3>🏆 En İyi 10 — ${
+      { hafta: "bu hafta", ay: "bu ay", tum: "tüm zamanlar" }[quizLbTab]}</h3>
+      ${lbTabHtml()}${lbTabloHtml(list, k.id)}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" id="btnLbGeri" style="flex:1">↩ Başla ekranı</button>
+        <button class="btn" id="btnLbStats" style="flex:1">📊 İstatistiklerim</button>
+      </div></div>`;
+    container.querySelectorAll("[data-lbt]").forEach(b =>
+      b.addEventListener("click", () => { quizLbTab = b.dataset.lbt; ciz(); }));
+    container.querySelector("#btnLbGeri").addEventListener("click", quizLoadAndRenderStart);
+    container.querySelector("#btnLbStats").addEventListener("click", () => renderQuizStats(container));
+  };
+  ciz();
+}
+async function renderQuizStats(container) {
+  container.innerHTML = `<p class="hint">📊 İstatistikler yükleniyor…</p>`;
+  const k = quizKimlik();
+  let games;
+  try { games = (await quizGamesYukle()).filter(g => g.oyuncu && g.oyuncu.id === k.id); }
+  catch (e) { container.innerHTML = `<p class="hint">Yüklenemedi: ${esc(e.message)}</p>`; return; }
+  if (!games.length) {
+    container.innerHTML = `<div class="rpt"><p class="hint">Henüz oyunun yok — ▶️ Başla ile ilk turunu oyna.</p>
+      <button class="btn" id="btnStGeri" style="width:100%">↩ Başla ekranı</button></div>`;
+    container.querySelector("#btnStGeri").addEventListener("click", quizLoadAndRenderStart);
+    return;
   }
+  games.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const best = games.reduce((m, g) =>
+    !m || (g.correct > m.correct) || (g.correct === m.correct && (g.timeMs || 9e15) < (m.timeMs || 9e15)) ? g : m, null);
+  const ortAcc = Math.round(games.reduce((s, g) => s + (g.total ? g.correct / g.total * 100 : 0), 0) / games.length);
+  const toplamSure = games.reduce((s, g) => s + (g.timeMs || 0), 0);
+  const haftaBest = liderlikHesapla(periyotFiltre(games, "hafta"))[0];
+  const kpi = `<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+    <div class="kpi c-primary"><div class="kpi-head">🎮 Oyun</div><div class="kpi-val">${games.length}</div><div class="kpi-sub">toplam ${fmtSure(toplamSure)}</div></div>
+    <div class="kpi c-green"><div class="kpi-head">🏅 En iyi</div><div class="kpi-val">${best.correct}/${best.total}</div><div class="kpi-sub">${fmtSure(best.timeMs || 0)} · ${fmtDateTime(best.ts)}</div></div>
+    <div class="kpi c-amber"><div class="kpi-head">🎯 Ort. doğruluk</div><div class="kpi-val">%${ortAcc}</div><div class="kpi-sub">${games.length} tur ortalaması</div></div>
+    <div class="kpi ${haftaBest ? "c-red" : ""}"><div class="kpi-head">🗓️ Hafta lideri sensin mi?</div>
+      <div class="kpi-val" style="font-size:16px;align-self:center">${haftaBest ? (haftaBest.id === k.id ? "🥇 Evet!" : "—") : "—"}</div>
+      <div class="kpi-sub">${haftaBest ? "bu hafta 1#: " + esc(haftaBest.isim) : "bu hafta oyun yok"}</div></div>
+  </div>`;
+  const son10 = games.slice(0, 10).map(g => `<tr>
+    <td>${fmtDateTime(g.ts)}</td>
+    <td class="center oh-strong" style="color:${g.correct >= g.total * .7 ? "var(--green)" : g.correct >= g.total * .4 ? "var(--amber)" : "var(--red)"}">${g.correct}/${g.total}</td>
+    <td class="center">%${g.total ? Math.round(g.correct / g.total * 100) : 0}</td>
+    <td class="center">${fmtSure(g.timeMs || 0)}</td>
+  </tr>`).join("");
+  container.innerHTML = `<div class="rpt">
+    <p class="hint">👤 <b>${esc(k.isim)}</b> · ${k.tip === "guest" ? "misafir oyuncu (bu cihaza bağlı)" : "girişli oyuncu"}</p>
+    ${kpi}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Tarih</th><th class="center">Skor</th><th class="center">Doğruluk</th><th class="center">Süre</th></tr></thead>
+      <tbody>${son10}</tbody></table></div>
+    <button class="btn" id="btnStGeri" style="width:100%;margin-top:10px">↩ Başla ekranı</button></div>`;
+  container.querySelector("#btnStGeri").addEventListener("click", quizLoadAndRenderStart);
 }
 /* --- Admin: soru yönetimi --- */
 async function openQuizAdmin() {
