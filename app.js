@@ -1942,7 +1942,7 @@ function openDepo() {
   document.querySelectorAll(".depo-tab").forEach(x => x.classList.toggle("active", x.dataset.dtab === "anlik"));
   document.getElementById("depoOverlay").classList.remove("hidden");
   document.body.classList.add("depo-open");
-  ();
+  renderDepoContent();
 }
 function closeDepo() {
   stopSnake();
