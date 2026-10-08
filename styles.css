@@ -703,3 +703,8 @@ body.dark .yas-badge.danger, body[data-theme="forest"] .yas-badge.danger, body[d
 /* Eksik (stok yetersiz) satır zemin boyama */
 tr.oh-eksik td { background: var(--red-soft); }
 tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
+/* 🧠 Quiz — liderlik/istatistik */
+.qz-lb-tabs { display:flex; gap:6px; margin:10px 0; }
+#quizModal .kpi-grid { gap:8px; }
+#quizModal .kpi { padding:10px 12px; }
+#quizModal .kpi-val { font-size:20px; }
