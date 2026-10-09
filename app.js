@@ -2415,7 +2415,6 @@ function etkinSureMs(r) {
 /* ---------- Veri katmanı: toDb/applyDurum korunur, alanlar PATCH ile taşınır ---------- */
 /* mevcut toDb() zaten tüm alanları yazıyor; yeni alanlar oraya eklenecek (AŞAĞIDA) */
 
-}
 async function ekipEkle(ad) {
   const maxN = ekipSira.reduce((m, k) => Math.max(m, parseInt(k.replace(/\D/g, ""), 10) || 0), 0);
   const kod = "ekip-" + (maxN + 1);
