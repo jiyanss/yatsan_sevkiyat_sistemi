@@ -2454,7 +2454,7 @@ function etkinSureMs(r) {
 function bulkEkipDoldur() {
   const sel = document.getElementById("bulkEkip");
   if (!sel) return;
-  sel.innerHTML = `<option value="">Ekip (değişmez)</option>` +
+  sel.innerHTML = `<option value="">Ekip (değiştir)</option>` +
     aktifEkipler().map(k => `<option value="${esc(k)}">${esc(ekipAd(k))}</option>`).join("");
 }
 
@@ -2469,7 +2469,7 @@ async function loadEkipler() {
       const nb = parseInt(b.replace(/\D/g, ""), 10) || 0;
       return na - nb;
     });
-   } catch (e) { console.warn("Ekipler yüklenemedi:", e.message); ekipler = {}; ekipSira = []; }
+  } catch (e) { console.warn("Ekipler yüklenemedi:", e.message); ekipler = {}; ekipSira = []; }
   bulkEkipDoldur();
 }
 async function ekipEkle(ad) {
@@ -2529,6 +2529,8 @@ function renderEkipTable() {
         </td>
       </tr>`;
     }).join("");
+  }
+  bulkEkipDoldur();
 }
 document.getElementById("btnEkipAdd").addEventListener("click", async () => {
   const inp = document.getElementById("ekipNewAd");
