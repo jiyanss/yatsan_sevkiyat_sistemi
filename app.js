@@ -457,6 +457,8 @@ function toDb(r) {
     oncelikNo: (r.oncelikNo === "" || r.oncelikNo == null) ? null : Number(r.oncelikNo),
     gecikmeNedeni: r.gecikmeNedeni || "",
     gecikmeSon: (r.gecikmeSon == null) ? null : Number(r.gecikmeSon),
+    ekip: (r.ekip || "").trim() || "",
+    toplamaBittiTs: (r.toplamaBittiTs == null) ? null : Number(r.toplamaBittiTs),
     comments: Array.isArray(r.comments) ? r.comments : [],
     loadingStartedAt: (r.loadingStartedAt == null) ? null : Number(r.loadingStartedAt),
     loadingEndedAt: (r.loadingEndedAt == null) ? null : Number(r.loadingEndedAt),
@@ -1898,6 +1900,7 @@ document.getElementById("btnBulkCancel").addEventListener("click", () => {
 });
 document.getElementById("btnBulkApply").addEventListener("click", async () => {
   if (!selectedIds.size) return;
+  await bulkEkipUygula();
   const yeniTarih = document.getElementById("bulkDate").value;
   const yeniDurum = document.getElementById("bulkDurum").value;
   if (!yeniTarih && !yeniDurum) { alert("Tarih veya durum seç."); return; }
@@ -1982,7 +1985,7 @@ function depoItem(r, cls, extra) {
   return `<div class="depo-item ${cls}">
     <div>
       <div class="d-musteri">${esc(r.musteri)}</div>
-      <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}</div>
+      <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}${depoEkipSatiri(r)}</div>
       <div class="d-sub">${aracDurumHtml(r)}</div>
       ${r.aciklama ? `<div class="d-cmt" style="color:#93c5fd">📝 ${esc(r.aciklama)}</div>` : ""}
       ${depoCmtLine(r)}
@@ -2418,6 +2421,221 @@ async function buildArsiv() {
     arsivStatsTable(zengin, r => r.sevkiyatTipi, "🚛 Sevkiyat tipi bazlı (arşiv)", "Tip");
   c.innerHTML = kpiBlock + tablolar;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   👷 EKİP PERFORMANS MODÜLÜ — PART 1 (veri + atama + depo)
+   ═══════════════════════════════════════════════════════════ */
+const EKIP_NODE = "sevkiyat_ekipler";
+const EKIP_RENKLERI = ["#6366f1","#059669","#d97706","#0ea5e9","#8b5cf6","#dc2626","#0f766e","#be185d"];
+let ekipler = {};              /* { "ekip-1": { ad, aktif, ts } } */
+let ekipSira = [];             /* ["ekip-1","ekip-2",...] — sıralı liste */
+
+/* ---------- Ekip adı/renk yardımcıları ---------- */
+function ekipAd(kod) { return (ekipler[kod] && ekipler[kod].ad) || kod; }
+function ekipRenk(kod) {
+  const n = parseInt(String(kod).replace(/\D/g, ""), 10) || 1;
+  return EKIP_RENKLERI[(n - 1) % EKIP_RENKLERI.length];
+}
+function ekipChipHtml(kod) {
+  if (!kod || !ekipler[kod]) return "";
+  return `<span class="ekip-chip" style="background:${ekipRenk(kod)}" title="Ekip: ${esc(ekipAd(kod))}">👷 ${esc(ekipAd(kod))}</span>`;
+}
+/* Etkin süre (ms): toplama bitti varsa o an, yoksa kronometre bitişi */
+function etkinSureMs(r) {
+  if (!r.loadingStartedAt) return 0;
+  const bitis = r.toplamaBittiTs || r.loadingEndedAt;
+  if (!bitis) return 0;
+  return Math.max(0, bitis - r.loadingStartedAt);
+}
+
+/* ---------- Veri katmanı: toDb/applyDurum korunur, alanlar PATCH ile taşınır ---------- */
+/* mevcut toDb() zaten tüm alanları yazıyor; yeni alanlar oraya eklenecek (AŞAĞIDA) */
+
+/* ---------- Ekip yükleme / CRUD ---------- */
+async function loadEkipler() {
+  try {
+    const res = await authFetch(`${FIREBASE_DB_URL}/${EKIP_NODE}.json`);
+    const data = await check(res, "Ekipler yüklenemedi");
+    ekipler = data || {};
+    ekipSira = Object.keys(ekipler).sort((a, b) => {
+      const na = parseInt(a.replace(/\D/g, ""), 10) || 0;
+      const nb = parseInt(b.replace(/\D/g, ""), 10) || 0;
+      return na - nb;
+    });
+  } catch (e) { console.warn("Ekipler yüklenemedi:", e.message); ekipler = {}; ekipSira = []; }
+}
+async function ekipEkle(ad) {
+  const maxN = ekipSira.reduce((m, k) => Math.max(m, parseInt(k.replace(/\D/g, ""), 10) || 0), 0);
+  const kod = "ekip-" + (maxN + 1);
+  const body = { ad: (ad || "").trim() || kod, aktif: true, ts: Date.now() };
+  const res = await authFetch(`${FIREBASE_DB_URL}/${EKIP_NODE}/${kod}.json`, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+  });
+  await check(res, "Ekip eklenemedi");
+  ekipler[kod] = body;
+  ekipSira.push(kod); ekipSira.sort((a, b) => (parseInt(a.replace(/\D/g,""),10)||0) - (parseInt(b.replace(/\D/g,""),10)||0));
+  await apiLog("yetki", "", body.ad, `👷 ekip oluşturuldu: ${kod}`);
+  return kod;
+}
+async function ekipAdKaydet(kod, ad) {
+  const v = (ad || "").trim() || kod;
+  const res = await authFetch(`${FIREBASE_DB_URL}/${EKIP_NODE}/${kod}.json`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ad: v })
+  });
+  await check(res, "Ekip adı kaydedilemedi");
+  if (ekipler[kod]) ekipler[kod].ad = v;
+  await apiLog("yetki", "", v, `👷 ekip adı güncellendi: ${kod} → ${v}`);
+}
+async function ekipToggle(kod) {
+  const cur = ekipler[kod] || {};
+  const yeni = !cur.aktif;
+  const res = await authFetch(`${FIREBASE_DB_URL}/${EKIP_NODE}/${kod}.json`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aktif: yeni })
+  });
+  await check(res, "Ekip durumu değiştirilemedi");
+  if (ekipler[kod]) ekipler[kod].aktif = yeni;
+  await apiLog("yetki", "", ekipAd(kod), `👷 ekip ${yeni ? "aktif" : "pasif"} yapıldı: ${kod}`);
+}
+function aktifEkipler() { return ekipSira.filter(k => ekipler[k] && ekipler[k].aktif); }
+
+/* ---------- Ekip yönetim modalı ---------- */
+function openEkipPanel() {
+  if (!isAdmin()) { alert("Bu panel sadece yöneticiler içindir."); return; }
+  renderEkipTable();
+  document.getElementById("ekipModal").classList.remove("hidden");
+}
+function renderEkipTable() {
+  const tb = document.getElementById("ekipTable");
+  if (!ekipSira.length) {
+    tb.innerHTML = `<tr><td colspan="4" class="empty">Henüz ekip yok — yukarıdan ekleyin.</td></tr>`;
+  } else {
+    tb.innerHTML = ekipSira.map(k => {
+      const e = ekipler[k];
+      return `<tr data-ekod="${esc(k)}">
+        <td class="muted">${esc(k)}</td>
+        <td><input class="cell-input" style="width:100%" value="${esc(e.ad || k)}" data-ekipad="${esc(k)}" /></td>
+        <td class="center">${e.aktif !== false ? '<span class="badge done">Aktif</span>' : '<span class="badge waiting">Pasif</span>'}</td>
+        <td class="nowrap">
+          <button class="btn primary" data-ekipsave="${esc(k)}">Kaydet</button>
+          <button class="btn" data-ekiptoggle="${esc(k)}">${e.aktif !== false ? "Pasifleştir" : "Aktifleştir"}</button>
+        </td>
+      </tr>`;
+    }).join("");
+  }
+  /* bulkBar dropdown + atama seçenekleri */
+  const sel = document.getElementById("bulkEkip");
+  if (sel) {
+    sel.innerHTML = `<option value="">Ekip (değişmez)</option>` +
+      aktifEkipler().map(k => `<option value="${esc(k)}">${esc(ekipAd(k))}</option>`).join("");
+  }
+}
+document.getElementById("btnEkipAdd").addEventListener("click", async () => {
+  const inp = document.getElementById("ekipNewAd");
+  try {
+    const kod = await ekipEkle(inp.value);
+    inp.value = "";
+    renderEkipTable();
+    showToast(`✅ ${ekipAd(kod)} eklendi.`);
+  } catch (e) { alert("Eklenemedi: " + e.message); }
+});
+document.getElementById("ekipNewAd").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("btnEkipAdd").click(); });
+document.getElementById("ekipTable").addEventListener("click", async e => {
+  const sb = e.target.closest("[data-ekipsave]");
+  if (sb) {
+    const kod = sb.dataset.ekipsave;
+    const ad = document.querySelector(`input[data-ekipad="${kod}"]`).value;
+    try { await ekipAdKaydet(kod, ad); showToast("✅ Ekip adı güncellendi."); renderEkipTable(); }
+    catch (err) { alert("Kaydedilemedi: " + err.message); }
+    return;
+  }
+  const tb = e.target.closest("[data-ekiptoggle]");
+  if (tb) {
+    try { await ekipToggle(tb.dataset.ekiptoggle); renderEkipTable(); }
+    catch (err) { alert("İşlem başarısız: " + err.message); }
+  }
+});
+document.getElementById("btnCloseEkip").addEventListener("click", () =>
+  document.getElementById("ekipModal").classList.add("hidden"));
+document.getElementById("ekipModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+});
+document.getElementById("btnEkip").addEventListener("click", openEkipPanel);
+/* updateUserUI görünürlüğü — ekleyeceğiz (PART 2) */
+
+/* ---------- Toplu ekip ataması (bulkBar) ---------- */
+async function bulkEkipUygula() {
+  const kod = document.getElementById("bulkEkip").value;
+  if (!kod) return;
+  if (!selectedIds.size) return;
+  const secili = rows.filter(r => selectedIds.has(r.id));
+  if (!secili.length) return;
+  if (!confirm(`${secili.length} kayda "${ekipAd(kod)}" atanacak. Onaylıyor musun?`)) return;
+  const btn = document.getElementById("btnBulkApply");
+  btn.disabled = true; btn.textContent = "Atanıyor…";
+  try {
+    let done = 0;
+    for (const r of secili) {
+      const updated = { ...r, ekip: kod };
+      const saved = await apiUpdate(r.id, updated);
+      rows = rows.map(x => x.id === r.id ? saved : x);
+      done++;
+    }
+    await apiLog("guncelleme", "", secili.map(r => r.musteri).slice(0, 15).join(", ") + (secili.length > 15 ? "…" : ""),
+      `👷 toplu ekip ataması (${done} kayıt): ${ekipAd(kod)}`);
+    selectedIds.clear();
+    setSaveError("");
+    render();
+    showToast(`👷 ${done} kayda ${ekipAd(kod)} atandı.`);
+  } catch (e) {
+    setSaveError(e.message);
+    alert("Ekip atama hatası: " + e.message);
+  }
+  btn.disabled = false; btn.textContent = "Uygula";
+}
+
+/* ---------- 📦 Toplama Bitti (QR + Operasyon) ---------- */
+/* Fiziksel toplama bitti ama statü bekliyor olabilir (üretim eksiği) —
+   etkin süre bu anla durur, kronometre/statü bozulmaz. */
+async function toplamaBittiAction(idOverride = null) {
+  const targetId = idOverride || islemId;
+  if (!currentUser) { showLogin("İşlem için giriş yapın."); return; }
+  if (!hasPerm("edit")) { alert("Bu işlem için düzenleme yetkiniz yok."); return; }
+  const row = await freshRow(targetId);
+  if (!row) { alert("Kayıt bulunamadı."); return; }
+  if (!row.loadingStartedAt) { alert("Kronometre henüz başlamamış — önce yüklemeyi başlatın."); return; }
+  if (row.toplamaBittiTs) { showToast("ℹ️ Toplama bitti zaten işaretli (" + fmtTime(row.toplamaBittiTs) + ")."); return; }
+  const ekipNotu = row.ekip ? "" : "\n\n⚠️ Bu kayda henüz ekip atanmamış — performans raporunda 'Atanmamış' görünür.";
+  if (!confirm(`"${row.musteri}" için fiziksel toplama bitti olarak işaretlenecek.${ekipNotu}\n\nDevam?`)) return;
+  try {
+    const saved = await apiUpdate(row.id, { ...row, toplamaBittiTs: Date.now() });
+    rows = rows.map(r => r.id === row.id ? saved : r);
+    setSaveError("");
+    render();
+    const isOv = document.getElementById("islemOverlay");
+    if (isOv && !isOv.classList.contains("hidden")) renderIslem();
+    if (document.getElementById("opOverlay")) renderOpCard();
+    await apiLog("guncelleme", row.id, row.musteri,
+      `📦 toplama bitti: ${fmtTime(saved.toplamaBittiTs)} · etkin süre: ${fmtSure(etkinSureMs(saved))}` +
+      (row.ekip ? ` · ${ekipAd(row.ekip)}` : ""));
+    showToast(`✅ Toplama bitti — etkin süre ${fmtSure(etkinSureMs(saved))}`);
+  } catch (e) { alert("Kaydedilemedi: " + e.message); }
+}
+
+/* ---------- Depo / işlem ekranlarına entegrasyon ---------- */
+/* depoItem kartına ekip rozeti + toplama bitti rozeti ekler (PART 2'de html'e ekleyeceğiz) */
+function depoEkipSatiri(r) {
+  const chip = ekipChipHtml(r.ekip);
+  const bitti = r.toplamaBittiTs && r.durum === "Yükleniyor"
+    ? ` <span class="ekip-toplam-bitti">📦 Toplama bitti ${fmtTime(r.toplamaBittiTs)}</span>` : "";
+  return (chip || bitti) ? `<div class="d-sub">${chip}${bitti}</div>` : "";
+}
+
+/* ═══════════════ TODB GÜNCELLEME (alan taşınması) ═══════════════ */
+/* mevcut toDb fonksiyonu içindeki "comments:" satırının ÜSTÜNE şu iki satırı ekleyin:
+    ekip: (r.ekip || "").trim() || "",
+    toplamaBittiTs: (r.toplamaBittiTs == null) ? null : Number(r.toplamaBittiTs),
+*/
+
 
 /* ================= 🧠 BİLGİ YARIŞMASI ================= */
 let quizQuestions = [];
@@ -2969,8 +3187,8 @@ function islemBtns(d) {
       <button class="islem-btn b-geldi" data-iact="geldi">🚛 Araç Geldi</button>
       <button class="islem-btn b-basla" data-iact="baslat">▶️ Yüklemeyi Başlat</button>`;
   }
-  if (d.durum === "Yükleniyor") {
-    return `<button class="islem-btn b-bitir" data-iact="bitir">✅ Yüklemeyi Bitir</button>`;
+   if (d.durum === "Yükleniyor") {
+    return `<button class="islem-btn b-bitir" data-iact="bitir">✅ Yüklemeyi Bitir</button><button class="islem-btn b-geldi" data-iact="toplamabitti" style="background:#0f766e">📦 Toplama Bitti</button>`;
   }
   return "";
 }
@@ -3033,6 +3251,8 @@ async function islemAction(action, idOverride = null) {
     updated.durum = "Yükleniyor";
     applyDurumSideEffects(updated);
     etiket = "yükleme başlatıldı";
+  } else if (action === "toplamabitti") {
+    return toplamaBittiAction(targetId);
   } else if (action === "bitir") {
     updated.durum = "Yükleme Tamamlandı";
     applyDurumSideEffects(updated);
