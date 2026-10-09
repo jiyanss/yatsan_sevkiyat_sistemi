@@ -767,3 +767,16 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 #depoMini .dm-ok { color: #34d399 !important; font-weight: 700; }
 #depoMini .dm-empty { color: #8aa0b8 !important; font-style: italic; text-align: center; }
 #depoMini .dm-table tr:hover td { background: #1e2a44 !important; }
+
+/* 👷 Ekip rozetleri */
+.ekip-chip {
+  display:inline-block; font-size:11.5px; font-weight:800; padding:3px 10px;
+  border-radius:999px; color:#fff; letter-spacing:.02em; white-space:nowrap;
+}
+.ekip-toplam-bitti {
+  display:inline-block; font-size:12px; font-weight:700; color:#34d399;
+  background:#0d2b22; border:1px solid #34d399; border-radius:8px; padding:2px 8px;
+}
+.d-sub .ekip-chip { margin-right:6px; }
+/* Ekip raporu mini not */
+.ekip-uyari { color:var(--amber); font-weight:700; }
