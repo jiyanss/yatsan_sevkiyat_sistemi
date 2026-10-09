@@ -2451,6 +2451,13 @@ function etkinSureMs(r) {
 /* ---------- Veri katmanı: toDb/applyDurum korunur, alanlar PATCH ile taşınır ---------- */
 /* mevcut toDb() zaten tüm alanları yazıyor; yeni alanlar oraya eklenecek (AŞAĞIDA) */
 
+function bulkEkipDoldur() {
+  const sel = document.getElementById("bulkEkip");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">Ekip (değişmez)</option>` +
+    aktifEkipler().map(k => `<option value="${esc(k)}">${esc(ekipAd(k))}</option>`).join("");
+}
+
 /* ---------- Ekip yükleme / CRUD ---------- */
 async function loadEkipler() {
   try {
@@ -2462,7 +2469,8 @@ async function loadEkipler() {
       const nb = parseInt(b.replace(/\D/g, ""), 10) || 0;
       return na - nb;
     });
-  } catch (e) { console.warn("Ekipler yüklenemedi:", e.message); ekipler = {}; ekipSira = []; }
+   } catch (e) { console.warn("Ekipler yüklenemedi:", e.message); ekipler = {}; ekipSira = []; }
+  bulkEkipDoldur();
 }
 async function ekipEkle(ad) {
   const maxN = ekipSira.reduce((m, k) => Math.max(m, parseInt(k.replace(/\D/g, ""), 10) || 0), 0);
@@ -2521,13 +2529,6 @@ function renderEkipTable() {
         </td>
       </tr>`;
     }).join("");
-  }
-  /* bulkBar dropdown + atama seçenekleri */
-  const sel = document.getElementById("bulkEkip");
-  if (sel) {
-    sel.innerHTML = `<option value="">Ekip (değişmez)</option>` +
-      aktifEkipler().map(k => `<option value="${esc(k)}">${esc(ekipAd(k))}</option>`).join("");
-  }
 }
 document.getElementById("btnEkipAdd").addEventListener("click", async () => {
   const inp = document.getElementById("ekipNewAd");
@@ -2592,7 +2593,7 @@ async function bulkEkipUygula() {
   }
   btn.disabled = false; btn.textContent = "Uygula";
 }
-
+bulkEkipDoldur();
 /* ---------- 📦 Toplama Bitti (QR + Operasyon) ---------- */
 /* Fiziksel toplama bitti ama statü bekliyor olabilir (üretim eksiği) —
    etkin süre bu anla durur, kronometre/statü bozulmaz. */
@@ -5422,6 +5423,7 @@ updateUserUI();
   loadKapasitePrefs();
   updateSortHeaders();
   await loadSureAyarlari();
+  await loadEkipler();
   const s = getAuthState();
   if (s) {
     try {
