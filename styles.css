@@ -709,32 +709,44 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 #quizModal .kpi { padding:10px 12px; }
 #quizModal .kpi-val { font-size:20px; }
 
-/* 📊 Depo mini dashboard + yılan modal hizaları */
-/* 📊 Depo mini dashboard v2 + başlık düzeni */
-.depo-left { display:flex; flex-direction:column; gap:14px; align-items:flex-start; }
-.depo-left .depo-tabs { margin-bottom:0; }
-.depo-right { display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
-.depo-mini { background:#151f31; border:1px solid #2b3a52; border-radius:12px; padding:10px 12px; width:250px; box-shadow:0 4px 14px rgba(0,0,0,.35); }
-.dm-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-.dm-week { font-size:12px; font-weight:800; color:#818cf8; letter-spacing:.06em; }
-.dm-pct { font-size:16px; font-weight:800; color:#e2e8f0; }
-.dm-nums { display:flex; gap:14px; margin-bottom:6px; }
-.dm-nums div { display:flex; flex-direction:column; }
-.dm-nums b { font-size:18px; font-weight:800; color:#e2e8f0; line-height:1.1; }
-.dm-nums span { font-size:8.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#8aa0b8; margin-top:2px; }
-.dm-bitti { color:#34d399 !important; }
-.dm-kalan2 { color:#fbbf24 !important; }
-.dm-kalan { color:#fbbf24; font-weight:700; }
-.dm-ok { color:#34d399; font-weight:700; }
-.dm-bar { height:7px; border-radius:999px; background:#2b3a52; overflow:hidden; margin-bottom:8px; }
+/* ═══ Depo — tek satır başlık + yatay mini dashboard ═══ */
+.depo-overlay { padding: 12px 16px 40px; }
+.depo-head { display:flex; align-items:center; gap:12px; flex-wrap:nowrap; margin-bottom:10px; }
+.depo-clock { font-size:28px; font-weight:800; letter-spacing:-0.02em; color:#818cf8; white-space:nowrap; }
+.depo-date { font-size:12px; color:#8aa0b8; margin:0; white-space:nowrap; }
+.depo-head .depo-tabs { margin:0; flex:1; flex-wrap:nowrap; }
+.depo-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.depo-mini { background:#151f31; border:1px solid #2b3a52; border-radius:10px; padding:6px 12px; box-shadow:0 2px 10px rgba(0,0,0,.3); }
+.dm-row { display:flex; align-items:baseline; gap:10px; white-space:nowrap; }
+.dm-week { font-size:11px; font-weight:800; color:#818cf8; letter-spacing:.05em; }
+.dm-nums2 { font-size:12px; color:#8aa0b8; }
+.dm-nums2 b { font-size:16px; font-weight:800; color:#e2e8f0; }
+.dm-nums2 .dm-bitti { color:#34d399; }
+.dm-pct { font-size:15px; font-weight:800; color:#34d399; }
+.dm-bar { height:5px; border-radius:999px; background:#2b3a52; overflow:hidden; margin:4px 0; }
 .dm-bar-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#059669,#34d399); transition:width .4s ease; }
-.dm-table { width:100%; border-collapse:collapse; font-size:11px; background:transparent; }
-.dm-table th { text-align:left; color:#8aa0b8; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:4px; border-bottom:1px solid #2b3a52; background:transparent; }
-.dm-table td { padding:4px; color:#e2e8f0; border-bottom:1px solid #1c2942; white-space:nowrap; background:transparent; }
-.dm-table th.center, .dm-table td.center { text-align:center; }
-.dm-empty { color:#8aa0b8 !important; text-align:center; font-style:italic; background:transparent !important; }
-#snakeModal .modal { max-width:460px; }
+.dm-tips { display:flex; gap:10px; flex-wrap:wrap; }
+.dm-tip { font-size:10px; font-weight:700; color:#8aa0b8; white-space:nowrap; }
+.dm-tip b { color:#34d399; }
+.dm-empty { font-size:10px; color:#8aa0b8; font-style:italic; }
 
+/* ═══ Depo kartı — max 4 satır kompakt ═══ */
+.depo-item { padding:10px 16px; margin-bottom:8px; gap:16px; align-items:center; }
+.depo-item .d-musteri { font-size:22px; }
+.di-main { min-width:0; flex:1; }
+.di-top { display:flex; align-items:baseline; gap:10px; overflow:hidden; }
+.di-sub { font-size:12px; color:#8aa0b8; white-space:nowrap; }
+.di-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.di-chip { font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; white-space:nowrap; }
+.di-ok { background:#0d2b22; color:#34d399; border:1px solid #14532d; }
+.di-warn { background:#2d2410; color:#fbbf24; border:1px solid #78350f; }
+.di-bad { background:#31151a; color:#f87171; border:1px solid #7f1d1d; }
+.di-note { font-size:11.5px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:680px; margin-top:3px; }
+.di-note.d-cmt { color:#fbbf24; }
+.d-right { text-align:right; flex-shrink:0; }
+.di-tip { font-size:13px; color:#8aa0b8; }
+.di-extra { font-size:13.5px; font-weight:700; color:#e2e8f0; margin-top:2px; }
+.di-saat { font-size:11px; color:#8aa0b8; margin-top:2px; }
 /* 📊 Depo mini dashboard — okunabilirlik düzeltmeleri (tüm temalarda sabit) */
 #depoMini,
 #depoMini * {
