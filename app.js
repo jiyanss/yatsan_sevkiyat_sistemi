@@ -2099,7 +2099,7 @@ function renderDepoContent() {
     return;
   }
 
-  if (depoTab === "bitmis") {
+    if (depoTab === "bitmis") {
     const thisWeek = getISOWeek(new Date());
     const bitmis = list.filter(r => {
       if (r.durum !== "Yükleme Tamamlandı") return false;
@@ -2120,19 +2120,27 @@ function renderDepoContent() {
       html += `<div class="depo-empty">Bu haftada tamamlanmış yükleme yok.</div>`;
     } else {
       gunler.forEach(iso => {
-         const gList = byDate.get(iso).sort((a, b) => String(a.musteri).localeCompare(String(b.musteri), "tr"));
+        const gList = byDate.get(iso).sort((a, b) => String(a.musteri).localeCompare(String(b.musteri), "tr"));
         const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
         const satirlar = gList.map(r => {
           const b = sureBilgi(r);
           const sureTxt = b.durum === "done"
-            ? (b.asim ? `<span style="color:#fbbf24">⏱️ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşım</span>` : `<span style="color:#34d399">⏱️ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk</span>`)
+            ? `<span class="di-chip ${b.asim ? "di-bad" : "di-ok"}">⏱ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk${b.asim ? ` · +${b.asimDk}dk` : ""}</span>`
             : "";
-          const saatTxt = (r.loadingStartedAt && r.loadingEndedAt) ? ` <span style="color:#8aa0b8">· Baş:${fmtTime(r.loadingStartedAt)} - Bitiş:${fmtTime(r.loadingEndedAt)}</span>` : "";
-          const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
-          const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
-          return `<div class="depo-week-row">
-            <div class="w-m">${esc(r.musteri)}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
-            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""} · ${aracDurumHtml(r)}${r.aciklama ? ` <span style="color:#93c5fd">📝 ${esc(r.aciklama)}</span>` : ""}</div>
+          const chips = [
+            ekipler[r.ekip] ? ekipChipHtml(r.ekip) : "",
+            r.toplamaBasTs && r.toplamaBittiTs
+              ? `<span class="di-chip di-ok">📦 ${fmtTime(r.toplamaBasTs)}→${fmtTime(r.toplamaBittiTs)} · ${fmtSure(r.toplamaBittiTs - r.toplamaBasTs)}</span>` : "",
+            sureTxt,
+            r.araciGeldi === "GELDİ" ? `<span class="di-chip di-ok">🚛 Geldi</span>`
+              : (r.araciGeldi ? `<span class="di-chip di-warn">🚛 Gelmedi</span>` : "")
+          ].filter(Boolean).join(" ");
+          return `<div class="depo-week-row" style="flex-wrap:wrap">
+            <div class="w-m" style="min-width:260px"><b style="font-size:16px">${esc(r.musteri)}</b>
+              <div style="margin-top:4px">${chips}</div>
+              ${r.aciklama ? `<div class="di-note" title="${esc(r.aciklama)}">📝 ${esc(r.aciklama)}</div>` : ""}
+            </div>
+            <div class="w-r">${esc(r.sevkiyatTipi)} · <b style="font-size:16px;color:#e2e8f0">${esc(r.ad)}</b> yükleme · ${formatDate(iso)}</div>
           </div>`;
         }).join("");
         html += `<div class="depo-week-day">
@@ -2142,6 +2150,7 @@ function renderDepoContent() {
       });
     }
     c.innerHTML = html;
+    return;
   }
     
   /* Operasyonel gecikme: REEL PLAN bugünün gerisinde kalan tamamlanmamışlar.
