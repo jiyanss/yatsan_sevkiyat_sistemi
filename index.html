@@ -82,6 +82,7 @@
     <button class="btn hidden" id="btnBackup">💾 Yedek</button>
     <button class="btn hidden" id="btnSurePanel">⏱️ Süreler</button>
     <button class="btn hidden" id="btnArsiv">🗄️ Arşiv</button>
+    <button class="btn hidden" id="btnEkip">👷 Ekipler</button>
     <button class="btn hidden" id="btnAdminPanel">🛡️ Admin Panel</button>
     <button class="btn hidden" id="btnPwaInstall">📲 Uygulamayı Yükle</button>
     <a class="btn primary" id="btnOrderHazir" href="order-hazir.html" title="Order Hazır — yükleme hazırlık analizi">📦 Order Hazır</a>
@@ -130,6 +131,7 @@
   <span id="bulkCount">0 seçili</span>
   <input type="date" id="bulkDate" title="Seçili kayıtları bu tarihe taşı" />
   <select id="bulkDurum" title="Durumu değiştir">
+  <select id="bulkEkip" title="Seçili kayıtlara ekip ata"></select>
     <option value="">Durum (değişmez)</option>
     <option value="Yükleme Bekliyor">Yükleme Bekliyor</option>
     <option value="Yükleniyor">Yükleniyor</option>
@@ -175,8 +177,10 @@
       <button class="rtab" data-rtab="sure">⏱️ Süre Performansı</button>
       <button class="rtab" data-rtab="detay">📋 Detay Tablolar</button>
       <button class="rtab" data-rtab="arsiv">🗄️ Arşiv</button>
+      <button class="rtab" data-rtab="ekip">👷 Ekip</button>
     </div>
     <div id="reportPaneGenel" class="rpane"></div>
+    <div id="reportPaneEkip" class="rpane hidden"></div>
     <div id="reportPaneAnaliz" class="rpane hidden"></div>
     <div id="reportPaneKapasite" class="rpane hidden"></div>
     <div id="reportPaneSure" class="rpane hidden"></div>
@@ -459,7 +463,24 @@
     <div class="modal-actions"><button class="btn" id="btnSnakeClose">Kapat</button></div>
   </div>
 </div>
-
+  
+<div id="ekipModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>👷 Ekip Yönetimi</h2>
+    <p class="hint">Ekip kodları sabittir (ekip-1, ekip-2…), <b>Görünen ad</b> alanına gerçek ismi yazabilirsiniz (örn. "Ekip-1 · Sabah Ekibi"). Pasif ekipler atama listesinde görünmez ama geçmiş raporları korunur. <b>Kayıt atamak için:</b> tabloda kutucukları seç → alt çubuktan Ekip seç → Uygula.</p>
+    <div class="form-grid" style="grid-template-columns:1fr auto;align-items:end">
+      <label><span>Yeni ekip</span><input id="ekipNewAd" placeholder="boş bırak → otomatik Ekip-N" /></label>
+      <button class="btn primary" id="btnEkipAdd" style="padding:8px 14px">+ Ekip Ekle</button>
+    </div>
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>Kod</th><th>Görünen ad</th><th class="center">Durum</th><th></th></tr></thead>
+        <tbody id="ekipTable"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCloseEkip">Kapat</button></div>
+  </div>
+</div>
   
 <div id="toast" class="toast hidden"></div>
   <script>
