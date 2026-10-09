@@ -929,9 +929,13 @@ function sureCellHtml(r) {
   /* ⏱️ Y. satırı — statü kronometresi (mevcut davranış) */
   const b = sureBilgi(r);
   let yHtml = "";
-  if (b.durum === "none") {
-    if (!tpHtml) return `<span class="sure-txt">-</span>`;
-    yHtml = `<span class="sure-txt muted" style="font-size:9px">⏱️ Y: başlamadı</span>`;
+    if (b.durum === "none") {
+    if (r.loadingStartedAt) {
+      yHtml = `<span class="sure-txt muted" style="font-size:9px">⏱️ Y: ${fmtTime(r.loadingStartedAt)}'dan beri (statü: ${esc(r.durum)})</span>`;
+    } else {
+      if (!tpHtml) return `<span class="sure-txt">-</span>`;
+      yHtml = `<span class="sure-txt muted" style="font-size:9px">⏱️ Y: yok</span>`;
+    }
   } else if (b.durum === "live") {
     const cls = b.yuzde >= 100 ? "over" : b.yuzde >= 70 ? "warn" : "";
     const txt = b.asim
@@ -1601,52 +1605,24 @@ async function commentDelete(ts) {
 function openSureEdit(id) {
   const row = rows.find(r => r.id === id);
   if (!row) return;
-  if (row.durum === "Yükleme Bekliyor") {
-    alert("Bu kayıt henüz yüklenmiyor — kronometre 'Yükleniyor' durumunda başlar.");
-    return;
-  }
   currentSureId = id;
   const standart = getSureDk(row);
   document.getElementById("sureEditWho").innerHTML =
     `<b>${esc(row.musteri)}</b> · ${esc(row.sevkiyatTipi)} · standart: ${standart} dk · durum: ${esc(row.durum)}${row.ekip ? ` · 👷 ${esc(ekipAd(row.ekip))}` : ""}`;
-  const body = document.getElementById("sureEditBody");
-   const toplamaField = `
-      <label class="col-2"><span>📦 Toplama başlangıç (boş = toplama kaydı yok)</span>
-        <input type="datetime-local" id="sureTopBas" class="w-dt" value="${toLocalDT(row.toplamaBasTs)}" />
-      </label>
-      <label class="col-2"><span>📦 Toplama bitti (boş = hâlâ toplanıyor / kayıt yok)</span>
-        <input type="datetime-local" id="sureTopBitti" class="w-dt" value="${toLocalDT(row.toplamaBittiTs)}" />
-      </label>`;
-  if (row.durum === "Yükleniyor") {
-    body.innerHTML = `
-      <p class="hint">Kronometre çalışıyor. Üretim eksiği bekleniyorsa bitiş girmek yerine <b>Toplama bitti</b> işaretleyin — statü "Yükleniyor" kalır ama performans süresi kilitlenir. Bitiş girerseniz kayıt otomatik "Tamamlandı" olur.</p>
-      <div class="form-grid">
-        <label class="col-2"><span>Başlangıç (gün-saat)</span>
-          <input type="datetime-local" id="sureStart" class="w-dt" value="${toLocalDT(row.loadingStartedAt)}" />
-        </label>
-        <label class="col-2"><span>Bitiş — boş bırak = hâlâ yüklemede</span>
-          <input type="datetime-local" id="sureEnd" class="w-dt" value="" />
-        </label>
-        ${toplamaField}
-      </div>
-      <div class="modal-actions" style="justify-content:flex-start;margin-top:8px">
-        <button class="btn" id="btnSureReset" type="button">↺ Şimdi sıfırla (başlangıç = şu an)</button>
-      </div>`;
-    document.getElementById("btnSureReset").addEventListener("click", () => {
-      document.getElementById("sureStart").value = toLocalDT(Date.now());
-      document.getElementById("sureEnd").value = "";
-      const t = document.getElementById("sureTopBitti");
-      if (t) t.value = "";
-    });
-  } else {
-    body.innerHTML = `
-      <p class="hint">Yükleme tamamlandı — başlangıç, bitiş ve toplama bitiş saatlerini elle düzeltebilirsin.</p>
-      <div class="form-grid">
-        <label><span>Başlangıç</span><input type="datetime-local" id="sureStart" class="w-dt" value="${toLocalDT(row.loadingStartedAt)}" /></label>
-        <label><span>Bitiş</span><input type="datetime-local" id="sureEnd" class="w-dt" value="${toLocalDT(row.loadingEndedAt)}" /></label>
-        ${toplamaField}
-      </div>`;
-  }
+  const etkin = etkinSureMs(row);
+  document.getElementById("sureEditBody").innerHTML = `
+    <p class="hint">İki bağımsız süreç: <b>📦 T.</b> = toplama (statüden bağımsız — performans raporu bunu kullanır) · <b>⏱️ Y.</b> = statü kronometresi ("Yükleniyor"da çalışır, "Tamamlandı"da durur). İstenmeyen alanları <b>boş bırakıp</b> kaydedin — kayıt silinir. "Yükleniyor" iken Y.Bitiş girerseniz statü otomatik "Tamamlandı" olur.</p>
+    <div class="form-grid">
+      <label class="col-2"><span>📦 T. Başlangıç (boş = toplama kaydı yok)</span>
+        <input type="datetime-local" id="sureTopBas" class="w-dt" value="${toLocalDT(row.toplamaBasTs)}" /></label>
+      <label class="col-2"><span>📦 T. Bitiş (boş = hâlâ toplanıyor)</span>
+        <input type="datetime-local" id="sureTopBitti" class="w-dt" value="${toLocalDT(row.toplamaBittiTs)}" /></label>
+      <label class="col-2"><span>⏱️ Y. Başlangıç (boş = kronometre kaydı yok)</span>
+        <input type="datetime-local" id="sureStart" class="w-dt" value="${toLocalDT(row.loadingStartedAt)}" /></label>
+      <label class="col-2"><span>⏱️ Y. Bitiş (boş = hâlâ yüklemede / sürüyor)</span>
+        <input type="datetime-local" id="sureEnd" class="w-dt" value="${toLocalDT(row.loadingEndedAt)}" /></label>
+    </div>
+    ${etkin > 0 ? `<p class="hint" style="margin-top:8px">🧮 Mevcut etkin süre: <b>${fmtSure(etkin)}</b>${row.toplamaBittiTs ? " (📦 toplamadan)" : " (⏱️ kronometreden)"}</p>` : ""}`;
   document.getElementById("sureEditModal").classList.remove("hidden");
 }
 document.getElementById("btnSureEditCancel").addEventListener("click", () => {
@@ -1658,52 +1634,51 @@ document.getElementById("sureEditModal").addEventListener("click", e => {
 document.getElementById("btnSureEditSave").addEventListener("click", async () => {
   const row = rows.find(r => r.id === currentSureId);
   if (!row) return;
-  const sVal = document.getElementById("sureStart").value;
-  const eVal = document.getElementById("sureEnd").value;
-  const tbInp = document.getElementById("sureTopBas");
-  const tInp = document.getElementById("sureTopBitti");
-  const tbVal = tbInp ? tbInp.value : "";
-  const tVal = tInp ? tInp.value : "";
-  if (!sVal) { alert("Başlangıç saati gerekli."); return; }
-  const start = new Date(sVal).getTime();
-  const updated = { ...row, loadingStartedAt: start };
-  /* 📦 Toplama kaydı: ikisi boş → temizle · sadece başlangıç → sürüyor · ikisi dolu → kilitli */
+  const gv = id => { const el = document.getElementById(id); return el ? el.value : ""; };
+  const sVal = gv("sureStart"), eVal = gv("sureEnd");
+  const tbVal = gv("sureTopBas"), tVal = gv("sureTopBitti");
+  const updated = { ...row };
+
+  /* ⏱️ Y. alanları — statüden bağımsız düzenleme */
+  if (sVal && eVal) {
+    const start = new Date(sVal).getTime();
+    const end = new Date(eVal).getTime();
+    if (end < start) { alert("Y. bitiş, başlangıçtan önce olamaz."); return; }
+    updated.loadingStartedAt = start;
+    updated.loadingEndedAt = end;
+    if (row.durum === "Yükleniyor") {
+      updated.durum = "Yükleme Tamamlandı";
+      updated.gerceklesenTarih = isoFromDate(new Date(end));
+    }
+  } else if (sVal && !eVal) {
+    updated.loadingStartedAt = new Date(sVal).getTime();
+    updated.loadingEndedAt = null;
+  } else if (!sVal && eVal) {
+    alert("Y. bitişi girdiniz ama Y. başlangıç boş — ikisini birlikte girin ya da ikisini boşaltın.");
+    return;
+  } else {
+    updated.loadingStartedAt = null;
+    updated.loadingEndedAt = null;
+  }
+
+  /* 📦 T. alanları — statüden bağımsız */
   if (tbVal && tVal) {
     const tbTs = new Date(tbVal).getTime();
     const tTs = new Date(tVal).getTime();
-    if (tbTs > tTs) { alert("Toplama bitişi, toplama başlangıcından önce olamaz."); return; }
+    if (tbTs > tTs) { alert("T. bitişi, T. başlangıcından önce olamaz."); return; }
     updated.toplamaBasTs = tbTs;
     updated.toplamaBittiTs = tTs;
   } else if (tbVal && !tVal) {
     updated.toplamaBasTs = new Date(tbVal).getTime();
     updated.toplamaBittiTs = null;
   } else if (!tbVal && tVal) {
-    alert("Toplama bitişi girdiniz ama başlangıç boş — başlangıcı da girin ya da ikisini boşaltın.");
+    alert("T. bitişi girdiniz ama T. başlangıç boş — ikisini birlikte girin ya da ikisini boşaltın.");
     return;
   } else {
     updated.toplamaBasTs = null;
     updated.toplamaBittiTs = null;
   }
-  if (row.durum === "Yükleniyor") {
-    if (eVal) {
-      const end = new Date(eVal).getTime();
-      if (end < start) { alert("Bitiş, başlangıçtan önce olamaz."); return; }
-      updated.loadingEndedAt = end;
-      updated.durum = "Yükleme Tamamlandı";
-      updated.gerceklesenTarih = isoFromDate(new Date(end));
-    } else {
-      updated.loadingEndedAt = null;
-    }
-  } else {
-    if (!eVal) { alert("Bitiş saati gerekli (kayıt tamamlandı)."); return; }
-    const end = new Date(eVal).getTime();
-    if (end < start) { alert("Bitiş, başlangıçtan önce olamaz."); return; }
-    updated.loadingEndedAt = end;
-    updated.gerceklesenTarih = isoFromDate(new Date(end));
-  }
-  if (updated.toplamaBittiTs && updated.loadingEndedAt && updated.toplamaBittiTs > updated.loadingEndedAt) {
-    alert("Toplama bitişi, yükleme bitişinden sonra olamaz."); return;
-  }
+
   try {
     const saved = await apiUpdate(row.id, updated);
     rows = rows.map(r => r.id === row.id ? saved : r);
@@ -1711,10 +1686,10 @@ document.getElementById("btnSureEditSave").addEventListener("click", async () =>
     setSaveError("");
     render();
     await apiLog("guncelleme", row.id, row.musteri,
-      `süre elle düzeltildi · başlangıç: ${fmtDateTime(updated.loadingStartedAt)}` +
-      (updated.toplamaBasTs ? ` · 📦 toplama: ${fmtDateTime(updated.toplamaBasTs)} → ${updated.toplamaBittiTs ? fmtDateTime(updated.toplamaBittiTs) : "sürüyor"}` : "") +
-      (updated.loadingEndedAt ? ` · bitiş: ${fmtDateTime(updated.loadingEndedAt)}` : "") +
-      ` · etkin süre: ${fmtSure(etkinSureMs(saved))}` +
+      "süre elle düzeltildi" +
+      (updated.toplamaBasTs ? ` · 📦 T: ${fmtDateTime(updated.toplamaBasTs)} → ${updated.toplamaBittiTs ? fmtDateTime(updated.toplamaBittiTs) : "sürüyor"}` : " · 📦 T: yok") +
+      (updated.loadingStartedAt ? ` · ⏱️ Y: ${fmtDateTime(updated.loadingStartedAt)} → ${updated.loadingEndedAt ? fmtDateTime(updated.loadingEndedAt) : "sürüyor"}` : " · ⏱️ Y: yok") +
+      ` · etkin: ${fmtSure(etkinSureMs(saved))}` +
       (row.durum === "Yükleniyor" && updated.durum === "Yükleme Tamamlandı" ? " · durum → Tamamlandı" : ""));
     showToast("✅ Süre güncellendi.");
   } catch (e) { setSaveError(e.message); }
