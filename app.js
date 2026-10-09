@@ -2033,8 +2033,6 @@ function gunEtiketi(iso) {
 
 function renderDepoContent() {
    renderDepoMini();
-  /* Yılan oyunu korunur: canvas zaten varsa hiçbir şeyi yeniden çizme
-     (sekme değişimi + otomatik yenileme oyunu resetlemesin) */
   if (depoTab === "yilan" && document.getElementById("snakeCanvas")) return;
   /* Başka sekmeye geçilirken oyun çalışıyorsa duraklat — durum saklanır */
   if (depoTab !== "yilan" && snakeTimer) { stopSnake(); snakePaused = true; }
@@ -2048,8 +2046,11 @@ function renderDepoContent() {
   const list = enriched(rows);
   const c = document.getElementById("depoContent");
 
-  if (depoTab === "kalan") {
-    const kalan = list.filter(r => dT(r) && dT(r) >= today && r.durum !== "Yükleme Tamamlandı");
+    if (depoTab === "kalan") {
+    const kalan = list.filter(r => {
+      const t = dT(r);
+      return t && t >= today && r.durum !== "Yükleme Tamamlandı";
+    });
     const byDate = new Map();
     kalan.forEach(r => {
       const key = dT(r);
@@ -2062,14 +2063,30 @@ function renderDepoContent() {
       html += `<div class="depo-empty">Kalan yükleme yok 🎉</div>`;
     } else {
       gunler.forEach(iso => {
-      const gList = byDate.get(iso).sort((a, b) => String(a.musteri).localeCompare(String(b.musteri), "tr"));
+        const gList = byDate.get(iso).sort((a, b) =>
+          String(a.musteri).localeCompare(String(b.musteri), "tr"));
         const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
         const satirlar = gList.map(r => {
-          const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
-          const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
-          return `<div class="depo-week-row">
-            <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
-            <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${r.durum === "Yükleniyor" ? " · 🟠 yükleniyor" : ""} · ${aracDurumHtml(r)}${r.aciklama ? ` <span style="color:#93c5fd">📝 ${esc(r.aciklama)}</span>` : ""}</div>
+          const tpOn = r.toplamaBasTs && !r.toplamaBittiTs;
+          const tpOk = !!r.toplamaBittiTs;
+          const tpTxt = tpOk
+            ? `<span class="di-chip di-ok">📦 ${fmtTime(r.toplamaBasTs)}→${fmtTime(r.toplamaBittiTs)} · ${fmtSure(r.toplamaBittiTs - r.toplamaBasTs)}</span>`
+            : tpOn ? `<span class="di-chip di-warn">📦 sürüyor · ${fmtTime(r.toplamaBasTs)}'dan</span>` : "";
+          const b = sureBilgi(r);
+          const sureTxt = b.durum === "live"
+            ? `<span class="di-chip ${b.asim ? "di-bad" : "di-warn"}">⏱ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk · %${b.yuzde}${b.asim ? ` · ${b.asimDk}dk AŞIM` : ""}</span>`
+            : "";
+          const chips = [
+            ekipler[r.ekip] ? ekipChipHtml(r.ekip) : "",
+            tpTxt, sureTxt,
+            r.araciGeldi === "GELDİ" ? `<span class="di-chip di-ok">🚛 Geldi</span>` : (r.araciGeldi ? `<span class="di-chip di-warn">🚛 Gelmedi</span>` : "")
+          ].filter(Boolean).join(" ");
+          return `<div class="depo-week-row" style="flex-wrap:wrap">
+            <div class="w-m" style="min-width:260px"><b style="font-size:16px">${esc(r.musteri)}</b>
+              <div style="margin-top:4px">${chips}</div>
+              ${r.aciklama ? `<div class="di-note" title="${esc(r.aciklama)}">📝 ${esc(r.aciklama)}</div>` : ""}
+            </div>
+            <div class="w-r">${esc(r.sevkiyatTipi)} · <b style="font-size:16px;color:#e2e8f0">${esc(r.ad)}</b> yükleme · ${formatDate(iso)}</div>
           </div>`;
         }).join("");
         html += `<div class="depo-week-day">
