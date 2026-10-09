@@ -48,14 +48,14 @@ const GECIKME_NEDENLERI = ["Araç yok", "Evrak/Gümrük", "Üretim gecikmesi", "
 const M3_CARPAN = { "KOMPLE TIR": 90, "40 HC": 70, "20 DC": 35 };
 const DURUM_SIRA = { "Yükleniyor": 0, "Yükleme Bekliyor": 1, "Yükleme Tamamlandı": 2 };
 const SORTABLE = { musteri:1, blm:1, kategori:1, sevkiyatTipi:1, ad:1, planlananTarih:1,
-  hafta:1, ay:1, reelPlan:1, gerceklesenTarih:1, durum:1, oncelikNo:1, prsM3:1, m3:1, createdBy:1 };
+  hafta:1, ay:1, reelPlan:1, gerceklesenTarih:1, durum:1, ekip:1, prsM3:1, m3:1, createdBy:1 };
 
 /* Tablo kolonları — BAŞLIK ve SATIRLAR bu tek kaynaktan üretilir (hizalama garantisi) */
 const ALL_COLS = [
   ["musteri","Müşteri"],["blm","BLM"],["kategori","Kategori"],["sevkiyatTipi","Sevkiyat Tipi"],
   ["ad","AD"],["planlananTarih","Planlanan Tarih"],["hafta","Hafta"],["ay","Ay"],
   ["reelPlan","Reel Plan"],["gerceklesenTarih","Gerçekleşen"],["durum","Durum"],
-  ["sure","Süre"],["oncelikNo","⭐ Önc."],
+  ["sure","Süre"],["ekip","Ekip"],,
   ["aciklama","Açıklama"],["araciGeldi","Aracı Geldi"],["status","Status"],
   ["prsM3","PRS M3"],["m3","M3"],["createdBy","Ekleyen"]
 ];
@@ -70,7 +70,7 @@ const CELL_DEFS = {
   reelPlan:         { kind: "date",   w: "w-date" },
   /* gerceklesenTarih elle düzenlenmez — durum değişince otomatik yazılır */
   durum:            { kind: "select", options: DURUMLAR },
-  oncelikNo:        { kind: "number", w: "w-num" },
+  ekip:             { kind: "ekip" },
   aciklama:         { kind: "text",   w: "w-aciklama" },
   araciGeldi:       { kind: "select", options: GELDI },
   prsM3:            { kind: "number", w: "w-num" },
@@ -79,7 +79,7 @@ const FIELD_LABELS = {
   musteri: "Müşteri", blm: "BLM", kategori: "Kategori", sevkiyatTipi: "Tip",
   ad: "AD", planlananTarih: "Planlanan", reelPlan: "Reel Plan",
   gerceklesenTarih: "Gerçekleşen", durum: "Durum", aciklama: "Açıklama",
-  araciGeldi: "Aracı", prsM3: "PRS M3", m3: "M3", oncelikli: "Öncelikli", oncelikNo: "Öncelik No"
+  araciGeldi: "Aracı", prsM3: "PRS M3", m3: "M3", ekip: "Ekip",
 };
 const ACTION_META = {
   "ekleme":     { label: "Kayıt eklendi",   dot: "add" },
@@ -212,7 +212,7 @@ function emptyRecord() {
     musteri: "", blm: "EXPORT-1", kategori: "PLANLI", sevkiyatTipi: "KOMPLE TIR",
     ad: 1, planlananTarih: todayISO(), reelPlan: todayISO(), gerceklesenTarih: "",
     durum: "Yükleme Bekliyor", aciklama: "", araciGeldi: "", prsM3: "", m3: 90,
-    oncelikli: false, oncelikNo: "", comments: []
+    comments: []
   };
 }
 function hesaplaM3(tip, ad, prsM3) {
@@ -241,42 +241,7 @@ function dispVal(field, val) {
   if (def && def.kind === "date") return formatDate(val);
   return String(val ?? "") || "-";
 }
-function oncelikVal(r) {
-  return (r.oncelikNo === "" || r.oncelikNo == null) ? Infinity : Number(r.oncelikNo);
-}
-/* ============================================================
-   VARSAYILAN SIRALAMA (kullanıcının tarifi):
-   1) ⭐ Öncelikli işaretli kayıtlar + öncelik numarası (1,2,3…) en üste
-   2) Durum: Yükleniyor (en üst) → Yükleme Bekliyor (orta) → Yükleme Tamamlandı (en alt)
-   3) Her durum grubunun İÇİNDE Reel Plan: eski → yeni (boşlar sona;
-      eski kayıtlarda reel plan yoksa planlanan tarihe düşülür)
-   4) Aynı tarih + durumda: Müşteri adı alfabetik
-   5) Tie-breaker: Gerçekleşen
-   ============================================================ */
-function oncelikBas(r) { return r.oncelikli ? 0 : 1; }
-function reelKey(r) { return r.reelPlan || r.planlananTarih; }
-function sortList(list) {
-  return list.slice().sort((x, y) => {
-    /* 1) Durum her şeyden önce: Yükleniyor (en üst, tarih farketmeksizin)
-          → Bekliyor (orta) → Tamamlandı (en alt) */
-    const dx = DURUM_SIRA[x.durum] ?? 9;
-    const dy = DURUM_SIRA[y.durum] ?? 9;
-    if (dx !== dy) return dx - dy;
-    /* 2) Grup içinde: öncelikli kayıtlar öne */
-    const bx = oncelikBas(x), by = oncelikBas(y);
-    if (bx !== by) return bx - by;
-    const px = oncelikVal(x), py = oncelikVal(y);
-    if (px !== py) return px - py;
-    /* 3) Önce Reel Plan, eşitse Planlanan Tarih (küçükten büyüğe) */
-    let c = tarihCmp(reelKey(x), reelKey(y));
-    if (c) return c;
-    c = tarihCmp(x.planlananTarih, y.planlananTarih);
-    if (c) return c;
-    c = String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
-    if (c) return c;
-    return tarihCmp(x.gerceklesenTarih, y.gerceklesenTarih);
-  });
-}
+
 /* ⚠️ Yinelenen kayıt kontrolü */
 function isDuplicate(rec, excludeId) {
   const m = (rec.musteri || "").trim().toLowerCase();
@@ -298,7 +263,7 @@ let sortDir = "desc";
 function cmpVals(x, y, col) {
   const vx = x[col], vy = y[col];
   switch (col) {
-    case "ad": case "prsM3": case "m3": case "hafta": case "oncelikNo":
+    case "ad": case "prsM3": case "m3": case "hafta":
       return (Number(vx) || 0) - (Number(vy) || 0);
     case "ay":
       return AYLAR.indexOf(vx) - AYLAR.indexOf(vy);
@@ -329,10 +294,6 @@ function getSortedList(list) {
     const dx = DURUM_SIRA[x.durum] ?? 9;
     const dy = DURUM_SIRA[y.durum] ?? 9;
     if (dx !== dy) return dx - dy;
-    const bx = oncelikBas(x), by = oncelikBas(y);
-    if (bx !== by) return bx - by;
-    const px = oncelikVal(x), py = oncelikVal(y);
-    if (px !== py) return px - py;
     let t = tarihCmp(reelKey(x), reelKey(y));
     if (t) return t;
     t = tarihCmp(x.planlananTarih, y.planlananTarih);
@@ -453,8 +414,6 @@ function toDb(r) {
     araciGeldi: r.araciGeldi || "",
     prsM3: (r.prsM3 === "" || r.prsM3 == null) ? null : Number(r.prsM3),
     m3: (r.m3 === "" || r.m3 == null) ? null : Number(r.m3),
-    oncelikli: !!r.oncelikli,
-    oncelikNo: (r.oncelikNo === "" || r.oncelikNo == null) ? null : Number(r.oncelikNo),
     gecikmeNedeni: r.gecikmeNedeni || "",
     gecikmeSon: (r.gecikmeSon == null) ? null : Number(r.gecikmeSon),
     ekip: (r.ekip || "").trim() || "",
@@ -969,7 +928,7 @@ function updateSureCells() {
     const b = sureBilgi(r);
     const isOver = b.asim;
     const hasCls = tr.classList.contains("overtime");
-    if (isOver && !hasCls && !r.oncelikli) tr.classList.add("overtime");
+    if (isOver && !hasCls &&) tr.classList.add("overtime");
     else if (!isOver && hasCls) tr.classList.remove("overtime");
   });
 }
@@ -1061,6 +1020,12 @@ function fSelect(data, scope, field, options) {
 }
 function cellInputHtml(r, field) {
   const def = CELL_DEFS[field];
+  if (field === "ekip") {
+    const secenekler = [["", "—"], ...ekipSira.map(k => [k, ekipAd(k)])];
+    return `<select data-cid="${r.id}" data-cfield="ekip">
+      ${secenekler.map(([v, l]) => `<option value="${esc(v)}" ${String(r.ekip || "") === v ? "selected" : ""}>${esc(l)}</option>`).join("")}
+    </select>`;
+  }
   if (def.kind === "select") {
     return `<select data-cid="${r.id}" data-cfield="${field}">
       ${def.options.map(o => `<option value="${esc(o)}" ${String(r[field]) === o ? "selected" : ""}>${o === "" ? "-" : esc(o)}</option>`).join("")}
@@ -1120,7 +1085,7 @@ function formRowHtml(d, scope, rowClass, saveAction, cancelAction) {
     <td data-col="gerceklesenTarih" class="muted">otomatik</td>
     <td data-col="durum">${fSelect(d, scope, "durum", DURUMLAR)}</td>
     <td data-col="sure" class="center"><span class="sure-txt">-</span></td>
-    <td data-col="oncelikNo">${fInput(d, scope, "oncelikNo", "number", "w-num")}</td>
+    <td data-col="ekip" class="muted">-</td>
     <td data-col="aciklama">${fInput(d, scope, "aciklama", "text", "w-aciklama")}</td>
     <td data-col="araciGeldi">${fSelect(d, scope, "araciGeldi", GELDI)}</td>
     <td data-col="status" class="center st-cell">${durumIcon(d.durum)}</td>
@@ -1137,7 +1102,7 @@ function rowHtml(r) {
   const dt = parseLocalDate(r.reelPlan || r.planlananTarih); /* hafta/ay reel plandan */
   const isToday = gecikmeTarihi(r) === todayISO();
   const isOvertime = r.durum === "Yükleniyor" && sureBilgi(r).asim;
-  let rowCls = r.oncelikli ? "priority" : (isOvertime ? "overtime" : (r.araciGeldi === "GELDİ" ? "arac-geldi" : (isToday ? "today-row" : "")));
+    let rowCls = isOvertime ? "overtime" : (r.araciGeldi === "GELDİ" ? "arac-geldi" : (isToday ? "today-row" : ""));
   if (r._arsiv) rowCls += " arsiv-row";
   const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
   const isSel = selectedIds.has(r.id);
@@ -1155,7 +1120,7 @@ function rowHtml(r) {
     <td data-col="gerceklesenTarih" class="muted" title="Durum Tamamlandı olunca otomatik yazılır">${gerceklesenView(r)}</td>
     ${tdHtml(r, "durum", "", x => `<span class="badge ${durumClass(x.durum)}">${esc(x.durum)}</span>`)}
     <td data-col="sure" class="center">${sureCellHtml(r)}</td>
-    ${tdHtml(r, "oncelikNo", "center", x => numOrDash(x.oncelikNo))}
+    ${tdHtml(r, "ekip", "", x => ekipChipHtml(x.ekip) || '<span class="muted">-</span>')}
     ${tdHtml(r, "aciklama", "truncate", x => `<span title="${esc(x.aciklama)}">${esc(x.aciklama) || "-"}</span>`)}
     ${tdHtml(r, "araciGeldi", r.araciGeldi === "GELDİ" ? "arac-gel-yes" : (r.araciGeldi === "HAYIR" ? "arac-gel-no" : ""), x => esc(x.araciGeldi) || "-")}
     <td data-col="status" class="center">${durumIcon(r.durum)}</td>
@@ -1172,7 +1137,7 @@ function rowHtml(r) {
 function renderTable(list) {
   closeCellEditor();
   const tbody = document.getElementById("tbody");
-  const cc = 21 - hiddenCols.size;
+  const cc = 20 - hiddenCols.size;
   let html = "";
   if (loading) html += `<tr><td colspan="${cc}" class="empty">Yükleniyor…</td></tr>`;
   if (addingInline) html += formRowHtml(inlineData, "inline", "inline-row", "save-inline", "cancel-inline");
@@ -1238,6 +1203,7 @@ async function commitCell() {
   if (!inp || !row) { committing = false; closeCellEditor(); return; }
   let val = inp.value;
   if (field === "musteri") val = val.trim();
+  if (field === "ekip" && val && !ekipler[val]) { committing = false; closeCellEditor(); render(); return; }
   if (field === "ad") val = Number(val) || 1;
   if (field === "prsM3") val = val === "" ? null : Number(val);
   if (field === "oncelikNo") val = val === "" ? null : Number(val);
@@ -1421,7 +1387,7 @@ async function duplicateRow(id) {
   rec.prsM3 = src.prsM3 ?? "";
   const m3 = hesaplaM3(rec.sevkiyatTipi, rec.ad, rec.prsM3);
   rec.m3 = m3 !== null ? m3 : (src.m3 ?? "");
-  rec.oncelikli = src.oncelikli;
+  rec.ekip = src.ekip || "";
   if (isDuplicate(rec) && !confirm(dupMsg(rec))) return;
   try {
     const saved = await apiInsert(rec);
@@ -1900,7 +1866,6 @@ document.getElementById("btnBulkCancel").addEventListener("click", () => {
 });
 document.getElementById("btnBulkApply").addEventListener("click", async () => {
   if (!selectedIds.size) return;
-  await bulkEkipUygula();
   const yeniTarih = document.getElementById("bulkDate").value;
   const yeniDurum = document.getElementById("bulkDurum").value;
   if (!yeniTarih && !yeniDurum) { alert("Tarih veya durum seç."); return; }
@@ -1985,7 +1950,7 @@ function depoItem(r, cls, extra) {
   return `<div class="depo-item ${cls}">
     <div>
       <div class="d-musteri">${esc(r.musteri)}</div>
-      <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${r.oncelikNo ? " · ⭐ Öncelik " + esc(r.oncelikNo) : ""}${depoEkipSatiri(r)}</div>
+      <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${depoEkipSatiri(r)}</div>
       <div class="d-sub">${aracDurumHtml(r)}</div>
       ${r.aciklama ? `<div class="d-cmt" style="color:#93c5fd">📝 ${esc(r.aciklama)}</div>` : ""}
       ${depoCmtLine(r)}
@@ -2032,7 +1997,7 @@ function renderDepoContent() {
       html += `<div class="depo-empty">Kalan yükleme yok 🎉</div>`;
     } else {
       gunler.forEach(iso => {
-        const gList = byDate.get(iso).sort((a, b) => (oncelikBas(a) - oncelikBas(b)) || (oncelikVal(a) - oncelikVal(b)) || (String(a.musteri).localeCompare(String(b.musteri), "tr")));
+      const gList = byDate.get(iso).sort((a, b) => String(a.musteri).localeCompare(String(b.musteri), "tr"));
         const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
         const satirlar = gList.map(r => {
           const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
@@ -2084,7 +2049,7 @@ function renderDepoContent() {
           const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
           const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
           return `<div class="depo-week-row">
-            <div class="w-m">${esc(r.musteri)}${r.oncelikNo ? ` <span style="color:#fbbf24">⭐${esc(r.oncelikNo)}</span>` : ""}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
+            <div class="w-m">${esc(r.musteri)}${}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
             <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""} · ${aracDurumHtml(r)}${r.aciklama ? ` <span style="color:#93c5fd">📝 ${esc(r.aciklama)}</span>` : ""}</div>
           </div>`;
         }).join("");
@@ -2110,7 +2075,7 @@ function renderDepoContent() {
   const geciken = list.filter(r => opGecikme(r) > 0).sort((a, b) => dT(a) < dT(b) ? -1 : 1);
   const yukleniyor = list.filter(r => r.durum === "Yükleniyor").sort((a, b) => (a.loadingStartedAt || 0) - (b.loadingStartedAt || 0));
   const bugun = list.filter(r => dT(r) === today && r.durum === "Yükleme Bekliyor")
-    .sort((a, b) => (oncelikVal(a) - oncelikVal(b)));
+    .sort((a, b) => String(a.musteri).localeCompare(String(b.musteri), "tr"));
   let html = "";
   html += `<div class="depo-sec-title" style="color:#fbbf24">🟠 ŞİMDİ YÜKLENİYOR (${yukleniyor.length})</div>`;
   html += yukleniyor.length ? yukleniyor.map(r => depoItem(r, "d-amber", formatDate(dT(r)))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
@@ -2451,26 +2416,6 @@ function etkinSureMs(r) {
 /* ---------- Veri katmanı: toDb/applyDurum korunur, alanlar PATCH ile taşınır ---------- */
 /* mevcut toDb() zaten tüm alanları yazıyor; yeni alanlar oraya eklenecek (AŞAĞIDA) */
 
-function bulkEkipDoldur() {
-  const sel = document.getElementById("bulkEkip");
-  if (!sel) return;
-  sel.innerHTML = `<option value="">Ekip (değiştir)</option>` +
-    aktifEkipler().map(k => `<option value="${esc(k)}">${esc(ekipAd(k))}</option>`).join("");
-}
-
-/* ---------- Ekip yükleme / CRUD ---------- */
-async function loadEkipler() {
-  try {
-    const res = await authFetch(`${FIREBASE_DB_URL}/${EKIP_NODE}.json`);
-    const data = await check(res, "Ekipler yüklenemedi");
-    ekipler = data || {};
-    ekipSira = Object.keys(ekipler).sort((a, b) => {
-      const na = parseInt(a.replace(/\D/g, ""), 10) || 0;
-      const nb = parseInt(b.replace(/\D/g, ""), 10) || 0;
-      return na - nb;
-    });
-  } catch (e) { console.warn("Ekipler yüklenemedi:", e.message); ekipler = {}; ekipSira = []; }
-  bulkEkipDoldur();
 }
 async function ekipEkle(ad) {
   const maxN = ekipSira.reduce((m, k) => Math.max(m, parseInt(k.replace(/\D/g, ""), 10) || 0), 0);
@@ -2509,7 +2454,6 @@ function aktifEkipler() { return ekipSira.filter(k => ekipler[k] && ekipler[k].a
 /* ---------- Ekip yönetim modalı ---------- */
 function openEkipPanel() {
   if (!isAdmin()) { alert("Bu panel sadece yöneticiler içindir."); return; }
-  renderEkipTable();
   document.getElementById("ekipModal").classList.remove("hidden");
 }
 function renderEkipTable() {
@@ -3332,8 +3276,6 @@ function opSort(list) {
   return list.slice().sort((a, b) => {
     const da = DURUM_SIRA[a.durum] ?? 9, db = DURUM_SIRA[b.durum] ?? 9;
     if (da !== db) return da - db;
-    const pa = oncelikVal(a), pb = oncelikVal(b);
-    if (pa !== pb) return pa - pb;
     const t = tarihCmp(gecikmeTarihi(a), gecikmeTarihi(b));
     if (t) return t;
     return String(a.musteri || "").localeCompare(String(b.musteri || ""), "tr");
@@ -3862,7 +3804,6 @@ function openModal() {
   document.getElementById("f-prsM3").value = "";
   document.getElementById("f-m3").value = rec.m3;
   document.getElementById("f-aciklama").value = "";
-  document.getElementById("f-oncelikli").checked = false;
   document.getElementById("modal").classList.remove("hidden");
   document.getElementById("f-musteri").focus();
 }
@@ -3906,7 +3847,6 @@ document.getElementById("btnSaveForm").addEventListener("click", async () => {
   rec.prsM3 = getVal("f-prsM3");
   rec.m3 = getVal("f-m3");
   rec.aciklama = getVal("f-aciklama");
-  rec.oncelikli = document.getElementById("f-oncelikli").checked;
   if (isDuplicate(rec) && !confirm(dupMsg(rec))) return;
   applyDurumSideEffects(rec);
   try {
@@ -4969,7 +4909,7 @@ function exportExcel() {
   /* --- veri --- */
   const HEAD = ["Müşteri","BLM","Kategori","Sevkiyat Tipi","AD","Planlanan","Reel Plan","Hafta","Ay",
     "Gerçekleşen","Durum","Gecikme (gün)","Gecikme Nedeni","Yükleme Süresi","Süre Aşımı (dk)",
-    "Öncelik No","Yorum (adet)","Açıklama","Aracı Geldi","PRS M3","M3","Öncelikli","Ekleyen","Kayıt Türü"];
+    "Ekip","Yorum (adet)","Açıklama","Aracı Geldi","PRS M3","M3","Ekleyen","Kayıt Türü"];
   const grid = [HEAD];
   const rowMeta = [];
   list.forEach(r => {
@@ -4977,7 +4917,7 @@ function exportExcel() {
     const gb = gecikmeBilgi(r);
     const isToday = gecikmeTarihi(r) === today;
     const isOvertime = r.durum === "Yükleniyor" && b.asim;
-    const kind = r._arsiv ? "arsiv" : (r.oncelikli ? "priority" : isOvertime ? "overtime" : isToday ? "today" : null);
+    const kind = r._arsiv ? "arsiv" : isOvertime ? "overtime" : isToday ? "today" : null);
     rowMeta.push({ kind, durum: r.durum, gecikmeGun: gb.gun, arsiv: !!r._arsiv });
     grid.push([
       r.musteri, r.blm, r.kategori, r.sevkiyatTipi,
@@ -4991,13 +4931,12 @@ function exportExcel() {
       gb.gun > 0 ? (gb.neden || "") : "",
       b.durum !== "none" ? fmtSure(b.gecenMs) : "",
       (b.durum !== "none" && b.asim) ? b.asimDk : "",
-      r.oncelikNo ?? "",
+      r.ekip ? ekipAd(r.ekip) : "",
       Array.isArray(r.comments) ? r.comments.length : 0,
       r.aciklama || "",
       r.araciGeldi || "",
       r.prsM3 ?? "",
       r.m3 ?? "",
-      r.oncelikli ? "Evet" : "",
       r.createdBy || "",
       r._arsiv ? "Arşiv" : "Aktif"
     ]);
