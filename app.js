@@ -2673,8 +2673,10 @@ async function ekipToggle(kod) {
 function aktifEkipler() { return ekipSira.filter(k => ekipler[k] && ekipler[k].aktif); }
 
 /* ---------- Ekip yönetim modalı ---------- */
-function openEkipPanel() {
+async function openEkipPanel() {
   if (!isAdmin()) { alert("Bu panel sadece yöneticiler içindir."); return; }
+  await loadEkipler();          /* ✅ taze veri garantisi */
+  renderEkipTable();
   document.getElementById("ekipModal").classList.remove("hidden");
 }
 async function ekipSil(kod) {
