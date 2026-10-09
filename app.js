@@ -1995,26 +1995,33 @@ function depoCmtLine(r) {
 }
 function depoItem(r, cls, extra) {
   const b = sureBilgi(r);
-  const sureTxt = b.durum !== "none"
-    ? (b.asim ? `<span style="color:#f87171">⚠ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşıldı</span>` : `⏱️ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk · %${b.yuzde}`)
-    : "";
-  const saatTxt = (b.durum === "live" && r.loadingStartedAt)
-    ? `<div style="font-size:13px;color:#fbbf24;margin-top:4px">⏱ ${fmtTime(r.loadingStartedAt)}'da başladı</div>`
-    : ((b.durum === "done" && r.loadingStartedAt && r.loadingEndedAt)
-      ? `<div style="font-size:13px;color:#8aa0b8;margin-top:4px">Baş:${fmtTime(r.loadingStartedAt)} - Bitiş:${fmtTime(r.loadingEndedAt)}</div>`
-      : "");
-  const gb = gecikmeBilgi(r);
-  const nedenTxt = (gb.gun > 0 && gb.neden) ? `<div class="d-cmt">⚠️ Gecikme nedeni: ${esc(gb.neden)}</div>` : "";
+  const c = [];
+  if (r.ekip && ekipler[r.ekip]) c.push(ekipChipHtml(r.ekip));
+  if (r.toplamaBasTs && r.toplamaBittiTs)
+    c.push(`<span class="di-chip di-ok">📦 ${fmtTime(r.toplamaBasTs)}→${fmtTime(r.toplamaBittiTs)} · ${fmtSure(r.toplamaBittiTs - r.toplamaBasTs)}</span>`);
+  else if (r.toplamaBasTs)
+    c.push(`<span class="di-chip di-warn">📦 sürüyor · ${fmtTime(r.toplamaBasTs)}'dan</span>`);
+  c.push(r.araciGeldi === "GELDİ" ? `<span class="di-chip di-ok">🚛 Geldi</span>` : `<span class="di-chip di-warn">🚛 Gelmedi</span>`);
+  if (b.durum === "live")
+    c.push(`<span class="di-chip ${b.asim ? "di-bad" : "di-warn"}">⏱ ${fmtSure(b.gecenMs)}${b.asim ? ` · ${b.asimDk}dk AŞIM` : ` / ${b.sureDk}dk · %${b.yuzde}`}</span>`);
+  else if (b.durum === "done")
+    c.push(`<span class="di-chip ${b.asim ? "di-bad" : "di-ok"}">⏱ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk${b.asim ? ` · +${b.asimDk}dk` : ""}</span>`);
+  const cmt = (Array.isArray(r.comments) && r.comments.length) ? r.comments.slice(-2).map(x => x.text).join(" · ") : "";
   return `<div class="depo-item ${cls}">
-    <div>
-      <div class="d-musteri">${esc(r.musteri)}</div>
-      <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${depoEkipSatiri(r)}${depoToplamaSatiri(r)}</div>
-      <div class="d-sub">${aracDurumHtml(r)}</div>
-      ${r.aciklama ? `<div class="d-cmt" style="color:#93c5fd">📝 ${esc(r.aciklama)}</div>` : ""}
-      ${depoCmtLine(r)}
-      ${nedenTxt}
+    <div class="di-main">
+      <div class="di-top">
+        <span class="d-musteri">${esc(r.musteri)}</span>
+        <span class="di-sub">${esc(r.blm)}${r.kategori && r.kategori !== "PLANLI" ? " · " + esc(r.kategori) : ""}</span>
+      </div>
+      <div class="di-chips">${c.join("")}</div>
+      ${r.aciklama ? `<div class="di-note" title="${esc(r.aciklama)}">📝 ${esc(r.aciklama)}</div>` : ""}
+      ${cmt ? `<div class="di-note d-cmt" title="${esc(cmt)}">💬 ${esc(cmt)}</div>` : ""}
     </div>
-    <div class="d-right">${esc(r.sevkiyatTipi)} · <span style="font-size:24px;color:#e2e8f0">${esc(r.ad)} yükleme</span><br>${extra}${sureTxt ? " · " + sureTxt : ""}${saatTxt}</div>
+    <div class="d-right">
+      <div class="di-tip">${esc(r.sevkiyatTipi)} · <b style="font-size:20px;color:#e2e8f0">${esc(r.ad)}</b> yükleme</div>
+      <div class="di-extra">${extra || ""}</div>
+      ${(b.durum === "live" && r.loadingStartedAt) ? `<div class="di-saat">⏱ ${fmtTime(r.loadingStartedAt)}'da başladı</div>` : ""}
+    </div>
   </div>`;
 }
 function gunEtiketi(iso) {
@@ -2136,10 +2143,10 @@ function renderDepoContent() {
   let html = "";
   html += `<div class="depo-sec-title" style="color:#fbbf24">🟠 ŞİMDİ YÜKLENİYOR (${yukleniyor.length})</div>`;
   html += yukleniyor.length ? yukleniyor.map(r => depoItem(r, "d-amber", formatDate(dT(r)))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
-  html += `<div class="depo-sec-title" style="color:#f87171">🔴 GECİKEN (${geciken.reduce((s, r) => s + adet(r), 0)})</div>`;
-  html += geciken.length ? geciken.map(r => depoItem(r, "d-red", `${formatDate(dT(r))} · ⚠ ${opGecikme(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
   html += `<div class="depo-sec-title" style="color:#818cf8">🔵 BUGÜN BEKLİYOR (${bugun.reduce((s, r) => s + adet(r), 0)})</div>`;
   html += bugun.length ? bugun.map(r => depoItem(r, "d-blue", "bugün")).join("") : `<div class="depo-empty">Bugün için bekleyen yükleme yok.</div>`;
+  html += `<div class="depo-sec-title" style="color:#f87171">🔴 GECİKEN (${geciken.reduce((s, r) => s + adet(r), 0)})</div>`;
+  html += geciken.length ? geciken.map(r => depoItem(r, "d-red", `${formatDate(dT(r))} · ⚠ ${opGecikme(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
   c.innerHTML = html;
 }
 setInterval(() => {
@@ -5722,17 +5729,12 @@ function renderSnakeGameBody() {
     if (d === "right") snakeDir(1, 0);
   }));
 }
-/* 📊 Depo mini dashboard — bu hafta (+ gecikenler) özeti */
-/* 📊 Depo mini dashboard — bu hafta (+ gecikenler) özeti v2 */
 function renderDepoMini() {
   const el = document.getElementById("depoMini");
   if (!el) return;
   const hafta = getISOWeek(new Date());
   const bugun = todayISO();
-  const haftaOf = r => {
-    const d = parseLocalDate(depoTarih(r));
-    return d ? getISOWeek(d) : null;
-  };
+  const haftaOf = r => { const d = parseLocalDate(depoTarih(r)); return d ? getISOWeek(d) : null; };
   const havuz = (rows || []).filter(r => {
     if (haftaOf(r) === hafta) return true;
     const t = gecikmeTarihi(r);
@@ -5740,29 +5742,22 @@ function renderDepoMini() {
   });
   const plan = havuz.reduce((s, r) => s + adet(r), 0);
   const bitti = havuz.filter(r => r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + adet(r), 0);
-  const kalan = plan - bitti;
   const oran = plan ? Math.round(bitti / plan * 100) : 0;
-  const tipSatirlar = TIPLER.map(tip => {
-    const g = havuz.filter(r => r.sevkiyatTipi === tip);
-    const p = g.reduce((s, r) => s + adet(r), 0);
+  const KISA = { "KOMPLE TIR": "KOMPLE", "PARSIYEL TIR": "PARS", "40 HC": "40HC", "20 DC": "20DC" };
+  const tips = TIPLER.map(tip => {
+    const p = havuz.filter(r => r.sevkiyatTipi === tip).reduce((s, r) => s + adet(r), 0);
     if (!p) return "";
-    const b = g.filter(r => r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + adet(r), 0);
-    const k = p - b;
-    return `<tr><td>${esc(tip)}</td><td class="center">${b}/${p}</td>
-      <td class="center ${k > 0 ? "dm-kalan" : "dm-ok"}">${k}</td></tr>`;
-  }).join("");
+    const b = havuz.filter(r => r.sevkiyatTipi === tip && r.durum === "Yükleme Tamamlandı").reduce((s, r) => s + adet(r), 0);
+    return `<span class="dm-tip">${KISA[tip] || esc(tip)} <b>${b}/${p}</b></span>`;
+  }).filter(Boolean).join("");
   el.innerHTML = `
-    <div class="dm-head"><span class="dm-week">📅 HAFTA ${hafta}</span><span class="dm-pct">%${oran}</span></div>
-    <div class="dm-nums">
-      <div><b>${plan}</b><span>Planlanan</span></div>
-      <div><b class="dm-bitti">${bitti}</b><span>Bitti</span></div>
-      <div><b class="dm-kalan2">${kalan}</b><span>Kaldı</span></div>
+    <div class="dm-row">
+      <span class="dm-week">📅 HAFTA ${hafta}</span>
+      <span class="dm-nums2"><b class="dm-bitti">${bitti}</b>/<b>${plan}</b> yükleme</span>
+      <span class="dm-pct">%${oran}</span>
     </div>
     <div class="dm-bar"><div class="dm-bar-fill" style="width:${oran}%"></div></div>
-    <table class="dm-table">
-      <thead><tr><th>Tip</th><th class="center">Bitti/Plan</th><th class="center">Kalan</th></tr></thead>
-      <tbody>${tipSatirlar || `<tr><td colspan="3" class="dm-empty">Bu hafta kayıt yok</td></tr>`}</tbody>
-    </table>`;
+    <div class="dm-tips">${tips || `<span class="dm-empty">Bu hafta kayıt yok</span>`}</div>`;
 }
 
 function stopSnake() {
