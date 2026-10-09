@@ -780,3 +780,15 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 .d-sub .ekip-chip { margin-right:6px; }
 /* Ekip raporu mini not */
 .ekip-uyari { color:var(--amber); font-weight:700; }
+
+/* 📦 Ana tablo — ekip hücresi + toplama butonları */
+.ekip-tp { display:flex; align-items:center; gap:5px; }
+.tp-btns { display:inline-flex; gap:2px; margin-left:2px; }
+.icon-btn.tp {
+  font-size:10px; padding:2px 5px; border:1px solid var(--border);
+  border-radius:6px; line-height:1.2;
+}
+.icon-btn.tp:hover { background:var(--primary-soft); }
+.icon-btn.tp.on { background:var(--green-soft); border-color:var(--green); }
+.icon-btn.tp:disabled { opacity:.35; cursor:default; }
+.icon-btn.tp:disabled:hover { background:none; }
