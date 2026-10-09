@@ -3872,10 +3872,12 @@ document.getElementById("tbody").addEventListener("click", e => {
       case "delete":        gate("delete", id); break;
       case "comments":      gate("comments", id); break;
     }
-    const tpBtn = e.target.closest("button[data-tpact]");
-    if (tpBtn) { toplamaAction(tpBtn.dataset.tpact, tpBtn.dataset.tpid); return; }
     return;
   }
+  /* 📦 Toplama Başlat/Bitir — hücre editöründen ÖNCE yakalanmalı */
+  const tpBtn = e.target.closest("button[data-tpact]");
+  if (tpBtn) { toplamaAction(tpBtn.dataset.tpact, tpBtn.dataset.tpid); return; }
+
   const chip = e.target.closest("[data-mchip]");
   if (chip) { gate("musteri-kart", chip.dataset.mchip); return; }
   const causeBtn = e.target.closest("[data-cause]");
