@@ -1578,11 +1578,15 @@ function openSureEdit(id) {
   currentSureId = id;
   const standart = getSureDk(row);
   document.getElementById("sureEditWho").innerHTML =
-    `<b>${esc(row.musteri)}</b> · ${esc(row.sevkiyatTipi)} · standart: ${standart} dk · durum: ${esc(row.durum)}`;
+    `<b>${esc(row.musteri)}</b> · ${esc(row.sevkiyatTipi)} · standart: ${standart} dk · durum: ${esc(row.durum)}${row.ekip ? ` · 👷 ${esc(ekipAd(row.ekip))}` : ""}`;
   const body = document.getElementById("sureEditBody");
+  const toplamaField = `
+      <label class="col-2"><span>📦 Toplama bitti (boş = hâlâ toplanıyor) — performans süresi bu anla kilitlenir</span>
+        <input type="datetime-local" id="sureTopBitti" class="w-dt" value="${toLocalDT(row.toplamaBittiTs)}" />
+      </label>`;
   if (row.durum === "Yükleniyor") {
     body.innerHTML = `
-      <p class="hint">Kronometre şu an çalışıyor. Başlangıcı düzeltebilirsin; <b>bitiş girersen kayıt otomatik "Yükleme Tamamlandı" olur</b> (durumu değiştirmeyi unuttuğun durumlar için).</p>
+      <p class="hint">Kronometre çalışıyor. Üretim eksiği bekleniyorsa bitiş girmek yerine <b>Toplama bitti</b> işaretleyin — statü "Yükleniyor" kalır ama performans süresi kilitlenir. Bitiş girerseniz kayıt otomatik "Tamamlandı" olur.</p>
       <div class="form-grid">
         <label class="col-2"><span>Başlangıç (gün-saat)</span>
           <input type="datetime-local" id="sureStart" class="w-dt" value="${toLocalDT(row.loadingStartedAt)}" />
@@ -1590,6 +1594,7 @@ function openSureEdit(id) {
         <label class="col-2"><span>Bitiş — boş bırak = hâlâ yüklemede</span>
           <input type="datetime-local" id="sureEnd" class="w-dt" value="" />
         </label>
+        ${toplamaField}
       </div>
       <div class="modal-actions" style="justify-content:flex-start;margin-top:8px">
         <button class="btn" id="btnSureReset" type="button">↺ Şimdi sıfırla (başlangıç = şu an)</button>
@@ -1597,13 +1602,16 @@ function openSureEdit(id) {
     document.getElementById("btnSureReset").addEventListener("click", () => {
       document.getElementById("sureStart").value = toLocalDT(Date.now());
       document.getElementById("sureEnd").value = "";
+      const t = document.getElementById("sureTopBitti");
+      if (t) t.value = "";
     });
   } else {
     body.innerHTML = `
-      <p class="hint">Yükleme tamamlandı — başlangıç ve bitiş saatlerini elle düzeltebilirsin.</p>
+      <p class="hint">Yükleme tamamlandı — başlangıç, bitiş ve toplama bitiş saatlerini elle düzeltebilirsin.</p>
       <div class="form-grid">
         <label><span>Başlangıç</span><input type="datetime-local" id="sureStart" class="w-dt" value="${toLocalDT(row.loadingStartedAt)}" /></label>
         <label><span>Bitiş</span><input type="datetime-local" id="sureEnd" class="w-dt" value="${toLocalDT(row.loadingEndedAt)}" /></label>
+        ${toplamaField}
       </div>`;
   }
   document.getElementById("sureEditModal").classList.remove("hidden");
@@ -1619,16 +1627,24 @@ document.getElementById("btnSureEditSave").addEventListener("click", async () =>
   if (!row) return;
   const sVal = document.getElementById("sureStart").value;
   const eVal = document.getElementById("sureEnd").value;
+  const tInp = document.getElementById("sureTopBitti");
+  const tVal = tInp ? tInp.value : "";
   if (!sVal) { alert("Başlangıç saati gerekli."); return; }
   const start = new Date(sVal).getTime();
   const updated = { ...row, loadingStartedAt: start };
+  if (tVal) {
+    const tTs = new Date(tVal).getTime();
+    if (tTs < start) { alert("Toplama bitişi, başlangıçtan önce olamaz."); return; }
+    updated.toplamaBittiTs = tTs;
+  } else {
+    updated.toplamaBittiTs = null;
+  }
   if (row.durum === "Yükleniyor") {
     if (eVal) {
       const end = new Date(eVal).getTime();
       if (end < start) { alert("Bitiş, başlangıçtan önce olamaz."); return; }
       updated.loadingEndedAt = end;
       updated.durum = "Yükleme Tamamlandı";
-      /* Bitiş günü = gerçekleşen tarih (kronometre korunur, tarih güncellenir) */
       updated.gerceklesenTarih = isoFromDate(new Date(end));
     } else {
       updated.loadingEndedAt = null;
@@ -1640,16 +1656,20 @@ document.getElementById("btnSureEditSave").addEventListener("click", async () =>
     updated.loadingEndedAt = end;
     updated.gerceklesenTarih = isoFromDate(new Date(end));
   }
+  if (updated.toplamaBittiTs && updated.loadingEndedAt && updated.toplamaBittiTs > updated.loadingEndedAt) {
+    alert("Toplama bitişi, yükleme bitişinden sonra olamaz."); return;
+  }
   try {
     const saved = await apiUpdate(row.id, updated);
     rows = rows.map(r => r.id === row.id ? saved : r);
     document.getElementById("sureEditModal").classList.add("hidden");
     setSaveError("");
     render();
-    const sureTxt = updated.loadingEndedAt ? fmtSure(updated.loadingEndedAt - updated.loadingStartedAt) : "sürüyor";
     await apiLog("guncelleme", row.id, row.musteri,
       `süre elle düzeltildi · başlangıç: ${fmtDateTime(updated.loadingStartedAt)}` +
-      (updated.loadingEndedAt ? ` · bitiş: ${fmtDateTime(updated.loadingEndedAt)} · süre: ${sureTxt}` : "") +
+      (updated.toplamaBittiTs ? ` · 📦 toplama bitti: ${fmtDateTime(updated.toplamaBittiTs)}` : "") +
+      (updated.loadingEndedAt ? ` · bitiş: ${fmtDateTime(updated.loadingEndedAt)}` : "") +
+      ` · etkin süre: ${fmtSure(etkinSureMs(saved))}` +
       (row.durum === "Yükleniyor" && updated.durum === "Yükleme Tamamlandı" ? " · durum → Tamamlandı" : ""));
     showToast("✅ Süre güncellendi.");
   } catch (e) { setSaveError(e.message); }
@@ -2430,8 +2450,151 @@ function etkinSureMs(r) {
   return Math.max(0, bitis - r.loadingStartedAt);
 }
 
-/* ---------- Veri katmanı: toDb/applyDurum korunur, alanlar PATCH ile taşınır ---------- */
-/* mevcut toDb() zaten tüm alanları yazıyor; yeni alanlar oraya eklenecek (AŞAĞIDA) */
+/* ═══════════════ 👷 EKİP PERFORMANS RAPORU (PART 2) ═══════════════ */
+function ekipEvren(list) {
+  /* Performans evreni: kronometre başlamış VE (📦 toplama bitti işaretli VEYA ✔ tamamlanmış) */
+  return list.filter(r => r.loadingStartedAt && (r.toplamaBittiTs || (r.durum === "Yükleme Tamamlandı" && r.loadingEndedAt)))
+    .map(r => {
+      const finishTs = r.toplamaBittiTs || r.loadingEndedAt;
+      const fd = new Date(finishTs);
+      return {
+        r,
+        ekip: r.ekip || "__atanmamis__",
+        etkinDk: Math.round(etkinSureMs(r) / 60000),
+        stDk: getSureDk(r) * (adet(r) || 1),
+        m3: Number(r.m3) || 0,
+        gun: isoFromDate(fd),
+        hafta: getISOWeek(fd)
+      };
+    });
+}
+function ekipOzetMap(evren) {
+  const m = new Map();
+  evren.forEach(x => {
+    if (!m.has(x.ekip)) m.set(x.ekip, { ekip: x.ekip, n: 0, m3: 0, etkin: 0, st: 0 });
+    const g = m.get(x.ekip);
+    g.n++; g.m3 += x.m3; g.etkin += x.etkinDk; g.st += x.stDk;
+  });
+  return m;
+}
+function ekipAd2(kod) { return kod === "__atanmamis__" ? "⚠ Atanmamış" : ekipAd(kod); }
+function ekipRenk2(kod) { return kod === "__atanmamis__" ? "#64748b" : ekipRenk(kod); }
+
+function buildEkip() {
+  const c = document.getElementById("reportPaneEkip");
+  if (!ekipSira.length) {
+    c.innerHTML = `<p class="hint">👷 Henüz ekip tanımlanmamış — 👷 Ekipler panelinden ekleyin (admin).</p>`;
+    return;
+  }
+  const evren = ekipEvren(filtered());
+  if (!evren.length) {
+    c.innerHTML = `<p class="hint">⏱️ Performans verisi yok — kronometresi başlamış ve (📦 toplama bitti işaretli veya ✔ tamamlanmış) kayıt bulunamadı.</p>`;
+    return;
+  }
+  const ozet = ekipOzetMap(evren);
+  const enCok = [...ozet.values()].sort((a, b) => b.n - a.n)[0];
+  const hizlis = [...ozet.values()].filter(g => g.n >= 3 && g.etkin > 0);
+  const enHizli = hizlis.length ? hizlis.sort((a, b) => (a.etkin / a.n) - (b.etkin / b.n))[0] : null;
+  const atanmamisN = filtered().filter(r => !r.ekip && !r._arsiv).length;
+  const toplamDk = evren.reduce((s, x) => s + x.etkinDk, 0);
+  const kpi = `<div class="kpi-grid">
+    <div class="kpi c-primary"><div class="kpi-head">🥇 En çok yükleyen</div><div class="kpi-val" style="font-size:18px">${esc(ekipAd2(enCok.ekip))}</div><div class="kpi-sub">${enCok.n} yükleme · ${fmtN(enCok.m3)} m³</div></div>
+    <div class="kpi c-green"><div class="kpi-head">⚡ En hızlı (≥3 yükleme)</div><div class="kpi-val" style="font-size:18px">${enHizli ? esc(ekipAd2(enHizli.ekip)) : "—"}</div><div class="kpi-sub">${enHizli ? fmtN(enHizli.etkin / enHizli.n) + " dk/yükleme" : "yeterli veri yok"}</div></div>
+    <div class="kpi c-amber"><div class="kpi-head">🧮 Toplam etkin iş</div><div class="kpi-val">${fmtN(toplamDk)}</div><div class="kpi-sub">dk · ${evren.length} yükleme</div></div>
+    <div class="kpi ${atanmamisN ? "c-red" : "c-green"}"><div class="kpi-head">⚠️ Atanmamış kayıt</div><div class="kpi-val">${atanmamisN}</div><div class="kpi-sub">aktif kayıtlarda ekip boş</div></div>
+  </div>`;
+  const aRows = [...ozet.values()].sort((a, b) => b.n - a.n).map(g => {
+    const sapma = g.st > 0 ? Math.round((g.etkin - g.st) / g.st * 100) : null;
+    const sapmaHtml = sapma == null ? `<span class="muted">-</span>`
+      : `<span style="font-weight:700;color:${sapma > 10 ? "var(--red)" : sapma < -5 ? "var(--green)" : "var(--amber)"}">${fmtSapma(sapma)}%</span>`;
+    return `<tr>
+      <td><span class="ekip-chip" style="background:${ekipRenk2(g.ekip)}">👷 ${esc(ekipAd2(g.ekip))}</span></td>
+      <td class="center oh-strong">${g.n}</td>
+      <td class="center">${fmtN(g.m3)}</td>
+      <td class="center">${fmtN(g.etkin)}</td>
+      <td class="center oh-strong">${fmtN(g.etkin / g.n)} dk</td>
+      <td class="center">${sapmaHtml}</td>
+    </tr>`;
+  }).join("");
+  const tabA = `<div class="rpt"><h3>👷 Ekip performansı — etkin süre (📦 toplama bitti, yoksa kronometre bitişi)</h3>
+    <p class="hint">Sapma: etkin toplam dk'nın standart hedefe (⏱️ Süreler paneli × AD) göre farkı. <b>+</b> hedefi aştı (kırmızı), <b>−</b> hedefin altında (yeşil). "Toplama bitti" işaretli ama statüsü bekleyenler rapora DAHİL — üretim eksiği performansı bozmaz.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Ekip</th><th class="center">Yükleme</th><th class="center">m³</th><th class="center">Etkin dk</th><th class="center">Ort dk/yükleme</th><th class="center">Hedef sapması</th></tr></thead>
+      <tbody>${aRows}</tbody></table></div></div>`;
+  function pivot(keyName, keyOf, sortNum, limit) {
+    const cols = [...new Set(evren.map(x => x.ekip))].sort((a, b) => {
+      if (a === "__atanmamis__") return 1;
+      if (b === "__atanmamis__") return -1;
+      return (parseInt(a.replace(/\D/g, ""), 10) || 0) - (parseInt(b.replace(/\D/g, ""), 10) || 0);
+    });
+    const byKey = new Map();
+    evren.forEach(x => {
+      const k = keyOf(x);
+      if (!byKey.has(k)) byKey.set(k, {});
+      const row = byKey.get(k);
+      if (!row[x.ekip]) row[x.ekip] = { n: 0, m3: 0, dk: 0 };
+      const cell = row[x.ekip];
+      cell.n++; cell.m3 += x.m3; cell.dk += x.etkinDk;
+    });
+    let keys = [...byKey.keys()];
+    keys.sort((a, b) => sortNum ? b - a : String(b).localeCompare(String(a)));
+    keys = keys.slice(0, limit);
+    const head = `<tr><th>${keyName}</th>${cols.map(k => `<th class="center">${esc(ekipAd2(k))}</th>`).join("")}</tr>`;
+    const rows = keys.map(k => {
+      const row = byKey.get(k);
+      return `<tr><td class="strong">${esc(k)}</td>${cols.map(kk => {
+        const cell = row[kk];
+        return `<td class="center">${cell ? `${cell.n} yük<br><span class="muted" style="font-size:9.5px">${fmtN(cell.m3)} m³ · ${fmtN(cell.dk)} dk</span>` : '<span class="muted">-</span>'}</td>`;
+      }).join("")}</tr>`;
+    }).join("");
+    return `<div class="table-wrap"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
+  }
+  const tabB = `<div class="rpt"><h3>📅 Gün × Ekip (son 14 gün — hangi gün hangi ekip kaç yükleme/kaç m³/kaç dk)</h3>${pivot("Gün", x => x.gun, false, 14)}</div>`;
+  const tabC = `<div class="rpt"><h3>📆 Hafta × Ekip (son 8 hafta trendi)</h3>${pivot("Hafta", x => x.hafta, true, 8)}</div>`;
+  c.innerHTML = kpi + tabA + tabB + tabC +
+    `<div class="modal-actions" style="justify-content:flex-start"><button class="btn primary" id="btnEkipExcel">📤 Excel</button></div>`;
+  c.querySelector("#btnEkipExcel").addEventListener("click", ekipExcelRapor);
+}
+function ekipExcelRapor() {
+  if (typeof XLSX === "undefined") { alert("Excel kütüphanesi yüklenemedi."); return; }
+  const evren = ekipEvren(filtered());
+  if (!evren.length) { alert("Performans verisi yok."); return; }
+  const ozet = ekipOzetMap(evren);
+  const ozetRows = [...ozet.values()].sort((a, b) => b.n - a.n).map(g => [
+    ekipAd2(g.ekip), g.n, +g.m3.toFixed(2), g.etkin, +(g.etkin / g.n).toFixed(1),
+    g.st > 0 ? Math.round((g.etkin - g.st) / g.st * 100) + "%" : ""
+  ]);
+  const gunRows = evren.slice().sort((a, b) => String(b.gun).localeCompare(String(a.gun)))
+    .map(x => [x.gun, ekipAd2(x.ekip), x.r.musteri, x.r.maddeKodu || "", adet(x.r), x.m3, x.etkinDk,
+      x.r.durum === "Yükleme Tamamlandı" ? "Tamamlandı" : "Toplama bitti"]);
+  const hf = new Map();
+  evren.forEach(x => {
+    const k = x.hafta + "|" + x.ekip;
+    if (!hf.has(k)) hf.set(k, { hafta: x.hafta, ekip: x.ekip, n: 0, m3: 0, dk: 0 });
+    const g = hf.get(k); g.n++; g.m3 += x.m3; g.dk += x.etkinDk;
+  });
+  const haftaRows = [...hf.values()].sort((a, b) => b.hafta - a.hafta)
+    .map(g => ["Hafta " + g.hafta, ekipAd2(g.ekip), g.n, +g.m3.toFixed(2), g.dk]);
+  const mk = (head, rows) => {
+    const ws = XLSX.utils.aoa_to_sheet([head, ...rows]);
+    ws["!cols"] = head.map(() => ({ wch: 18 }));
+    try {
+      const range = XLSX.utils.decode_range(ws["!ref"]);
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const a = XLSX.utils.encode_cell({ r: 0, c: C });
+        if (ws[a]) ws[a].s = { fill: { pattern: "solid", fgColor: { rgb: "1E293B" } },
+          font: { bold: true, color: { rgb: "FFFFFF" }, sz: 10 } };
+      }
+    } catch (e) {}
+    return ws;
+  };
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, mk(["Ekip", "Yükleme", "m³", "Etkin dk", "Ort dk/yükleme", "Hedef sapması"], ozetRows), "Ekip Ozeti");
+  XLSX.utils.book_append_sheet(wb, mk(["Gün", "Ekip", "Müşteri", "Madde", "AD", "m³", "Etkin dk", "Durum"], gunRows), "Gun Dökum");
+  XLSX.utils.book_append_sheet(wb, mk(["Hafta", "Ekip", "Yükleme", "m³", "Etkin dk"], haftaRows), "Haftalik");
+  XLSX.writeFile(wb, `ekip_performans_${todayISO()}.xlsx`);
+  showToast("📤 Ekip raporu indirildi.");
+}
 
 async function ekipEkle(ad) {
   const maxN = ekipSira.reduce((m, k) => Math.max(m, parseInt(k.replace(/\D/g, ""), 10) || 0), 0);
@@ -2526,6 +2689,7 @@ document.getElementById("btnEkip").addEventListener("click", openEkipPanel);
 
 async function loadEkipler() {
   try {
+    /* .read herkese açık — misafirler de ekip rozetlerini görür */
     const res = await fetch(`${FIREBASE_DB_URL}/${EKIP_NODE}.json`);
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
@@ -4834,6 +4998,7 @@ function buildReports() {
   document.getElementById("reportPaneKapasite").innerHTML = "";
   document.getElementById("reportPaneSure").innerHTML = "";
   document.getElementById("reportPaneArsiv").innerHTML = "";
+  document.getElementById("reportPaneEkip").innerHTML = "";
   if (!list.length) return;
   buildGenel(list);
   buildAnaliz(list);
@@ -4853,6 +5018,7 @@ function switchReportTab(tab) {
   if (tab === "kapasite") { buildKapasite(); return; }
   if (tab === "sure") { buildSure(filtered()); return; }
   if (tab === "arsiv") { buildArsiv(); return; }
+  if (tab === "ekip") { buildEkip(); return; }
   const list = filtered();
   if (!list.length) return;
   if (tab === "genel") buildGenel(list);
@@ -5209,6 +5375,7 @@ function updateUserUI() {
   document.getElementById("btnSurePanel").classList.toggle("hidden", !isAdmin());
   document.getElementById("btnBackup").classList.toggle("hidden", !isAdmin());
   document.getElementById("btnArsiv").classList.toggle("hidden", !isAdmin());
+  document.getElementById("btnEkip").classList.toggle("hidden", !isAdmin());
   document.getElementById("btnOrderHazir").classList.toggle("hidden", !isAdmin());
   if (currentUser) {
     const admin = isAdmin();
