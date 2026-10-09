@@ -928,7 +928,7 @@ function updateSureCells() {
     const b = sureBilgi(r);
     const isOver = b.asim;
     const hasCls = tr.classList.contains("overtime");
-    if (isOver && !hasCls &&) tr.classList.add("overtime");
+    if (isOver && !hasCls) tr.classList.add("overtime");
     else if (!isOver && hasCls) tr.classList.remove("overtime");
   });
 }
