@@ -2839,8 +2839,7 @@ async function toplamaBittiAction(idOverride = null) {
 /* depoItem kartına ekip rozeti + toplama bitti rozeti ekler (PART 2'de html'e ekleyeceğiz) */
 function depoEkipSatiri(r) {
   const chip = ekipChipHtml(r.ekip);
-  const bitti = r.toplamaBittiTs && r.durum === "Yükleniyor"
-    ? ` <span class="ekip-toplam-bitti">📦 Toplama bitti ${fmtTime(r.toplamaBittiTs)}</span>` : "";
+  return ekipChipHtml(r.ekip) ? `<div class="d-sub">${ekipChipHtml(r.ekip)}</div>` : "";
   return (chip || bitti) ? `<div class="d-sub">${chip}${bitti}</div>` : "";
 }
 
