@@ -1139,7 +1139,20 @@ function rowHtml(r) {
     <td data-col="gerceklesenTarih" class="muted" title="Durum Tamamlandı olunca otomatik yazılır">${gerceklesenView(r)}</td>
     ${tdHtml(r, "durum", "", x => `<span class="badge ${durumClass(x.durum)}">${esc(x.durum)}</span>`)}
     <td data-col="sure" class="center">${sureCellHtml(r)}</td>
-    ${tdHtml(r, "ekip", "", x => ekipChipHtml(x.ekip) || '<span class="muted">-</span>')}
+       ${tdHtml(r, "ekip", "", x => {
+      const chip = ekipChipHtml(x.ekip) || '<span class="muted">-</span>';
+      const tpOn = x.toplamaBasTs && !x.toplamaBittiTs;
+      const tpOk = !!x.toplamaBittiTs;
+      const durumIco = tpOn ? ' <span title="Toplama sürüyor" style="color:var(--amber);font-weight:700">📦</span>'
+        : tpOk ? ' <span title="Toplama bitti" style="color:var(--green)">✅</span>' : "";
+      return `<div class="ekip-tp">${chip}${durumIco}
+        <span class="tp-btns">
+          <button class="icon-btn tp${tpOn ? " on" : ""}" data-tpact="basla" data-tpid="${x.id}"
+            ${tpOn ? 'disabled title="Toplama zaten sürüyor"' : 'title="T.Başla — toplamayı başlat"'}>▶</button>
+          <button class="icon-btn tp${tpOk ? " on" : ""}" data-tpact="bitti" data-tpid="${x.id}"
+            ${!x.toplamaBasTs || tpOk ? 'disabled title="Önce başlatın / zaten bitti"' : 'title="T.Bitir — toplamayı bitir"'}>⏹</button>
+        </span></div>`;
+    })}
     ${tdHtml(r, "aciklama", "truncate", x => `<span title="${esc(x.aciklama)}">${esc(x.aciklama) || "-"}</span>`)}
     ${tdHtml(r, "araciGeldi", r.araciGeldi === "GELDİ" ? "arac-gel-yes" : (r.araciGeldi === "HAYIR" ? "arac-gel-no" : ""), x => esc(x.araciGeldi) || "-")}
     <td data-col="status" class="center">${durumIcon(r.durum)}</td>
@@ -3859,6 +3872,8 @@ document.getElementById("tbody").addEventListener("click", e => {
       case "delete":        gate("delete", id); break;
       case "comments":      gate("comments", id); break;
     }
+    const tpBtn = e.target.closest("button[data-tpact]");
+    if (tpBtn) { toplamaAction(tpBtn.dataset.tpact, tpBtn.dataset.tpid); return; }
     return;
   }
   const chip = e.target.closest("[data-mchip]");
