@@ -436,6 +436,7 @@ function toDb(r) {
     gecikmeSon: (r.gecikmeSon == null) ? null : Number(r.gecikmeSon),
     ekip: (r.ekip || "").trim() || "",
     toplamaBittiTs: (r.toplamaBittiTs == null) ? null : Number(r.toplamaBittiTs),
+    toplamaBasTs: (r.toplamaBasTs == null) ? null : Number(r.toplamaBasTs),
     comments: Array.isArray(r.comments) ? r.comments : [],
     loadingStartedAt: (r.loadingStartedAt == null) ? null : Number(r.loadingStartedAt),
     loadingEndedAt: (r.loadingEndedAt == null) ? null : Number(r.loadingEndedAt),
@@ -1039,7 +1040,7 @@ function fSelect(data, scope, field, options) {
 function cellInputHtml(r, field) {
   const def = CELL_DEFS[field];
   if (field === "ekip") {
-    const secenekler = [["", "—"], ...ekipSira.map(k => [k, ekipAd(k)])];
+    const secenekler = [["", "—"], ...ekipSira.map(k => [k, (ekipler[k] && ekipler[k].aktif === false ? "⏸ " : "") + ekipAd(k)])];
     return `<select data-cid="${r.id}" data-cfield="ekip">
       ${secenekler.map(([v, l]) => `<option value="${esc(v)}" ${String(r.ekip || "") === v ? "selected" : ""}>${esc(l)}</option>`).join("")}
     </select>`;
@@ -1988,7 +1989,7 @@ function depoItem(r, cls, extra) {
   return `<div class="depo-item ${cls}">
     <div>
       <div class="d-musteri">${esc(r.musteri)}</div>
-      <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${depoEkipSatiri(r)}</div>
+      <div class="d-sub">${esc(r.blm)} · ${esc(r.kategori || "")}${depoEkipSatiri(r)}${depoToplamaSatiri(r)}</div>
       <div class="d-sub">${aracDurumHtml(r)}</div>
       ${r.aciklama ? `<div class="d-cmt" style="color:#93c5fd">📝 ${esc(r.aciklama)}</div>` : ""}
       ${depoCmtLine(r)}
@@ -2450,17 +2451,58 @@ function etkinSureMs(r) {
   return Math.max(0, bitis - r.loadingStartedAt);
 }
 
+/* ---------- 📦 TOPLAMA SÜRECİ (statüden bağımsız) ---------- */
+async function toplamaAction(action, idOverride = null) {
+  const targetId = idOverride || currentOpId || islemId;
+  if (!currentUser) { showLogin("İşlem için giriş yapın."); return; }
+  if (!hasPerm("edit")) { alert("Bu işlem için düzenleme yetkiniz yok."); return; }
+  const row = await freshRow(targetId);
+  if (!row) { alert("Kayıt bulunamadı."); return; }
+  const updated = { ...row };
+  let etiket = "";
+  if (action === "basla") {
+    if (row.toplamaBasTs) { showToast("ℹ️ Toplama zaten başlatılmış (" + fmtTime(row.toplamaBasTs) + ")."); return; }
+    updated.toplamaBasTs = Date.now();
+    updated.toplamaBittiTs = null;
+    etiket = "📦 toplama başlatıldı";
+  } else if (action === "bitti") {
+    if (!row.toplamaBasTs) { alert("Önce toplamayı başlatın."); return; }
+    if (row.toplamaBittiTs) { showToast("ℹ️ Toplama zaten bitmiş (" + fmtTime(row.toplamaBittiTs) + ")."); return; }
+    updated.toplamaBittiTs = Date.now();
+    etiket = "📦 toplama bitti";
+  } else return;
+  try {
+    const saved = await apiUpdate(row.id, updated);
+    rows = rows.map(r => r.id === row.id ? saved : r);
+    setSaveError("");
+    render();
+    const isOv = document.getElementById("islemOverlay");
+    if (isOv && !isOv.classList.contains("hidden")) renderIslem();
+    if (document.getElementById("opOverlay")) renderOpCard();
+    const sure = (action === "bitti") ? fmtSure(saved.toplamaBittiTs - saved.toplamaBasTs) : "";
+    await apiLog("guncelleme", row.id, row.musteri, `${etiket}${sure ? " · süre: " + sure : ""}${row.ekip ? " · " + ekipAd(row.ekip) : ""}`);
+    showToast(`✅ ${esc(row.musteri)}: ${etiket}${sure ? " — " + sure : ""}`);
+  } catch (e) { alert("Kaydedilemedi: " + e.message); }
+}
+/* Depo kartı için toplama durum satırı */
+function depoToplamaSatiri(r) {
+  if (!r.toplamaBasTs) return "";
+  if (r.toplamaBittiTs) {
+    return `<div class="d-sub"><span class="ekip-toplam-bitti">📦 Toplama bitti ${fmtTime(r.toplamaBittiTs)} · ${fmtSure(r.toplamaBittiTs - r.toplamaBasTs)}</span></div>`;
+  }
+  return `<div class="d-sub" style="color:#fbbf24;font-weight:700">📦 Toplama sürüyor — ${fmtTime(r.toplamaBasTs)}'da başladı</div>`;
+}
+
 /* ═══════════════ 👷 EKİP PERFORMANS RAPORU (PART 2) ═══════════════ */
 function ekipEvren(list) {
-  /* Performans evreni: kronometre başlamış VE (📦 toplama bitti işaretli VEYA ✔ tamamlanmış) */
-  return list.filter(r => r.loadingStartedAt && (r.toplamaBittiTs || (r.durum === "Yükleme Tamamlandı" && r.loadingEndedAt)))
+  /* Performans evreni: toplama süreci BİTMİŞ satırlar (statü fark etmez) */
+  return list.filter(r => r.toplamaBasTs && r.toplamaBittiTs)
     .map(r => {
-      const finishTs = r.toplamaBittiTs || r.loadingEndedAt;
-      const fd = new Date(finishTs);
+      const fd = new Date(r.toplamaBittiTs);
       return {
         r,
         ekip: r.ekip || "__atanmamis__",
-        etkinDk: Math.round(etkinSureMs(r) / 60000),
+        etkinDk: Math.max(1, Math.round((r.toplamaBittiTs - r.toplamaBasTs) / 60000)),
         stDk: getSureDk(r) * (adet(r) || 1),
         m3: Number(r.m3) || 0,
         gun: isoFromDate(fd),
@@ -2483,7 +2525,7 @@ function ekipRenk2(kod) { return kod === "__atanmamis__" ? "#64748b" : ekipRenk(
 function buildEkip() {
   const c = document.getElementById("reportPaneEkip");
   if (!ekipSira.length) {
-    c.innerHTML = `<p class="hint">👷 Henüz ekip tanımlanmamış — 👷 Ekipler panelinden ekleyin (admin).</p>`;
+    c.innerHTML = `<p class="hint">Süre = 📦 <b>Toplama başlangıç → bitiş</b> (Operasyon/QR ekranındaki toplama butonlarıyla). Statü kronometresinden bağımsızdır — üretim beklemesi etkilemez. Sapma: standart hedefe (⏱️ Süreler × AD) göre fark.</p>`;
     return;
   }
   const evren = ekipEvren(filtered());
@@ -2635,24 +2677,44 @@ function openEkipPanel() {
   if (!isAdmin()) { alert("Bu panel sadece yöneticiler içindir."); return; }
   document.getElementById("ekipModal").classList.remove("hidden");
 }
+async function ekipSil(kod) {
+  if (!confirm(`"${ekipAd(kod)}" (${kod}) kalıcı olarak silinecek. Onaylıyor musunuz?`)) return;
+  try {
+    const res = await authFetch(`${FIREBASE_DB_URL}/${EKIP_NODE}/${kod}.json`, { method: "DELETE" });
+    await check(res, "Ekip silinemedi");
+    delete ekipler[kod];
+    ekipSira = ekipSira.filter(k => k !== kod);
+    await apiLog("yetki", "", ekipAd(kod), `👷 ekip silindi: ${kod}`);
+    renderEkipTable();
+    showToast("🗑️ Ekip silindi.");
+  } catch (e) { alert("Silinemedi: " + e.message); }
+}
+
 function renderEkipTable() {
   const tb = document.getElementById("ekipTable");
   if (!ekipSira.length) {
-    tb.innerHTML = `<tr><td colspan="4" class="empty">Henüz ekip yok — yukarıdan ekleyin.</td></tr>`;
-  } else {
-    tb.innerHTML = ekipSira.map(k => {
-      const e = ekipler[k];
-      return `<tr data-ekod="${esc(k)}">
-        <td class="muted">${esc(k)}</td>
-        <td><input class="cell-input" style="width:100%" value="${esc(e.ad || k)}" data-ekipad="${esc(k)}" /></td>
-        <td class="center">${e.aktif !== false ? '<span class="badge done">Aktif</span>' : '<span class="badge waiting">Pasif</span>'}</td>
-        <td class="nowrap">
-          <button class="btn primary" data-ekipsave="${esc(k)}">Kaydet</button>
-          <button class="btn" data-ekiptoggle="${esc(k)}">${e.aktif !== false ? "Pasifleştir" : "Aktifleştir"}</button>
-        </td>
-      </tr>`;
-    }).join("");
+    tb.innerHTML = `<tr><td colspan="5" class="empty">Henüz ekip yok — yukarıdan ekleyin.</td></tr>`;
+    return;
   }
+  const kullanim = {};
+  rows.forEach(r => { if (r.ekip) kullanim[r.ekip] = (kullanim[r.ekip] || 0) + 1; });
+  tb.innerHTML = ekipSira.map(k => {
+    const e = ekipler[k];
+    const n = kullanim[k] || 0;
+    const pasif = e.aktif === false;
+    return `<tr data-ekod="${esc(k)}" ${pasif ? 'style="opacity:.55"' : ""}>
+      <td class="muted">${esc(k)}</td>
+      <td><input class="cell-input" style="width:100%" value="${esc(e.ad || k)}" data-ekipad="${esc(k)}" ${pasif ? "disabled" : ""} /></td>
+      <td class="center">${pasif ? '<span class="badge waiting">Pasif</span>' : '<span class="badge done">Aktif</span>'}</td>
+      <td class="center">${n ? `<b>${n}</b> kayıt` : '<span class="muted">-</span>'}</td>
+      <td class="nowrap">
+        ${n === 0 ? `<button class="btn del" data-ekipsil="${esc(k)}" title="Kalıcı olarak sil">🗑️ Sil</button>` : `<span class="muted" style="font-size:10px" title="Ekip kayıtlarda kullanıldığı için silinemez; önce kayıtların ekiplerini boşaltın">kullanımda</span>`}
+        <button class="btn primary" data-ekipsave="${esc(k)}">Kaydet</button>
+        <button class="btn" data-ekiptoggle="${esc(k)}">${pasif ? "Aktifleştir" : "Pasifleştir"}</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
  }
 document.getElementById("btnEkipAdd").addEventListener("click", async () => {
   const inp = document.getElementById("ekipNewAd");
@@ -2677,7 +2739,9 @@ document.getElementById("ekipTable").addEventListener("click", async e => {
   if (tb) {
     try { await ekipToggle(tb.dataset.ekiptoggle); renderEkipTable(); }
     catch (err) { alert("İşlem başarısız: " + err.message); }
-  }
+       const sl = e.target.closest("[data-ekipsil]");
+  if (sl) { await ekipSil(sl.dataset.ekipsil); return; }
+     }
 });
 document.getElementById("btnCloseEkip").addEventListener("click", () =>
   document.getElementById("ekipModal").classList.add("hidden"));
@@ -3324,7 +3388,9 @@ function islemBtns(d) {
       <button class="islem-btn b-basla" data-iact="baslat">▶️ Yüklemeyi Başlat</button>`;
   }
    if (d.durum === "Yükleniyor") {
-    return `<button class="islem-btn b-bitir" data-iact="bitir">✅ Yüklemeyi Bitir</button><button class="islem-btn b-geldi" data-iact="toplamabitti" style="background:#0f766e">📦 Toplama Bitti</button>`;
+    return `<button class="islem-btn b-bitir" data-iact="bitir">✅ Yüklemeyi Bitir</button>
+      <button class="islem-btn b-geldi" data-iact="tp-basla" style="background:#0f766e">📦 Toplamayı Başlat${d.toplamaBasTs && !d.toplamaBittiTs ? " ✔ sürüyor" : ""}</button>
+      <button class="islem-btn b-bitir" data-iact="tp-bitti" style="background:#0f766e">📦 Toplamayı Bitir</button>`;
   }
   return "";
 }
@@ -3387,8 +3453,8 @@ async function islemAction(action, idOverride = null) {
     updated.durum = "Yükleniyor";
     applyDurumSideEffects(updated);
     etiket = "yükleme başlatıldı";
-  } else if (action === "toplamabitti") {
-    return toplamaBittiAction(targetId);
+    } else if (action === "tp-basla" || action === "tp-bitti") {
+    return toplamaAction(action === "tp-basla" ? "basla" : "bitti", targetId);
   } else if (action === "bitir") {
     updated.durum = "Yükleme Tamamlandı";
     applyDurumSideEffects(updated);
@@ -3586,6 +3652,10 @@ async function renderOpCard(scrollToIt = false) {
     <div class="islem-done">✅ Bu yükleme tamamlandı${r.loadingStartedAt && r.loadingEndedAt ? ` · Baş:${fmtTime(r.loadingStartedAt)} - Bitiş:${fmtTime(r.loadingEndedAt)}` : ""}</div>` : `
     <button class="islem-btn b-geldi" data-opact="geldi">🚛 Araç Geldi${r.araciGeldi === "GELDİ" ? " ✔" : ""}</button>
     <button class="islem-btn b-basla" data-opact="baslat">▶️ Yüklemeyi Başlat${r.durum === "Yükleniyor" ? " (çalışıyor)" : ""}</button>
+      <div style="display:flex;gap:10px;margin-top:2px">
+      <button class="islem-btn b-geldi" data-opact="toplama-basla" style="flex:1">📦 T.Başlat${r.toplamaBasTs && !r.toplamaBittiTs ? " ✔ sürüyor" : r.toplamaBasTs ? " (bitti)" : ""}</button>
+      <button class="islem-btn b-bitir" data-opact="toplama-bitti" style="flex:1">📦 T.Bitir</button>
+    </div>
     <button class="islem-btn b-bitir" data-opact="bitir">✅ Yüklemeyi Bitir</button>`;
   holder.innerHTML = `
     <div class="op-card">
@@ -3615,7 +3685,9 @@ async function renderOpCard(scrollToIt = false) {
     btn.addEventListener("click", () => {
       console.log("🖱️ operasyon butonu:", btn.dataset.opact, "→ id:", currentOpId);
       if (!currentOpId) { alert("Kayıt seçilemedi — sayfayı yenileyip tekrar dene."); return; }
-      islemAction(btn.dataset.opact, currentOpId);
+      const act = btn.dataset.opact;
+      if (act === "toplama-basla" || act === "toplama-bitti") toplamaAction(act === "toplama-basla" ? "basla" : "bitti", currentOpId);
+      else islemAction(act, currentOpId);
     }));
   holder.querySelector("#btnOpNot").addEventListener("click", opNotEkle);
   holder.querySelector("#btnOpBack").addEventListener("click", () => {
