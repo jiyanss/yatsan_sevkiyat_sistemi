@@ -802,3 +802,7 @@ html, body { overflow-x: hidden; }
   .depo-head { flex-direction: column; align-items: flex-start; }
   .depo-right { align-items: flex-start; }
 }
+
+/* 📦 T. satırı — Sure hücresinde toplama süreci */
+.sure-tp { font-size:9.5px; font-weight:700; color:var(--green); margin-bottom:2px; white-space:nowrap; }
+.sure-tp-live { color:var(--amber); }
