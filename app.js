@@ -916,26 +916,42 @@ function sureBilgi(r) {
   return { durum: "none" };
 }
 function sureCellHtml(r) {
+  /* 📦 T. satırı — toplama süreci (statüden bağımsız) */
+  let tpHtml = "";
+  if (r.toplamaBasTs) {
+    if (r.toplamaBittiTs) {
+      const dk = Math.max(0, Math.round((r.toplamaBittiTs - r.toplamaBasTs) / 60000));
+      tpHtml = `<div class="sure-tp">📦 T: ${fmtTime(r.toplamaBasTs)}→${fmtTime(r.toplamaBittiTs)} · <b>${dk}dk</b></div>`;
+    } else {
+      tpHtml = `<div class="sure-tp sure-tp-live">📦 T: sürüyor (${fmtTime(r.toplamaBasTs)}'dan beri)</div>`;
+    }
+  }
+  /* ⏱️ Y. satırı — statü kronometresi (mevcut davranış) */
   const b = sureBilgi(r);
-  if (b.durum === "none") return `<span class="sure-txt">-</span>`;
-  if (b.durum === "live") {
+  let yHtml = "";
+  if (b.durum === "none") {
+    if (!tpHtml) return `<span class="sure-txt">-</span>`;
+    yHtml = `<span class="sure-txt muted" style="font-size:9px">⏱️ Y: başlamadı</span>`;
+  } else if (b.durum === "live") {
     const cls = b.yuzde >= 100 ? "over" : b.yuzde >= 70 ? "warn" : "";
     const txt = b.asim
       ? `⚠ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşıldı`
       : `${fmtSure(b.gecenMs)} / ${b.sureDk}dk · %${b.yuzde}`;
-    return `<div class="sure-wrap">
+    yHtml = `<div class="sure-wrap">
       <div class="surebar"><div class="surebar-fill ${cls}" style="width:${b.yuzde}%"></div></div>
-      <span class="sure-txt ${b.asim ? "over" : ""}">${txt}</span>
+      <span class="sure-txt ${b.asim ? "over" : ""}">⏱️ Y: ${txt}</span>
+    </div>`;
+  } else {
+    const cls = b.asim ? "warn" : "";
+    const txt = b.asim
+      ? `✔ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşım`
+      : `✔ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk`;
+    yHtml = `<div class="sure-wrap">
+      <div class="surebar"><div class="surebar-fill ${cls}" style="width:${b.yuzde}%"></div></div>
+      <span class="sure-txt ${b.asim ? "done-over" : "done-ok"}">⏱️ Y: ${txt}</span>
     </div>`;
   }
-  const cls = b.asim ? "warn" : "";
-  const txt = b.asim
-    ? `✔ ${fmtSure(b.gecenMs)} · ${b.asimDk}dk aşım`
-    : `✔ ${fmtSure(b.gecenMs)} / ${b.sureDk}dk`;
-  return `<div class="sure-wrap">
-    <div class="surebar"><div class="surebar-fill ${cls}" style="width:${b.yuzde}%"></div></div>
-    <span class="sure-txt ${b.asim ? "done-over" : "done-ok"}">${txt}</span>
-  </div>`;
+  return tpHtml + yHtml;
 }
 function updateSureCells() {
   rows.forEach(r => {
