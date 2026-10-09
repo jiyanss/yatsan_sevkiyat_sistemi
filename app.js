@@ -2751,18 +2751,19 @@ document.getElementById("ekipTable").addEventListener("click", async e => {
   const sb = e.target.closest("[data-ekipsave]");
   if (sb) {
     const kod = sb.dataset.ekipsave;
-    const ad = document.querySelector(`input[data-ekipad="${kod}"]`).value;
-    try { await ekipAdKaydet(kod, ad); showToast("✅ Ekip adı güncellendi."); renderEkipTable(); }
+    const inp = document.querySelector(`input[data-ekipad="${kod}"]`);
+    if (!inp) return;
+    try { await ekipAdKaydet(kod, inp.value); showToast("✅ Ekip adı güncellendi."); renderEkipTable(); }
     catch (err) { alert("Kaydedilemedi: " + err.message); }
     return;
   }
-  const tb = e.target.closest("[data-ekiptoggle]");
-  if (tb) {
-    try { await ekipToggle(tb.dataset.ekiptoggle); renderEkipTable(); }
-    catch (err) { alert("İşlem başarısız: " + err.message); }
-       const sl = e.target.closest("[data-ekipsil]");
+  const sl = e.target.closest("[data-ekipsil]");
   if (sl) { await ekipSil(sl.dataset.ekipsil); return; }
-     }
+  const tg = e.target.closest("[data-ekiptoggle]");
+  if (tg) {
+    try { await ekipToggle(tg.dataset.ekiptoggle); renderEkipTable(); }
+    catch (err) { alert("İşlem başarısız: " + err.message); }
+  }
 });
 document.getElementById("btnCloseEkip").addEventListener("click", () =>
   document.getElementById("ekipModal").classList.add("hidden"));
