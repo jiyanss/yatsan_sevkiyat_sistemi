@@ -4915,7 +4915,7 @@ function exportExcel() {
     const gb = gecikmeBilgi(r);
     const isToday = gecikmeTarihi(r) === today;
     const isOvertime = r.durum === "Yükleniyor" && b.asim;
-    const kind = r._arsiv ? "arsiv" : isOvertime ? "overtime" : isToday ? "today" : null);
+    const kind = r._arsiv ? "arsiv" : isOvertime ? "overtime" : isToday ? "today" : null;
     rowMeta.push({ kind, durum: r.durum, gecikmeGun: gb.gun, arsiv: !!r._arsiv });
     grid.push([
       r.musteri, r.blm, r.kategori, r.sevkiyatTipi,
