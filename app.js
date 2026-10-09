@@ -5103,11 +5103,12 @@ function switchReportTab(tab) {
   document.getElementById("reportPaneSure").classList.toggle("hidden", tab !== "sure");
   document.getElementById("reportPaneDetay").classList.toggle("hidden", tab !== "detay");
   document.getElementById("reportPaneArsiv").classList.toggle("hidden", tab !== "arsiv");
+  document.getElementById("reportPaneEkip").classList.toggle("hidden", tab !== "ekip");   /* ⬅ bu satır kritik */
   destroyCharts();
   if (tab === "kapasite") { buildKapasite(); return; }
   if (tab === "sure") { buildSure(filtered()); return; }
   if (tab === "arsiv") { buildArsiv(); return; }
-  if (tab === "ekip") { buildEkip(); return; }
+  if (tab === "ekip") { buildEkip(); return; }                                             /* ⬅ ve bu */
   const list = filtered();
   if (!list.length) return;
   if (tab === "genel") buildGenel(list);
