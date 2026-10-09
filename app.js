@@ -281,6 +281,9 @@ function colEmpty(r, col) {
 }
 /* Kolon sıralaması: eşitlik durumunda varsayılan kriterlerle tie-break —
    böylece bir kolona göre sıralarken bile gruplar içi düzen karışık görünmez */
+/* Reel plan yoksa planlanan tarihe düş (sıralama anahtarı) */
+function reelKey(r) { return r.reelPlan || r.planlananTarih; }
+
 function getSortedList(list) {
   if (!sortCol || !SORTABLE[sortCol]) return sortList(list);
   return list.slice().sort((x, y) => {
