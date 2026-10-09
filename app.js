@@ -284,6 +284,21 @@ function colEmpty(r, col) {
 /* Reel plan yoksa planlanan tarihe düş (sıralama anahtarı) */
 function reelKey(r) { return r.reelPlan || r.planlananTarih; }
 
+function sortList(list) {
+  return list.slice().sort((x, y) => {
+    /* 1) Durum her şeyden önce: Yükleniyor → Bekliyor → Tamamlandı */
+    const dx = DURUM_SIRA[x.durum] ?? 9;
+    const dy = DURUM_SIRA[y.durum] ?? 9;
+    if (dx !== dy) return dx - dy;
+    /* 2) Reel Plan (yoksa planlanan) eski → yeni */
+    let c = tarihCmp(reelKey(x), reelKey(y));
+    if (c) return c;
+    c = tarihCmp(x.planlananTarih, y.planlananTarih);
+    if (c) return c;
+    /* 3) Müşteri A-Z */
+    return String(x.musteri || "").localeCompare(String(y.musteri || ""), "tr");
+  });
+}
 function getSortedList(list) {
   if (!sortCol || !SORTABLE[sortCol]) return sortList(list);
   return list.slice().sort((x, y) => {
@@ -2511,14 +2526,12 @@ document.getElementById("btnEkip").addEventListener("click", openEkipPanel);
 
 async function loadEkipler() {
   try {
-    const res = await authFetch(`${FIREBASE_DB_URL}/${EKIP_NODE}.json`);
-    const data = await check(res, "Ekipler yüklenemedi");
+    const res = await fetch(`${FIREBASE_DB_URL}/${EKIP_NODE}.json`);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
     ekipler = data || {};
-    ekipSira = Object.keys(ekipler).sort((a, b) => {
-      const na = parseInt(a.replace(/\D/g, ""), 10) || 0;
-      const nb = parseInt(b.replace(/\D/g, ""), 10) || 0;
-      return na - nb;
-    });
+    ekipSira = Object.keys(ekipler).sort((a, b) =>
+      (parseInt(a.replace(/\D/g, ""), 10) || 0) - (parseInt(b.replace(/\D/g, ""), 10) || 0));
   } catch (e) { console.warn("Ekipler yüklenemedi:", e.message); ekipler = {}; ekipSira = []; }
 }
 
