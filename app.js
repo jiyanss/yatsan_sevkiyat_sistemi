@@ -2715,7 +2715,6 @@ function renderEkipTable() {
     </tr>`;
   }).join("");
 }
- }
 document.getElementById("btnEkipAdd").addEventListener("click", async () => {
   const inp = document.getElementById("ekipNewAd");
   try {
