@@ -2472,8 +2472,7 @@ function renderEkipTable() {
       </tr>`;
     }).join("");
   }
-  bulkEkipDoldur();
-}
+ }
 document.getElementById("btnEkipAdd").addEventListener("click", async () => {
   const inp = document.getElementById("ekipNewAd");
   try {
@@ -2507,6 +2506,19 @@ document.getElementById("ekipModal").addEventListener("click", e => {
 document.getElementById("btnEkip").addEventListener("click", openEkipPanel);
 /* updateUserUI görünürlüğü — ekleyeceğiz (PART 2) */
 
+async function loadEkipler() {
+  try {
+    const res = await authFetch(`${FIREBASE_DB_URL}/${EKIP_NODE}.json`);
+    const data = await check(res, "Ekipler yüklenemedi");
+    ekipler = data || {};
+    ekipSira = Object.keys(ekipler).sort((a, b) => {
+      const na = parseInt(a.replace(/\D/g, ""), 10) || 0;
+      const nb = parseInt(b.replace(/\D/g, ""), 10) || 0;
+      return na - nb;
+    });
+  } catch (e) { console.warn("Ekipler yüklenemedi:", e.message); ekipler = {}; ekipSira = []; }
+}
+
 /* ---------- Toplu ekip ataması (bulkBar) ---------- */
 async function bulkEkipUygula() {
   const kod = document.getElementById("bulkEkip").value;
@@ -2537,7 +2549,6 @@ async function bulkEkipUygula() {
   }
   btn.disabled = false; btn.textContent = "Uygula";
 }
-bulkEkipDoldur();
 /* ---------- 📦 Toplama Bitti (QR + Operasyon) ---------- */
 /* Fiziksel toplama bitti ama statü bekliyor olabilir (üretim eksiği) —
    etkin süre bu anla durur, kronometre/statü bozulmaz. */
