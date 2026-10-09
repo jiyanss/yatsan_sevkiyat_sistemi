@@ -1640,7 +1640,11 @@ document.getElementById("sureEditModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
 });
 document.getElementById("btnSureEditSave").addEventListener("click", async () => {
-   const tbInp = document.getElementById("sureTopBas");
+  const row = rows.find(r => r.id === currentSureId);
+  if (!row) return;
+  const sVal = document.getElementById("sureStart").value;
+  const eVal = document.getElementById("sureEnd").value;
+  const tbInp = document.getElementById("sureTopBas");
   const tInp = document.getElementById("sureTopBitti");
   const tbVal = tbInp ? tbInp.value : "";
   const tVal = tInp ? tInp.value : "";
@@ -1692,7 +1696,7 @@ document.getElementById("btnSureEditSave").addEventListener("click", async () =>
     render();
     await apiLog("guncelleme", row.id, row.musteri,
       `süre elle düzeltildi · başlangıç: ${fmtDateTime(updated.loadingStartedAt)}` +
-      (updated.toplamaBittiTs ? ` · 📦 toplama bitti: ${fmtDateTime(updated.toplamaBittiTs)}` : "") +
+      (updated.toplamaBasTs ? ` · 📦 toplama: ${fmtDateTime(updated.toplamaBasTs)} → ${updated.toplamaBittiTs ? fmtDateTime(updated.toplamaBittiTs) : "sürüyor"}` : "") +
       (updated.loadingEndedAt ? ` · bitiş: ${fmtDateTime(updated.loadingEndedAt)}` : "") +
       ` · etkin süre: ${fmtSure(etkinSureMs(saved))}` +
       (row.durum === "Yükleniyor" && updated.durum === "Yükleme Tamamlandı" ? " · durum → Tamamlandı" : ""));
