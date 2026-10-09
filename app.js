@@ -2049,7 +2049,7 @@ function renderDepoContent() {
           const cmtN = Array.isArray(r.comments) ? r.comments.length : 0;
           const cmtTxt = cmtN ? `<span class="w-cmt">💬 ${r.comments.slice(-5).map(x => esc(x.text)).join(", ")}</span>` : "";
           return `<div class="depo-week-row">
-            <div class="w-m">${esc(r.musteri)}${}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
+            <div class="w-m">${esc(r.musteri)}${cmtTxt}${(() => { const gb = gecikmeBilgi(r); return (gb.gun > 0 && gb.neden) ? ` <span class="w-cmt" style="color:#f87171">⚠️ ${gb.gun} gün gecikti · ${esc(gb.neden)}</span>` : ""; })()}</div>
             <div class="w-r">${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme${sureTxt ? " · " + sureTxt : ""} · ${aracDurumHtml(r)}${r.aciklama ? ` <span style="color:#93c5fd">📝 ${esc(r.aciklama)}</span>` : ""}</div>
           </div>`;
         }).join("");
@@ -2060,7 +2060,6 @@ function renderDepoContent() {
       });
     }
     c.innerHTML = html;
-    return;
   }
     
   /* Operasyonel gecikme: REEL PLAN bugünün gerisinde kalan tamamlanmamışlar.
