@@ -792,3 +792,13 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 .icon-btn.tp.on { background:var(--green-soft); border-color:var(--green); }
 .icon-btn.tp:disabled { opacity:.35; cursor:default; }
 .icon-btn.tp:disabled:hover { background:none; }
+
+/* Depo overlay tek scroll + kart taşması düzeltmesi */
+html, body { overflow-x: hidden; }
+.depo-overlay { overflow-x: hidden; }
+.depo-head { max-width: 100%; }
+.depo-mini { flex-shrink: 0; }
+@media (max-width: 1100px) {
+  .depo-head { flex-direction: column; align-items: flex-start; }
+  .depo-right { align-items: flex-start; }
+}
