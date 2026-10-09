@@ -2120,7 +2120,7 @@ function renderDepoContent() {
       html += `<div class="depo-empty">Bu haftada tamamlanmış yükleme yok.</div>`;
     } else {
       gunler.forEach(iso => {
-        const gList = byDate.get(iso).sort((a, b) => String(a.musteri).localeCompare(String(b.musteri), "tr"));
+         const gList = byDate.get(iso).sort((a, b) => String(a.musteri).localeCompare(String(b.musteri), "tr"));
         const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
         const satirlar = gList.map(r => {
           const b = sureBilgi(r);
