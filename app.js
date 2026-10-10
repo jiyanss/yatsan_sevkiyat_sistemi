@@ -3613,6 +3613,18 @@ function haftaSonuISO(todayISOStr) {
   pazar.setDate(pazar.getDate() + (6 - ((d.getDay() + 6) % 7)));
   return isoFromDate(pazar);
 }
+
+/* Bugünden itibaren gelecek 7 gün (yarın → +7) ISO listesi */
+function sonraki7GunListesi(todayIso) {
+  const bas = new Date(parseLocalDate(todayIso));
+  bas.setDate(bas.getDate() + 1); /* yarından başla */
+  return [...Array(7)].map((_, i) => {
+    const d = new Date(bas);
+    d.setDate(d.getDate() + i);
+    return isoFromDate(d);
+  });
+}
+
 function opHaftaGunHtml(gunEtiketi, liste) {
   const toplamAd = liste.reduce((s, r) => s + adet(r), 0);
   const satirlar = liste.map(r => {
@@ -3632,9 +3644,16 @@ function opHaftaGunHtml(gunEtiketi, liste) {
   </div>`;
 }
 function renderOpHafta(res, today) {
+  const mod = res.dataset.opmod || "kalan";
   const kalanISO = haftaSonuISO(today);
-  const kalanlar = rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
-    gecikmeTarihi(r) > today && gecikmeTarihi(r) <= kalanISO);
+  let kalanlar;
+  if (mod === "yedi") {
+    const izin = new Set(sonraki7GunListesi(today));
+    kalanlar = rows.filter(r => r.durum !== "Yükleme Tamamlandı" && izin.has(gecikmeTarihi(r)));
+  } else {
+    kalanlar = rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
+      gecikmeTarihi(r) > today && gecikmeTarihi(r) <= kalanISO);
+  }
   const byDate = new Map();
   kalanlar.forEach(r => {
     const d = gecikmeTarihi(r);
@@ -3642,11 +3661,19 @@ function renderOpHafta(res, today) {
     byDate.get(d).push(r);
   });
   const gunIdx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
-  let html = `<div style="text-align:center;margin-bottom:10px">
-    <button class="btn" id="btnOpHaftaGeri">↩ Bugüne dön</button>
-  </div>`;
+  const kalanAd = kalanlar.reduce((s, r) => s + adet(r), 0);
+  const baslik = mod === "yedi"
+    ? `➡️ SONRAKİ 7 GÜN — ${kalanlar.length} kayıt / ${kalanAd} yükleme`
+    : `📅 BU HAFTANIN KALANI (Pazar ${formatDate(kalanISO)}'a kadar) — ${kalanlar.length} kayıt / ${kalanAd} yükleme`;
+  let html = `
+    <div style="text-align:center;margin-bottom:10px;font-weight:700;color:#e2e8f0">${baslik}</div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px">
+      <button class="btn ${mod === "kalan" ? "primary" : ""}" data-opmod="kalan">📅 Bu haftanın kalanı</button>
+      <button class="btn ${mod === "yedi" ? "primary" : ""}" data-opmod="yedi">➡️ Sonraki 7 gün</button>
+      <button class="btn" data-opmod="geri">↩ Bugüne dön</button>
+    </div>`;
   if (!kalanlar.length) {
-    html += `<div class="islem-done">📅 Bu haftanın kalanında planlı yükleme yok.</div>`;
+    html += `<div class="islem-done">${mod === "yedi" ? "Sonraki 7 günde planlı yükleme yok." : "📅 Bu haftanın kalanında planlı yükleme yok."}</div>`;
   } else {
     [...byDate.keys()].sort().forEach(d => {
       const dt = parseLocalDate(d);
@@ -3657,10 +3684,12 @@ function renderOpHafta(res, today) {
   res.innerHTML = html;
   res.querySelectorAll("[data-opid]").forEach(el =>
     el.addEventListener("click", () => openOpCard(el.dataset.opid)));
-  res.querySelector("#btnOpHaftaGeri").addEventListener("click", () => {
-    currentOpId = null;
-    renderOpResults("");
-  });
+  res.querySelectorAll("[data-opmod]").forEach(b =>
+    b.addEventListener("click", () => {
+      if (b.dataset.opmod === "geri") { currentOpId = null; renderOpResults(""); return; }
+      res.dataset.opmod = b.dataset.opmod;
+      renderOpHafta(res, today);
+    }));
 }
 function renderOpResults(q) {
   const res = document.getElementById("opResults");
@@ -3676,12 +3705,17 @@ function renderOpResults(q) {
       const kalanlar = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
         gecikmeTarihi(r) > today && gecikmeTarihi(r) <= kalanISO));
       const kalanAd = kalanlar.reduce((s2, r) => s2 + adet(r), 0);
+          const yediSet = new Set(sonraki7GunListesi(today));
+      const yediList = rows.filter(r => r.durum !== "Yükleme Tamamlandı" && yediSet.has(gecikmeTarihi(r)));
+      const yediAd = yediList.reduce((s, r) => s + adet(r), 0);
       res.innerHTML = `
         <div class="islem-done" style="margin-bottom:10px">🎉 Bugün (${formatDate(today)}) için bekleyen yükleme yok — gün tamam!</div>
-        <div style="text-align:center;margin-bottom:10px">
-          <button class="btn" id="btnOpHafta">📅 Haftanın kalanını göster (${kalanlar.length} kayıt / ${kalanAd} yükleme)</button>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn" id="btnOpHafta">📅 Haftanın kalanı (${kalanlar.length} kayıt / ${kalanAd} yükleme)</button>
+          <button class="btn" id="btnOpYedi">➡️ Sonraki 7 gün (${yediList.length} kayıt / ${yediAd} yükleme)</button>
         </div>`;
-      res.querySelector("#btnOpHafta").addEventListener("click", () => renderOpHafta(res, today));
+      res.querySelector("#btnOpHafta").addEventListener("click", () => { res.dataset.opmod = "kalan"; renderOpHafta(res, today); });
+      res.querySelector("#btnOpYedi").addEventListener("click", () => { res.dataset.opmod = "yedi"; renderOpHafta(res, today); });
       return;
     }
   } else hits = opMatches(s);
