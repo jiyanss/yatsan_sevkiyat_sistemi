@@ -3610,7 +3610,7 @@ function opHitHtml(r) {
 function haftaSonuISO(todayISOStr) {
   const d = parseLocalDate(todayISOStr);
   const pazar = new Date(d);
-  pazar.setDate(pazar.getDate() + (7 - ((d.getDay() + 6) % 7)));
+  pazar.setDate(pazar.getDate() + (6 - ((d.getDay() + 6) % 7)));
   return isoFromDate(pazar);
 }
 function opHaftaGunHtml(gunEtiketi, liste) {
