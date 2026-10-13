@@ -3569,7 +3569,6 @@ function openOperasyon() {
     }
   });
   renderOpResults("");
-  setTimeout(() => inp.focus(), 80);
   if (!currentUser) showLogin("Operasyon ekranı için giriş yapın.");
 }
 function closeOperasyon() {
