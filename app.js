@@ -2081,6 +2081,7 @@ function renderDepoContent() {
             <div class="w-m" style="min-width:260px"><b style="font-size:16px">${esc(r.musteri)}</b>
               <div style="margin-top:4px">${chips}</div>
               ${r.aciklama ? `<div class="di-note" title="${esc(r.aciklama)}">📝 ${esc(r.aciklama)}</div>` : ""}
+                            ${(Array.isArray(r.comments) && r.comments.length) ? `<div class="di-note d-cmt" title="${esc(r.comments.slice(-2).map(x => x.text).join(" · "))}">💬 ${esc(r.comments.slice(-2).map(x => x.text).join(" · "))}</div>` : ""}
             </div>
             <div class="w-r">${esc(r.sevkiyatTipi)} · <b style="font-size:16px;color:#e2e8f0">${esc(r.ad)}</b> yükleme · ${formatDate(iso)}</div>
           </div>`;
@@ -2136,6 +2137,7 @@ function renderDepoContent() {
             <div class="w-m" style="min-width:260px"><b style="font-size:16px">${esc(r.musteri)}</b>
               <div style="margin-top:4px">${chips}</div>
               ${r.aciklama ? `<div class="di-note" title="${esc(r.aciklama)}">📝 ${esc(r.aciklama)}</div>` : ""}
+              ${(Array.isArray(r.comments) && r.comments.length) ? `<div class="di-note d-cmt" title="${esc(r.comments.slice(-2).map(x => x.text).join(" · "))}">💬 ${esc(r.comments.slice(-2).map(x => x.text).join(" · "))}</div>` : ""}
             </div>
             <div class="w-r">${esc(r.sevkiyatTipi)} · <b style="font-size:16px;color:#e2e8f0">${esc(r.ad)}</b> yükleme · ${formatDate(iso)}</div>
           </div>`;
