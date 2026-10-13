@@ -2079,6 +2079,7 @@ function renderDepoContent() {
           const chips = [
             ekipler[r.ekip] ? ekipChipHtml(r.ekip) : "",
             tpTxt, sureTxt,
+            if (r._gecikenNotu) c.push(`<span class="di-chip di-bad">⚠ ${esc(r._gecikenNotu)}</span>`);
             r.araciGeldi === "GELDİ" ? `<span class="di-chip di-ok">🚛 Geldi</span>` : (r.araciGeldi ? `<span class="di-chip di-warn">🚛 Gelmedi</span>` : "")
           ].filter(Boolean).join(" ");
           return `<div class="depo-week-row" style="flex-wrap:wrap">
@@ -2172,7 +2173,11 @@ function renderDepoContent() {
   html += `<div class="depo-sec-title" style="color:#818cf8">🔵 BUGÜN BEKLİYOR (${bugun.reduce((s, r) => s + adet(r), 0)})</div>`;
   html += bugun.length ? bugun.map(r => depoItem(r, "d-blue", "bugün")).join("") : `<div class="depo-empty">Bugün için bekleyen yükleme yok.</div>`;
   html += `<div class="depo-sec-title" style="color:#f87171">🔴 GECİKEN (${geciken.reduce((s, r) => s + adet(r), 0)})</div>`;
-  html += geciken.length ? geciken.map(r => depoItem(r, "d-red", `${formatDate(dT(r))} · ⚠ ${opGecikme(r)} gün gecikti`)).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
+    html += geciken.length ? geciken.map(r => {
+    const gb = gecikmeBilgi(r);
+    r._gecikenNotu = `${opGecikme(r)} gün gecikti${gb.neden ? " · " + gb.neden : ""}`;
+    return depoItem(r, "d-red", formatDate(dT(r)));
+  }).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
   c.innerHTML = html;
 }
 setInterval(() => {
