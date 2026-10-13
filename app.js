@@ -2079,7 +2079,7 @@ function renderDepoContent() {
           const chips = [
             ekipler[r.ekip] ? ekipChipHtml(r.ekip) : "",
             tpTxt, sureTxt,
-            if (r._gecikenNotu) c.push(`<span class="di-chip di-bad">⚠ ${esc(r._gecikenNotu)}</span>`);
+            if (r._gecikenNotu) c.push(`<span class="di-chip di-bad">⚠ ${esc(r._gecikenNotu)}</span>`);{
             r.araciGeldi === "GELDİ" ? `<span class="di-chip di-ok">🚛 Geldi</span>` : (r.araciGeldi ? `<span class="di-chip di-warn">🚛 Gelmedi</span>` : "")
           ].filter(Boolean).join(" ");
           return `<div class="depo-week-row" style="flex-wrap:wrap">
