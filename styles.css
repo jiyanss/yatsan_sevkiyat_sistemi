@@ -714,7 +714,8 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 .depo-head { display:flex; align-items:center; gap:12px; flex-wrap:nowrap; margin-bottom:10px; }
 .depo-clock { font-size:28px; font-weight:800; letter-spacing:-0.02em; color:#818cf8; white-space:nowrap; }
 .depo-date { font-size:12px; color:#8aa0b8; margin:0; white-space:nowrap; }
-.depo-head .depo-tabs { margin:0; flex:1; flex-wrap:nowrap; }
+.depo-head .depo-tabs { align-items:center; }
+.depo-head .depo-tabs .btn { padding:10px 16px; font-size:14px; font-weight:700; border-radius:10px; }
 .depo-right { min-width:0; }
 .depo-mini  { max-width:360px; }
 .dm-row { display:flex; align-items:baseline; gap:10px; white-space:nowrap; }
