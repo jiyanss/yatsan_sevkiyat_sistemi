@@ -2032,13 +2032,9 @@ function gunEtiketi(iso) {
 }
 
 function renderDepoContent() {
-   renderDepoMini();
-  if (depoTab === "yilan" && document.getElementById("snakeCanvas")) return;
-  /* Başka sekmeye geçilirken oyun çalışıyorsa duraklat — durum saklanır */
-  if (depoTab !== "yilan" && snakeTimer) { stopSnake(); snakePaused = true; }
+  renderDepoMini();
   const today = todayISO();
   const d = new Date();
-  /* Depo ekranı tarihi: reel plan varsa o, yoksa planlanan tarih */
   const dT = r => r.reelPlan || r.planlananTarih || "";
   document.getElementById("depoClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   document.getElementById("depoDate").textContent =
@@ -2046,7 +2042,8 @@ function renderDepoContent() {
   const list = enriched(rows);
   const c = document.getElementById("depoContent");
 
-    if (depoTab === "kalan") {
+  /* ---- KALAN YÜKLEMELER ---- */
+  if (depoTab === "kalan") {
     const kalan = list.filter(r => {
       const t = dT(r);
       return t && t >= today && r.durum !== "Yükleme Tamamlandı";
@@ -2063,8 +2060,7 @@ function renderDepoContent() {
       html += `<div class="depo-empty">Kalan yükleme yok 🎉</div>`;
     } else {
       gunler.forEach(iso => {
-        const gList = byDate.get(iso).sort((a, b) =>
-          String(a.musteri).localeCompare(String(b.musteri), "tr"));
+        const gList = byDate.get(iso).sort((a, b) => String(a.musteri).localeCompare(String(b.musteri), "tr"));
         const toplamAd = gList.reduce((s, r) => s + adet(r), 0);
         const satirlar = gList.map(r => {
           const tpOn = r.toplamaBasTs && !r.toplamaBittiTs;
@@ -2079,7 +2075,6 @@ function renderDepoContent() {
           const chips = [
             ekipler[r.ekip] ? ekipChipHtml(r.ekip) : "",
             tpTxt, sureTxt,
-            if (r._gecikenNotu) c.push(`<span class="di-chip di-bad">⚠ ${esc(r._gecikenNotu)}</span>`);{
             r.araciGeldi === "GELDİ" ? `<span class="di-chip di-ok">🚛 Geldi</span>` : (r.araciGeldi ? `<span class="di-chip di-warn">🚛 Gelmedi</span>` : "")
           ].filter(Boolean).join(" ");
           return `<div class="depo-week-row" style="flex-wrap:wrap">
@@ -2100,7 +2095,8 @@ function renderDepoContent() {
     return;
   }
 
-    if (depoTab === "bitmis") {
+  /* ---- BİTMİŞ YÜKLEMELER ---- */
+  if (depoTab === "bitmis") {
     const thisWeek = getISOWeek(new Date());
     const bitmis = list.filter(r => {
       if (r.durum !== "Yükleme Tamamlandı") return false;
@@ -2153,10 +2149,8 @@ function renderDepoContent() {
     c.innerHTML = html;
     return;
   }
-    
-  /* Operasyonel gecikme: REEL PLAN bugünün gerisinde kalan tamamlanmamışlar.
-     Reel planı ileri çekilen kayıt burada GECİKEN görünmez —
-     gecikme notları zaten "Kalan Yüklemeler" sekmesinde gösteriliyor. */
+
+  /* ---- ANLIK DURUM (varsayılan) ---- */
   const opGecikme = r => {
     const t = dT(r);
     if (!t || r.durum === "Yükleme Tamamlandı") return 0;
@@ -2171,12 +2165,15 @@ function renderDepoContent() {
   html += `<div class="depo-sec-title" style="color:#fbbf24">🟠 ŞİMDİ YÜKLENİYOR (${yukleniyor.length})</div>`;
   html += yukleniyor.length ? yukleniyor.map(r => depoItem(r, "d-amber", formatDate(dT(r)))).join("") : `<div class="depo-empty">Şu an yükleme yok.</div>`;
   html += `<div class="depo-sec-title" style="color:#818cf8">🔵 BUGÜN BEKLİYOR (${bugun.reduce((s, r) => s + adet(r), 0)})</div>`;
-  html += bugun.length ? bugun.map(r => depoItem(r, "d-blue", "bugün")).join("") : `<div class="depo-empty">Bugün için bekleyen yükleme yok.</div>`;
+  html += bugun.length ? bugun.map(r => {
+    const rr = { ...r, _gecikenNotu: "" };
+    return depoItem(rr, "d-blue", "bugün");
+  }).join("") : `<div class="depo-empty">Bugün için bekleyen yükleme yok.</div>`;
   html += `<div class="depo-sec-title" style="color:#f87171">🔴 GECİKEN (${geciken.reduce((s, r) => s + adet(r), 0)})</div>`;
-    html += geciken.length ? geciken.map(r => {
+  html += geciken.length ? geciken.map(r => {
     const gb = gecikmeBilgi(r);
-    r._gecikenNotu = `${opGecikme(r)} gün gecikti${gb.neden ? " · " + gb.neden : ""}`;
-    return depoItem(r, "d-red", formatDate(dT(r)));
+    const rr = { ...r, _gecikenNotu: `${opGecikme(r)} gün gecikti${gb.neden ? " · " + gb.neden : ""}` };
+    return depoItem(rr, "d-red", formatDate(dT(r)));
   }).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
   c.innerHTML = html;
 }
