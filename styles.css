@@ -715,8 +715,8 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 .depo-clock { font-size:28px; font-weight:800; letter-spacing:-0.02em; color:#818cf8; white-space:nowrap; }
 .depo-date { font-size:12px; color:#8aa0b8; margin:0; white-space:nowrap; }
 .depo-head .depo-tabs { margin:0; flex:1; flex-wrap:nowrap; }
-.depo-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
-.depo-mini { background:#151f31; border:1px solid #2b3a52; border-radius:10px; padding:6px 12px; box-shadow:0 2px 10px rgba(0,0,0,.3); }
+.depo-right { min-width:0; }
+.depo-mini  { max-width:360px; }
 .dm-row { display:flex; align-items:baseline; gap:10px; white-space:nowrap; }
 .dm-week { font-size:11px; font-weight:800; color:#818cf8; letter-spacing:.05em; }
 .dm-nums2 { font-size:12px; color:#8aa0b8; }
@@ -725,7 +725,7 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 .dm-pct { font-size:15px; font-weight:800; color:#34d399; }
 .dm-bar { height:5px; border-radius:999px; background:#2b3a52; overflow:hidden; margin:4px 0; }
 .dm-bar-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#059669,#34d399); transition:width .4s ease; }
-.dm-tips { display:flex; gap:10px; flex-wrap:wrap; }
+.dm-tips { display:flex; flex-wrap:wrap; gap:6px 14px; }
 .dm-tip { font-size:10px; font-weight:700; color:#8aa0b8; white-space:nowrap; }
 .dm-tip b { color:#34d399; }
 .dm-empty { font-size:10px; color:#8aa0b8; font-style:italic; }
