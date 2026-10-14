@@ -800,6 +800,7 @@ async function load(withSpinner = true, live = false) {
     setSaveError("");
         if (live && prev.length >= 0) {
       const d = diffRows(prev, rows);
+      console.log("🔔 diff:", d.added, d.updated, d.deleted, "| events:", (d.events || []).length);
       /* 🔔 Diğer kullanıcıların işlemleri — toast + ding */
       (d.events || []).forEach(ev => {
         const ikon = { "tp-basla": "📦 başlattı", "tp-bitti": "📦 bitirdi",
