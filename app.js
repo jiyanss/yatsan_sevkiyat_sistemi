@@ -850,12 +850,16 @@ function liveReload() {
 function startLiveSync() {
   try {
     const es = new EventSource(`${FIREBASE_DB_URL}/${NODE}.json`);
+    window._sse = es;
+    es.onopen = () => console.info("🔔 SSE bağlı");
     es.onmessage = () => {
       clearTimeout(liveTimer);
       liveTimer = setTimeout(liveReload, 800);
     };
-    es.onerror = () => {};
-  } catch (e) {}
+    es.onerror = () => {
+      if (es.readyState === EventSource.CLOSED) console.warn("🔔 SSE kapandı");
+    };
+  } catch (e) { console.warn("SSE başlatılamadı:", e.message); }
 }
 
 /* ================= Tarih aralığı & filtre ================= */
