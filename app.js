@@ -796,6 +796,7 @@ async function load(withSpinner = true, live = false) {
   if (withSpinner) render();
   try {
     rows = await apiList();
+    if (live) console.log("🔔 canlı load:", prev.length, "→", rows.length, "| diff hazırlanıyor");
     setSaveError("");
         if (live && prev.length >= 0) {
       const d = diffRows(prev, rows);
