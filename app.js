@@ -743,8 +743,6 @@ function toastSiraIsle() {
 }
 /* 🔔 Ekran ortası bildirim — kuyruktan bağımsız, üst üste binmez (tek slot) */
 let centerTimer = null;
-/* 🔔 Ekran ortası bildirim — kuyruktan bağımsız, dokununca hemen kapanır */
-let centerTimer = null;
 function centerNotify(html, sure = 10000) {
   let el = document.getElementById("centerToast");
   if (!el) {
