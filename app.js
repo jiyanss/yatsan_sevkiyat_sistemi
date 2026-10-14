@@ -719,13 +719,27 @@ function loadPrefs() {
 
 /* ================= Yükle / hata / canlı bildirim ================= */
 let lastLocalOp = 0;
+/* 🔔 Toast kuyruğu — üst üste gelen bildirimler sırayla gösterilir */
 let toastTimer = null;
-function showToast(html) {
+const toastQueue = [];
+let toastGosteriliyor = false;
+
+function showToast(html, sure = 4500) {
+  toastQueue.push({ html, sure });
+  if (!toastGosteriliyor) toastSiraIsle();
+}
+function toastSiraIsle() {
+  const siradaki = toastQueue.shift();
+  if (!siradaki) { toastGosteriliyor = false; return; }
+  toastGosteriliyor = true;
   const t = document.getElementById("toast");
-  t.innerHTML = html;
+  t.innerHTML = siradaki.html;
   t.classList.remove("hidden");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.add("hidden"), 4500);
+  toastTimer = setTimeout(() => {
+    t.classList.add("hidden");
+    /* Küçük boşluk bırak — üst üste binme hissi olmasın */
+    setTimeout(toastSiraIsle, 300);
+  }, siradaki.sure);
 }
 /* 📊 Alan bazlı diff — başka kullanıcıların anlamlı işlemlerini yakalar */
 function diffRows(prev, next) {
@@ -789,7 +803,7 @@ async function load(withSpinner = true, live = false) {
       (d.events || []).forEach(ev => {
         const ikon = { "tp-basla": "📦 başlattı", "tp-bitti": "📦 bitirdi",
                        "basladi": "▶️ yüklemeye başladı", "bitti": "✅ tamamladı", "yorum": "💬 yorum ekledi" }[ev.olay] || "";
-        showToast(`🔔 <b>${esc(ev.kim)}</b> · ${esc(ev.musteri)}:<br>${ikon}${ev.detay ? " — " + esc(ev.detay) : ""}`);
+        showToast(`🔔 <b>${esc(ev.kim)}</b> · ${esc(ev.musteri)}:<br>${ikon}${ev.detay ? " — " + esc(ev.detay) : ""}`, 5000);
         bildirimDing();
       });
       /* Sayısal özet — yalnız bildirim YOKSA göster (gürültüyü azalt) */
