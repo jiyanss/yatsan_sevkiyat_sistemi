@@ -741,7 +741,7 @@ function toastSiraIsle() {
     setTimeout(toastSiraIsle, 300);
   }, siradaki.sure);
 }
-/* 🔔 Ekran ortası bildirim — kuyruktan bağımsız, üst üste binmez (tek slot) */
+/* 🔔 Ekran ortası bildirim — kuyruktan bağımsız, dokununca hemen kapanır */
 let centerTimer = null;
 function centerNotify(html, sure = 10000) {
   let el = document.getElementById("centerToast");
