@@ -2990,20 +2990,31 @@ function loadQuizQuestions() {
     .then(data => data ? Object.entries(data).map(([id, v]) => ({ id, ...(v || {}) })) : []);
 }
 /* 🔔 Bildirim ding sesi — quiz sndOk'tan bağımsız, kısa ve yumuşak */
+/* 🔔 Bildirim ding sesi — tek AudioContext, mobil uyumlu */
+let _audioCtx = null;
 function bildirimDing() {
   try {
-    const a = new (window.AudioContext || window.webkitAudioContext)();
-    const o = a.createOscillator(), g = a.createGain();
-    o.connect(g); g.connect(a.destination);
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_audioCtx.state === "suspended") _audioCtx.resume();
+    const o = _audioCtx.createOscillator(), g = _audioCtx.createGain();
+    o.connect(g); g.connect(_audioCtx.destination);
     o.type = "sine";
-    o.frequency.setValueAtTime(880, a.currentTime);
-    o.frequency.setValueAtTime(1320, a.currentTime + 0.08);
-    g.gain.setValueAtTime(0.001, a.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.12, a.currentTime + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.35);
-    o.start(); o.stop(a.currentTime + 0.4);
+    o.frequency.setValueAtTime(880, _audioCtx.currentTime);
+    o.frequency.setValueAtTime(1320, _audioCtx.currentTime + 0.08);
+    g.gain.setValueAtTime(0.001, _audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.12, _audioCtx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.35);
+    o.start(); o.stop(_audioCtx.currentTime + 0.4);
   } catch (e) {}
 }
+/* İlk kullanıcı etkileşiminde ses motorunu aç (mobil/iOS unlock) */
+["click", "touchstart", "keydown"].forEach(ev =>
+  document.addEventListener(ev, () => {
+    try {
+      if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (_audioCtx.state === "suspended") _audioCtx.resume();
+    } catch (e) {}
+  }, { passive: true }));
 
 function sndOk() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .08; o.start(); o.stop(a.currentTime + .12); } catch (e) {} }
 function sndErr() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.type = "square"; o.frequency.value = 160; g.gain.value = .06; o.start(); o.stop(a.currentTime + .2); } catch (e) {} }
