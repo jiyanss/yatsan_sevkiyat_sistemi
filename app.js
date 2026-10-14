@@ -743,15 +743,21 @@ function toastSiraIsle() {
 }
 /* 🔔 Ekran ortası bildirim — kuyruktan bağımsız, üst üste binmez (tek slot) */
 let centerTimer = null;
-function centerNotify(html, sure = 5000) {
+/* 🔔 Ekran ortası bildirim — kuyruktan bağımsız, dokununca hemen kapanır */
+let centerTimer = null;
+function centerNotify(html, sure = 10000) {
   let el = document.getElementById("centerToast");
   if (!el) {
     el = document.createElement("div");
     el.id = "centerToast";
     el.className = "toast center-toast";
     document.body.appendChild(el);
+    el.addEventListener("click", () => {
+      clearTimeout(centerTimer);
+      el.classList.add("hidden");
+    });
   }
-  el.innerHTML = html;
+  el.innerHTML = html + `<div style="font-size:10px;opacity:.55;margin-top:8px">kapatmak için dokunun</div>`;
   el.classList.remove("hidden");
   clearTimeout(centerTimer);
   centerTimer = setTimeout(() => el.classList.add("hidden"), sure);
@@ -822,7 +828,7 @@ async function load(withSpinner = true, live = false) {
         const ikon = { "tp-basla": "📦 başlattı", "tp-bitti": "📦 bitirdi",
                        "basladi": "▶️ yüklemeye başladı", "bitti": "✅ tamamladı", "yorum": "💬 yorum ekledi" }[ev.olay] || "";
                 /* 🔔 Bildirim — ekran ortası, 5 sn */
-        centerNotify(`🔔 <b>${esc(ev.kim)}</b> · ${esc(ev.musteri)}:<br>${ikon}${ev.detay ? " — " + esc(ev.detay) : ""}`, 5000);
+        centerNotify(`🔔 <b>${esc(ev.kim)}</b> · ${esc(ev.musteri)}:<br>${ikon}${ev.detay ? " — " + esc(ev.detay) : ""}`, 10000);
         bildirimDing();
       });
       /* Sayısal özet — yalnız bildirim YOKSA göster (gürültüyü azalt) */
