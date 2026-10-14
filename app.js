@@ -5708,7 +5708,7 @@ setInterval(() => {
   if (document.hidden || addingInline || editingCell) return;
   if (!document.getElementById("importModal").classList.contains("hidden")) return;
   if (Date.now() - lastLocalOp < 5000) return;
-  load(false);
+  load(false, true);
 }, 30000);
 
 /* ⏱️ Kronometre tick */
