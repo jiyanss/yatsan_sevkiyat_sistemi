@@ -727,17 +727,55 @@ function showToast(html) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.add("hidden"), 4500);
 }
+/* 📊 Alan bazlı diff — başka kullanıcıların anlamlı işlemlerini yakalar */
 function diffRows(prev, next) {
-  const pm = new Map(prev.map(r => [r.id, JSON.stringify(toDb(r))]));
+  const pm = new Map(prev.map(r => [r.id, r]));
   let added = 0, updated = 0, deleted = 0;
+  const events = [];
+  const KIMLIK = r => r.updatedBy || "";
   next.forEach(r => {
-    const s = JSON.stringify(toDb(r));
-    if (!pm.has(r.id)) added++;
-    else if (pm.get(r.id) !== s) updated++;
-    pm.delete(r.id);
+    const eski = pm.get(r.id);
+    if (!eski) { added++; return; }
+    const eskiS = JSON.stringify(toDb(eski));
+    const yeniS = JSON.stringify(toDb(r));
+    if (eskiS !== sifirToNull(eskiS, yeniS)) { /* placeholder asla true olmaz */ }
+    if (eskiS !== yeniS) updated++;
+    const yapan = KIMLIK(r);
+    if (!yapan) return;
+    /* Yorum eklendi mi? (son yorum ts'i değişti ve yorum sayısı arttı) */
+    const eskiC = Array.isArray(eski.comments) ? eski.comments : [];
+    const yeniC = Array.isArray(r.comments) ? r.comments : [];
+    if (yeniC.length > eskiC.length) {
+      const son = yeniC[yeniC.length - 1];
+      if (son && son.user && son.user !== (currentUser && currentUser.email)) {
+        events.push({ ts: Date.now(), musteri: r.musteri, olay: "yorum",
+          kim: shortUser(son.user), detay: son.text.length > 60 ? son.text.slice(0, 60) + "…" : son.text });
+      }
+    }
+    /* Her olay türü: değer değiştiyse VE yapan ben değilsem bildir */
+    const benYapmadi = yapan !== (currentUser && currentUser.email);
+    if (!benYapmadi) return;
+    if (!eski.toplamaBasTs && r.toplamaBasTs)
+      events.push({ ts: Date.now(), musteri: r.musteri, olay: "tp-basla", kim: shortUser(yapan),
+        detay: fmtTime(r.toplamaBasTs) + "'dan beri" + (r.ekip && ekipler[r.ekip] ? " · " + ekipAd(r.ekip) : "") });
+    else if (!eski.toplamaBittiTs && r.toplamaBittiTs)
+      events.push({ ts: Date.now(), musteri: r.musteri, olay: "tp-bitti", kim: shortUser(yapan),
+        detay: fmtTime(r.toplamaBittiTs) + " · " + fmtSure(r.toplamaBittiTs - (r.toplamaBasTs || eski.toplamaBasTs || r.toplamaBittiTs)) });
+    if (eski.durum !== r.durum) {
+      if (r.durum === "Yükleniyor")
+        events.push({ ts: Date.now(), musteri: r.musteri, olay: "basladi", kim: shortUser(yapan),
+          detay: fmtTime(r.loadingStartedAt) + "'da başladı" });
+      else if (r.durum === "Yükleme Tamamlandı")
+        events.push({ ts: Date.now(), musteri: r.musteri, olay: "bitti", kim: shortUser(yapan),
+          detay: (r.loadingStartedAt && r.loadingEndedAt) ? fmtSure(r.loadingEndedAt - r.loadingStartedAt) : "tamamlandı" });
+    }
   });
-  return { added, updated, deleted: pm.size };
+  deleted = [...pm.keys()].filter(id => !next.find(r => r.id === id)).length;
+  return { added, updated, deleted, events };
 }
+/* yardımcı gereksizse silinebilir — kod berraklığı için boş bırakıldı */
+
+function sifirToNull(a, b) { return a; }
 async function load(withSpinner = true, live = false) {
   const prev = rows;
   loading = withSpinner;
@@ -745,13 +783,23 @@ async function load(withSpinner = true, live = false) {
   try {
     rows = await apiList();
     setSaveError("");
-    if (live && prev.length >= 0) {
+        if (live && prev.length >= 0) {
       const d = diffRows(prev, rows);
-      const parts = [];
-      if (d.added) parts.push(`➕ ${d.added} yeni kayıt`);
-      if (d.updated) parts.push(`✏️ ${d.updated} güncellendi`);
-      if (d.deleted) parts.push(`🗑️ ${d.deleted} silindi`);
-      if (parts.length) showToast("🔄 Ekip değişikliği algılandı:<br><b>" + parts.join(" · ") + "</b>");
+      /* 🔔 Diğer kullanıcıların işlemleri — toast + ding */
+      (d.events || []).forEach(ev => {
+        const ikon = { "tp-basla": "📦 başlattı", "tp-bitti": "📦 bitirdi",
+                       "basladi": "▶️ yüklemeye başladı", "bitti": "✅ tamamladı", "yorum": "💬 yorum ekledi" }[ev.olay] || "";
+        showToast(`🔔 <b>${esc(ev.kim)}</b> · ${esc(ev.musteri)}:<br>${ikon}${ev.detay ? " — " + esc(ev.detay) : ""}`);
+        bildirimDing();
+      });
+      /* Sayısal özet — yalnız bildirim YOKSA göster (gürültüyü azalt) */
+      if (!(d.events || []).length) {
+        const parts = [];
+        if (d.added) parts.push(`➕ ${d.added} yeni kayıt`);
+        if (d.updated) parts.push(`✏️ ${d.updated} güncellendi`);
+        if (d.deleted) parts.push(`🗑️ ${d.deleted} silindi`);
+        if (parts.length) showToast("🔄 Ekip değişikliği algılandı:<br><b>" + parts.join(" · ") + "</b>");
+      }
     }
     const ids = new Set(rows.map(r => r.id));
     [...selectedIds].forEach(id => { if (!ids.has(id)) selectedIds.delete(id); });
@@ -2904,6 +2952,22 @@ function loadQuizQuestions() {
   return fetch(`${FIREBASE_DB_URL}/${QUIZ_NODE}.json`).then(r => r.json())
     .then(data => data ? Object.entries(data).map(([id, v]) => ({ id, ...(v || {}) })) : []);
 }
+/* 🔔 Bildirim ding sesi — quiz sndOk'tan bağımsız, kısa ve yumuşak */
+function bildirimDing() {
+  try {
+    const a = new (window.AudioContext || window.webkitAudioContext)();
+    const o = a.createOscillator(), g = a.createGain();
+    o.connect(g); g.connect(a.destination);
+    o.type = "sine";
+    o.frequency.setValueAtTime(880, a.currentTime);
+    o.frequency.setValueAtTime(1320, a.currentTime + 0.08);
+    g.gain.setValueAtTime(0.001, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.12, a.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.35);
+    o.start(); o.stop(a.currentTime + 0.4);
+  } catch (e) {}
+}
+
 function sndOk() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .08; o.start(); o.stop(a.currentTime + .12); } catch (e) {} }
 function sndErr() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.type = "square"; o.frequency.value = 160; g.gain.value = .06; o.start(); o.stop(a.currentTime + .2); } catch (e) {} }
 
