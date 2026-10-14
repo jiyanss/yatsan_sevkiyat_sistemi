@@ -834,3 +834,15 @@ html, body { overflow-x: hidden; }
   .depo-mini  { width: 100%; max-width: none; }
   .dm-tips    { gap: 4px 12px; }
 }
+
+/* 🔔 Ekran ortası büyük bildirim */
+.toast-m.center-toast {
+  top: 50%; left: 50%; bottom: auto; right: auto;
+  transform: translate(-50%, -50%);
+  max-width: 460px; width: calc(100% - 40px);
+  font-size: 14px; padding: 16px 20px;
+  border: 1px solid #818cf8; box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  animation: centerPop .25s ease-out;
+  z-index: 100;
+}
+@keyframes centerPop { from { transform: translate(-50%,-50%) scale(.9); opacity:0; } to { transform: translate(-50%,-50%) scale(1); opacity:1; } }
