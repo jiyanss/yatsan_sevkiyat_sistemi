@@ -851,3 +851,6 @@ html, body { overflow-x: hidden; }
 }
 /* Sağ alttaki sistem toast'ları da depo modunda görünsün */
 #toast { z-index: 97; }
+
+.islem-btn:disabled { opacity: .45; cursor: default; }
+.islem-btn:disabled:hover { filter: none; transform: none; }
