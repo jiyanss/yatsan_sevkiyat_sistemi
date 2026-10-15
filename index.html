@@ -123,6 +123,30 @@
   <p class="hint" style="margin-top:8px">💡 <b>Varsayılan sıralama:</b> 1) Durum (Yükleniyor her zaman en üstte → Bekliyor → Tamamlandı) → her grupta ⭐ öncelik no → Reel Plan (eski → yeni) → eşitse Planlanan (eski → yeni) → Müşteri.<b>Hafta/Ay</b> reel plan tarihinden hesaplanır; <b>Planlanan tarih</b> girilince Reel Plan otomatik eşitlenir. Başlığa tıklayarak değiştir (3. tık: varsayılana dön). Hücreye tıkla → değiştir → <b>Enter</b>. <b>Gerçekleşen tarih</b> otomatik yazılır. <b>🔄 rozeti</b> kaydın son güncellenme zamanını gösterir. <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt. <b>💬</b> yorum butonu satırın sağında. <b>📅 Takvim</b>'de çipleri sürükle. Müşteri adına tıkla → <b>kart</b>. İlk kolonun kutuları ile <b>toplu düzenleme</b>.</p>
 </main>
 
+  <div id="reportModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>📊 Yönetim Raporu</h2>
+
+    <div class="rpt-filter" id="rptFilter">
+      ... (tarih / müşteri / arşiv checkbox) ...
+    </div>
+
+    <div class="rtabs">
+      ... 7 sekme butonu (genel, analiz, kapasite, sure, detay, arsiv, ekip) ...
+    </div>
+
+    <div id="reportPaneGenel" class="rpane"></div>
+    <div id="reportPaneAnaliz" class="rpane hidden"></div>
+    <div id="reportPaneKapasite" class="rpane hidden"></div>
+    <div id="reportPaneSure" class="rpane hidden"></div>
+    <div id="reportPaneDetay" class="rpane hidden"></div>
+    <div id="reportPaneArsiv" class="rpane hidden"></div>
+    <div id="reportPaneEkip" class="rpane hidden"></div>
+
+    <div class="modal-actions"><button class="btn" id="btnCloseReport">Kapat</button></div>
+  </div>
+</div>
+
 <div id="cellEditor" class="hidden"></div>
 
 <datalist id="musteri-list"></datalist>
