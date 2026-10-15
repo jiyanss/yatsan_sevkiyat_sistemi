@@ -854,3 +854,14 @@ html, body { overflow-x: hidden; }
 
 .islem-btn:disabled { opacity: .45; cursor: default; }
 .islem-btn:disabled:hover { filter: none; transform: none; }
+
+/* 📊 Rapor içi filtre çubuğu */
+.rpt-filter {
+  display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+  padding:8px 12px; margin-bottom:14px;
+  background:var(--bg); border:1px solid var(--border); border-radius:10px;
+}
+.rpt-filter label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--muted); }
+.rpt-filter select { padding:5px 8px; font-size:12px; }
+.rpt-arsiv-chk { cursor:pointer; }
+.rpt-arsiv-chk input { accent-color:var(--primary); margin:0; }
