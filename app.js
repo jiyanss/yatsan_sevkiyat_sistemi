@@ -5383,35 +5383,36 @@ async function raporHavuz() {
   return list;
 }
 let _rptBusy = false;
+let _rptBusy = false;
 async function buildReports() {
-  if (_rptBusy) { console.info("rapor zaten çiziliyor — atlandı"); return; }
+  if (_rptBusy) { console.info("📊 Rapor zaten çiziliyor — istek atlandı"); return; }
   _rptBusy = true;
   try {
-    /* ...mevcut gövdenin TAMAMI try içine... */
+    destroyCharts();
+    const list = await raporHavuz();
+    const sel = document.getElementById("rptMusteri");
+    const onceki = sel.value;
+    const musler = [...new Set(list.map(r => r.musteri).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr"));
+    sel.innerHTML = `<option value="">Tüm müşteriler</option>` +
+      musler.map(m => `<option value="${esc(m)}" ${m === onceki ? "selected" : ""}>${esc(m)}</option>`).join("");
+    const emptyMsg = `<p class="hint">Seçilen filtre/değer aralığında kayıt yok — filtreleri gevşetin.</p>`;
+    ["reportPaneGenel","reportPaneAnaliz","reportPaneDetay"].forEach(id => {
+      document.getElementById(id).innerHTML = list.length ? "" : emptyMsg;
+    });
+    ["reportPaneKapasite","reportPaneSure","reportPaneArsiv","reportPaneEkip"].forEach(id => {
+      document.getElementById(id).innerHTML = "";
+    });
+    if (!list.length) return;
+    buildGenel(list);
+    buildAnaliz(list);
+    buildDetay(list);
+    switchReportTab(activeReportTab);
+  } catch (e) {
+    console.error("Rapor çizim hatası:", e);
+    showToast("⚠️ Rapor hatası: " + e.message);
   } finally {
     _rptBusy = false;
   }
-}
-  destroyCharts();
-  const list = await raporHavuz();
-  /* Müşteri seçeneklerini tazele (havuzdan) */
-  const sel = document.getElementById("rptMusteri");
-  const onceki = sel.value;
-  const musler = [...new Set(list.map(r => r.musteri).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr"));
-  sel.innerHTML = `<option value="">Tüm müşteriler</option>` +
-    musler.map(m => `<option value="${esc(m)}" ${m === onceki ? "selected" : ""}>${esc(m)}</option>`).join("");
-  const emptyMsg = `<p class="hint">Seçilen filtre/değer aralığında kayıt yok — filtreleri gevşetin.</p>`;
-  ["reportPaneGenel","reportPaneAnaliz","reportPaneDetay"].forEach(id => {
-    document.getElementById(id).innerHTML = list.length ? "" : emptyMsg;
-  });
-  ["reportPaneKapasite","reportPaneSure","reportPaneArsiv","reportPaneEkip"].forEach(id => {
-    document.getElementById(id).innerHTML = "";
-  });
-  if (!list.length) return;
-  buildGenel(list);
-  buildAnaliz(list);
-  buildDetay(list);
-  switchReportTab(activeReportTab);
 }
 async function switchReportTab(tab) {
   activeReportTab = tab;
@@ -5457,14 +5458,10 @@ document.getElementById("reportModal").addEventListener("click", e => {
   document.getElementById(id).addEventListener("change", buildReports));
 document.getElementById("rptArsiv").addEventListener("change", async e => {
   const cb = e.target;
-  cb.disabled = true;                       /* çift tetiklenmeyi engelle */
+  cb.disabled = true;
   try {
-    if (cb.checked) {
-      if (!Array.isArray(rptArsivPool)) {
-        cb.parentElement && (cb.parentElement.style.opacity = ".5");
-        rptArsivPool = (await fetchArsiv()).map(r => ({ ...r, _arsiv: true }));
-        cb.parentElement && (cb.parentElement.style.opacity = "");
-      }
+    if (cb.checked && !Array.isArray(rptArsivPool)) {
+      rptArsivPool = (await fetchArsiv()).map(r => ({ ...r, _arsiv: true }));
     }
     await buildReports();
   } catch (err) {
@@ -5472,6 +5469,7 @@ document.getElementById("rptArsiv").addEventListener("change", async e => {
   }
   cb.disabled = false;
 });
+   
   rptArsivPool = null;   /* arşiv havuzunu tazele */
   buildReports();
 });
