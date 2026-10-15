@@ -5383,7 +5383,6 @@ async function raporHavuz() {
   return list;
 }
 let _rptBusy = false;
-let _rptBusy = false;
 async function buildReports() {
   if (_rptBusy) { console.info("📊 Rapor zaten çiziliyor — istek atlandı"); return; }
   _rptBusy = true;
