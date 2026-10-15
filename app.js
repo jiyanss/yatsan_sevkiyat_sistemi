@@ -5352,7 +5352,9 @@ function buildDetay(list) {
 let rptArsivPool = null;   /* oturum başına bir kez çekilir */
 async function raporHavuz() {
   let list = enriched(rows);
-    if (arsivOn) {
+  /* 🗄️ Arşiv dahil — checkbox işaretliyse arşiv havuzunu birleştir */
+  const arsivOn = document.getElementById("rptArsiv") ? document.getElementById("rptArsiv").checked : false;
+  if (arsivOn) {
     if (!Array.isArray(rptArsivPool)) {
       try { rptArsivPool = (await fetchArsiv()).map(r => ({ ...r, _arsiv: true })); }
       catch (e) { rptArsivPool = []; showToast("⚠️ Arşiv yüklenemedi: " + e.message); }
@@ -5360,13 +5362,14 @@ async function raporHavuz() {
     const ids = new Set(list.map(r => r.id));
     list = list.concat(rptArsivPool.filter(r => !ids.has(r.id)));
   }
-  /* Müşteri filtresi */
-  const mus = document.getElementById("rptMusteri").value.trim().toLowerCase();
+  /* 👤 Müşteri filtresi */
+  const musEl = document.getElementById("rptMusteri");
+  const mus = musEl ? musEl.value.trim().toLowerCase() : "";
   if (mus) list = list.filter(r => (r.musteri || "").toLowerCase().includes(mus));
-  /* Tarih filtresi — planlanan üzerinden (rapor = plan perspektifi) */
-  const mod = document.getElementById("rptTarih").value;
+  /* 📅 Tarih filtresi — planlanan üzerinden */
+  const tEl = document.getElementById("rptTarih");
+  const mod = tEl ? tEl.value : "all";
   if (mod !== "all") {
-    const bugun = todayISO();
     let from = "";
     if (mod === "week") {
       const d = new Date();
@@ -5377,7 +5380,8 @@ async function raporHavuz() {
     else if (mod === "d30") { const d = new Date(); d.setDate(d.getDate() - 29); from = isoFromDate(d); }
     else if (mod === "d90") { const d = new Date(); d.setDate(d.getDate() - 89); from = isoFromDate(d); }
     else if (mod === "year") from = new Date().getFullYear() + "-01-01";
-    list = list.filter(r => (r.planlananTarih || "") >= from && (r.planlananTarih || "") <= (mod === "lastmonth" ? monthBounds(-1).to : "9999-12-31"));
+    const to = (mod === "lastmonth") ? monthBounds(-1).to : "9999-12-31";
+    list = list.filter(r => (r.planlananTarih || "") >= from && (r.planlananTarih || "") <= to);
   }
   return list;
 }
