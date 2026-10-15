@@ -6298,7 +6298,9 @@ document.addEventListener("keydown", e => {
   const b = document.getElementById("btnReports");
   if (!b) { console.warn("⚠️ btnReports HTML'de yok"); return; }
   b.addEventListener("click", () => {
-    document.getElementById("reportModal").classList.remove("hidden");
+    const m = document.getElementById("reportModal");
+    if (!m) { alert("⚠️ Rapor penceresi HTML'de bulunamadı — index.html'de reportModal div'ini kontrol edin."); return; }
+    m.classList.remove("hidden");
     buildReports();
   });
   console.info("✅ Rapor butonu bağlandı");
