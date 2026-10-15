@@ -5384,7 +5384,6 @@ async function raporHavuz() {
 }
 async function buildReports() {
    let _rptBusy = false;
-async function buildReports() {
   if (_rptBusy) { console.info("rapor zaten çiziliyor — atlandı"); return; }
   _rptBusy = true;
   try {
