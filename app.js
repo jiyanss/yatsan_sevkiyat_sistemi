@@ -4734,6 +4734,7 @@ function sapmaAnalizi(list) {
 }
 function sapmaTable(az) {
   const rowsHtml = [...az.musteri.entries()]
+     .filter(([k, g]) => (g.toplam / g.n) !== 0)   /* 0 sapmalıları tablodan çıkar */
     .sort((a, b) => b[1].toplam / b[1].n - a[1].toplam / a[1].n)
     .map(([k, g]) => {
       const ort = g.toplam / g.n;
@@ -4802,9 +4803,9 @@ function sureTable(az) {
         <td class="center">%${(az.asimli / az.n * 100).toFixed(0)}</td></tr></tfoot>
     </table></div></div>`;
 }
-function haftaData() {
+function haftaData(list = null) {
   const haftaMap = new Map();
-  enriched(rows).forEach(r => {
+  enriched(list || rows).forEach(r => {
     if (r.hafta === "-") return;
     if (!haftaMap.has(r.hafta)) haftaMap.set(r.hafta, { ad: 0, tamam: 0 });
     const g = haftaMap.get(r.hafta);
@@ -5057,21 +5058,42 @@ function gecikmeNedenTable() {
 function buildAnaliz(list) {
   const { textColor, gridColor } = chartBase();
   const az = sapmaAnalizi(list);
+  const buHafta = getISOWeek(new Date());
+
+  /* 📋 Son 4 hafta özet bantı (rapor filtre havuzundan) */
+  const { haftaMap: hm4, haftalar: hl4 } = haftaData(list);
+  const son4 = hl4.filter(h => h >= buHafta - 3 && h < buHafta);
+  const t4Ad = son4.reduce((s, h) => s + (hm4.get(h)?.ad || 0), 0);
+  const t4Tam = son4.reduce((s, h) => s + (hm4.get(h)?.tamam || 0), 0);
+  const ozetBant = `<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">
+    <div class="kpi c-primary"><div class="kpi-head">📊 Son 4 hafta ortalaması</div>
+      <div class="kpi-val" style="font-size:20px">${son4.length ? fmtN(t4Ad / son4.length) : "—"} yükleme/hafta</div>
+      <div class="kpi-sub">${fmtN(t4Ad)} yükleme · ${son4.length} hafta</div></div>
+    <div class="kpi c-green"><div class="kpi-head">✅ Son 4 hafta tamamlanma</div>
+      <div class="kpi-val" style="font-size:20px">%${t4Ad ? (t4Tam / t4Ad * 100).toFixed(1) : "—"}</div>
+      <div class="kpi-sub">${fmtN(t4Tam)} / ${fmtN(t4Ad)} yükleme</div></div>
+    <div class="kpi c-amber"><div class="kpi-head">🗓️ Genel plan sapması</div>
+      <div class="kpi-val" style="font-size:20px">${az ? fmtSapma(az.ort) + " gün" : "—"}</div>
+      <div class="kpi-sub">${az ? az.n + " tamamlanmış yükleme · zamanında %" + (az.zamaninda / az.n * 100).toFixed(0) : "veri yok"}</div></div>
+  </div>`;
+
   const chartBlock = (typeof Chart === "undefined")
     ? `<p class="hint">⚠️ Grafik kütüphanesi (CDN) yüklenemedi.</p>`
     : `<div class="chart-grid">
-         <div class="chart-box wide"><h3>📈 Haftalık yükleme hacmi & tamamlanma oranı (son 8 hafta · reel plana göre)</h3><div class="chart-holder"><canvas id="chKarma"></canvas></div></div>
-         ${az ? `<div class="chart-box wide"><h3>🗓️ Müşteri bazlı ortalama plan sapması (gün)</h3><div class="chart-holder tall"><canvas id="chSapma"></canvas></div></div>` : ""}
+         <div class="chart-box wide"><h3>📈 Haftalık yükleme hacmi & tamamlanma oranı (son 8 hafta · çizgi yalnız kapanmış haftalarda · hedef %80)</h3><div class="chart-holder"><canvas id="chKarma"></canvas></div></div>
+         ${az ? `<div class="chart-box wide"><h3>🗓️ Müşteri bazlı ortalama plan sapması (gün · sıfır sapmalılar hariç)</h3><div class="chart-holder tall"><canvas id="chSapma"></canvas></div></div>` : ""}
       </div>` +
         gecikmeNedenTable() +
     (az ? sapmaTable(az) : `<p class="hint">🗓️ Sapma analizi için henüz tamamlanmış (gerçekleşen tarihi dolu) kayıt yok.</p>`);
-  document.getElementById("reportPaneAnaliz").innerHTML = chartBlock;
+  document.getElementById("reportPaneAnaliz").innerHTML = ozetBant + chartBlock;
   if (typeof Chart === "undefined") return;
 
-  const { haftaMap, haftalar } = haftaData();
+  const { haftaMap, haftalar } = haftaData(list);
+  /* Çizgi yalnız KAPANMIŞ haftalarda — aktif hafta boş bırakılır (grafik yıkmaz) */
   const oranlar = haftalar.map(h => {
+    if (h >= buHafta) return null;
     const g = haftaMap.get(h);
-    return g.ad ? +(g.tamam / g.ad * 100).toFixed(1) : 0;
+    return g.ad ? +(g.tamam / g.ad * 100).toFixed(1) : null;
   });
   const kCtx = document.getElementById("chKarma").getContext("2d");
   chartInstances.push(new Chart(kCtx, {
@@ -5092,9 +5114,17 @@ function buildAnaliz(list) {
         {
           type: "line", label: "Tamamlanma oranı %", yAxisID: "y1",
           data: oranlar,
+          spanGaps: false,
           borderColor: "#dc2626", backgroundColor: "#dc2626",
-          borderWidth: 2.5, tension: .35, pointRadius: 4, pointHoverRadius: 6,
-          pointBackgroundColor: "#fff", pointBorderColor: "#dc2626", pointBorderWidth: 2
+          borderWidth: 2.5, tension: .3, pointRadius: 4, pointHoverRadius: 6,
+          pointBackgroundColor: c => c.raw == null ? "transparent" : "#fff",
+          pointBorderColor: "#dc2626", pointBorderWidth: 2
+        },
+        {
+          type: "line", label: "Hedef %80", yAxisID: "y1",
+          data: haftalar.map(() => 80),
+          borderColor: "#94a3b8", borderWidth: 1.5, borderDash: [6, 5],
+          pointRadius: 0, datalabels: { display: false }
         }
       ]
     },
@@ -5102,14 +5132,17 @@ function buildAnaliz(list) {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, padding: 14, font: { size: 11 } } },
-        datalabels: { display: c => c.dataset.type === "line" && c.dataset.data[c.dataIndex] !== null,
+        legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, padding: 14, font: { size: 11 } },
+          filter: item => item.text !== "Hedef %80" },
+        datalabels: { display: c => c.dataset.type === "line" && c.dataset.label !== "Hedef %80" && c.dataset.data[c.dataIndex] !== null,
           align: "top", color: "#dc2626", font: { weight: "700", size: 10.5 },
-          formatter: v => "%" + v },
+          formatter: v => v == null ? "" : "%" + v },
         tooltip: { callbacks: {
-          label: c => c.dataset.yAxisID === "y1"
-            ? ` Tamamlanma: %${c.parsed.y}`
-            : ` ${c.dataset.label}: ${fmtN(c.parsed.y)} yükleme`
+          label: c => {
+            if (c.dataset.label === "Hedef %80") return ` Hedef: %80`;
+            if (c.dataset.yAxisID === "y1") return c.parsed.y == null ? null : ` Tamamlanma: %${c.parsed.y}`;
+            return ` ${c.dataset.label}: ${fmtN(c.parsed.y)} yükleme`;
+          }
         } }
       },
       scales: {
@@ -5126,38 +5159,44 @@ function buildAnaliz(list) {
 
   if (az) {
     const musArr = [...az.musteri.entries()]
-      .map(([k, g]) => ({ k, ort: +(g.toplam / g.n).toFixed(1) }))
+      .filter(([k, g]) => (g.toplam / g.n) !== 0)   /* 0 sapmalıları grafikten çıkar */
+      .map(([k, g]) => ({ k, ort: +(g.toplam / g.n).toFixed(1),
+        zamaninda: Math.round(g.zamaninda / g.n * 100) }))
       .sort((a, b) => b.ort - a.ort);
-    const sCtx = document.getElementById("chSapma").getContext("2d");
-    chartInstances.push(new Chart(sCtx, {
-      type: "bar",
-      data: { labels: musArr.map(x => x.k), datasets: [{
-        label: "Ortalama sapma (gün)",
-        data: musArr.map(x => x.ort),
-        backgroundColor: musArr.map(x => x.ort > 0 ? "#dc2626" : x.ort < 0 ? "#4f46e5" : "#059669"),
-        borderRadius: 5, maxBarThickness: 26
-      }]},
-      options: {
-        indexAxis: "y", responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          datalabels: {
-            anchor: c => c.dataset.data[c.dataIndex] >= 0 ? "end" : "start",
-            align: c => c.dataset.data[c.dataIndex] >= 0 ? "end" : "start",
-            clamp: true, color: textColor, font: { weight: "700", size: 10.5 },
-            formatter: v => fmtSapma(v)
+    if (musArr.length) {
+      const sCtx = document.getElementById("chSapma").getContext("2d");
+      chartInstances.push(new Chart(sCtx, {
+        type: "bar",
+        data: { labels: musArr.map(x => x.k), datasets: [{
+          label: "Ortalama sapma (gün)",
+          data: musArr.map(x => x.ort),
+          backgroundColor: musArr.map(x => x.ort > 0 ? "#dc2626" : x.ort < 0 ? "#4f46e5" : "#059669"),
+          borderRadius: 5, maxBarThickness: 26
+        }]},
+        options: {
+          indexAxis: "y", responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: c => c.dataset.data[c.dataIndex] >= 0 ? "end" : "start",
+              align: c => c.dataset.data[c.dataIndex] >= 0 ? "end" : "start",
+              clamp: true, color: textColor, font: { weight: "700", size: 10.5 },
+              formatter: v => fmtSapma(v)
+            },
+            tooltip: { callbacks: {
+              label: c => ` Ortalama: ${fmtSapma(c.parsed.x)} gün ${c.parsed.x > 0 ? "(geç)" : "(erken)"}`,
+              afterLabel: c => ` Zamanında: %${musArr[c.dataIndex].zamaninda}`
+            } }
           },
-          tooltip: { callbacks: { label: c => ` Ortalama: ${fmtSapma(c.parsed.x)} gün ${c.parsed.x > 0 ? "(geç)" : c.parsed.x < 0 ? "(erken)" : "(zamanında)"}` } }
-        },
-        scales: {
-          x: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => fmtSapma(v) } },
-          y: { grid: { display: false }, ticks: { color: textColor, font: { size: 11, weight: "600" } } }
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => fmtSapma(v) } },
+            y: { grid: { display: false }, ticks: { color: textColor, font: { size: 11, weight: "600" } } }
+          }
         }
-      }
-    }));
+      }));
+    }
   }
 }
-
 /* ============================================================
    👷 KAPASİTE ANALİZİ (dakika bazlı gösterim)
    ============================================================ */
