@@ -5348,24 +5348,65 @@ function buildDetay(list) {
     statsTable(groupStats(list, r => r.durum), "Durum bazlı", "Durum");
 }
 
-function buildReports() {
+/* ═══════════════ 📊 Rapor içi bağımsız filtre havuzu ═══════════════ */
+let rptArsivPool = null;   /* oturum başına bir kez çekilir */
+async function raporHavuz() {
+  let list = enriched(rows);
+  const arsivOn = document.getElementById("rptArsiv").checked;
+  if (arsivOn) {
+    if (!Array.isArray(rptArsivPool)) {
+      try { rptArsivPool = (await fetchArsiv()).map(r => ({ ...r, _arsiv: true })); }
+      catch (e) { rptArsivPool = []; showToast("⚠️ Arşiv yüklenemedi: " + e.message); }
+    }
+    const ids = new Set(list.map(r => r.id));
+    list = list.concat(rptArsivPool.filter(r => !ids.has(r.id)));
+  }
+  /* Müşteri filtresi */
+  const mus = document.getElementById("rptMusteri").value.trim().toLowerCase();
+  if (mus) list = list.filter(r => (r.musteri || "").toLowerCase().includes(mus));
+  /* Tarih filtresi — planlanan üzerinden (rapor = plan perspektifi) */
+  const mod = document.getElementById("rptTarih").value;
+  if (mod !== "all") {
+    const bugun = todayISO();
+    let from = "";
+    if (mod === "week") {
+      const d = new Date();
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      from = isoFromDate(d);
+    } else if (mod === "month") from = isoFromDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    else if (mod === "lastmonth") from = monthBounds(-1).from;
+    else if (mod === "d30") { const d = new Date(); d.setDate(d.getDate() - 29); from = isoFromDate(d); }
+    else if (mod === "d90") { const d = new Date(); d.setDate(d.getDate() - 89); from = isoFromDate(d); }
+    else if (mod === "year") from = new Date().getFullYear() + "-01-01";
+    list = list.filter(r => (r.planlananTarih || "") >= from && (r.planlananTarih || "") <= (mod === "lastmonth" ? monthBounds(-1).to : "9999-12-31"));
+  }
+  return list;
+}
+
+async function buildReports() {
   destroyCharts();
-  const list = filtered();
-  const emptyMsg = `<p class="hint">Filtrelere uyan kayıt yok — filtreleri gevşetip tekrar dene.</p>`;
-  document.getElementById("reportPaneGenel").innerHTML = list.length ? "" : emptyMsg;
-  document.getElementById("reportPaneAnaliz").innerHTML = list.length ? "" : emptyMsg;
-  document.getElementById("reportPaneDetay").innerHTML = list.length ? "" : emptyMsg;
-  document.getElementById("reportPaneKapasite").innerHTML = "";
-  document.getElementById("reportPaneSure").innerHTML = "";
-  document.getElementById("reportPaneArsiv").innerHTML = "";
-  document.getElementById("reportPaneEkip").innerHTML = "";
+  const list = await raporHavuz();
+  /* Müşteri seçeneklerini tazele (havuzdan) */
+  const sel = document.getElementById("rptMusteri");
+  const onceki = sel.value;
+  const musler = [...new Set(list.map(r => r.musteri).filter(Boolean))].sort((a, b) => a.localeCompare(b, "tr"));
+  sel.innerHTML = `<option value="">Tüm müşteriler</option>` +
+    musler.map(m => `<option value="${esc(m)}" ${m === onceki ? "selected" : ""}>${esc(m)}</option>`).join("");
+  const emptyMsg = `<p class="hint">Seçilen filtre/değer aralığında kayıt yok — filtreleri gevşetin.</p>`;
+  ["reportPaneGenel","reportPaneAnaliz","reportPaneDetay"].forEach(id => {
+    document.getElementById(id).innerHTML = list.length ? "" : emptyMsg;
+  });
+  ["reportPaneKapasite","reportPaneSure","reportPaneArsiv","reportPaneEkip"].forEach(id => {
+    document.getElementById(id).innerHTML = "";
+  });
   if (!list.length) return;
   buildGenel(list);
   buildAnaliz(list);
   buildDetay(list);
   switchReportTab(activeReportTab);
 }
-function switchReportTab(tab) {
+
+async function switchReportTab(tab) {
   activeReportTab = tab;
   document.querySelectorAll(".rtab").forEach(b => b.classList.toggle("active", b.dataset.rtab === tab));
   document.getElementById("reportPaneGenel").classList.toggle("hidden", tab !== "genel");
@@ -5374,31 +5415,22 @@ function switchReportTab(tab) {
   document.getElementById("reportPaneSure").classList.toggle("hidden", tab !== "sure");
   document.getElementById("reportPaneDetay").classList.toggle("hidden", tab !== "detay");
   document.getElementById("reportPaneArsiv").classList.toggle("hidden", tab !== "arsiv");
-  document.getElementById("reportPaneEkip").classList.toggle("hidden", tab !== "ekip");   /* ⬅ bu satır kritik */
+  document.getElementById("reportPaneEkip").classList.toggle("hidden", tab !== "ekip");
   destroyCharts();
   if (tab === "kapasite") { buildKapasite(); return; }
-  if (tab === "sure") { buildSure(filtered()); return; }
+  if (tab === "sure") { buildSure(await raporHavuz()); return; }
   if (tab === "arsiv") { buildArsiv(); return; }
-  if (tab === "ekip") { buildEkip(); return; }                                             /* ⬅ ve bu */
-  const list = filtered();
-  if (!list.length) return;
+  if (tab === "ekip") { buildEkip(); return; }
+  const list = await raporHavuz();
+  if (!list.length) {
+    ["reportPaneGenel","reportPaneAnaliz","reportPaneDetay"].forEach(id =>
+      document.getElementById(id).innerHTML = `<p class="hint">Seçilen filtrelerde kayıt yok.</p>`);
+    return;
+  }
   if (tab === "genel") buildGenel(list);
   else if (tab === "analiz") buildAnaliz(list);
+  else if (tab === "detay") buildDetay(list);
 }
-document.querySelectorAll(".rtab").forEach(b => {
-  b.addEventListener("click", () => switchReportTab(b.dataset.rtab));
-});
-document.getElementById("btnReports").addEventListener("click", () => {
-  document.getElementById("reportModal").classList.remove("hidden");
-  buildReports();
-});
-document.getElementById("btnCloseReport").addEventListener("click", () => {
-  destroyCharts();
-  document.getElementById("reportModal").classList.add("hidden");
-});
-document.getElementById("reportModal").addEventListener("click", e => {
-  if (e.target === e.currentTarget) { destroyCharts(); e.currentTarget.classList.add("hidden"); }
-});
 
 /* ================= GEÇMİŞ ================= */
 async function showHistory() {
