@@ -5404,42 +5404,6 @@ async function buildReports() {
   buildDetay(list);
   switchReportTab(activeReportTab);
 }
-
-/* ═══════════════ 📊 Rapor içi bağımsız filtre havuzu ═══════════════ */
-let rptArsivPool = null;   /* oturum başına bir kez çekilir */
-async function raporHavuz() {
-  let list = enriched(rows);
-  const arsivOn = document.getElementById("rptArsiv").checked;
-  if (arsivOn) {
-    if (!Array.isArray(rptArsivPool)) {
-      try { rptArsivPool = (await fetchArsiv()).map(r => ({ ...r, _arsiv: true })); }
-      catch (e) { rptArsivPool = []; showToast("⚠️ Arşiv yüklenemedi: " + e.message); }
-    }
-    const ids = new Set(list.map(r => r.id));
-    list = list.concat(rptArsivPool.filter(r => !ids.has(r.id)));
-  }
-  /* Müşteri filtresi */
-  const mus = document.getElementById("rptMusteri").value.trim().toLowerCase();
-  if (mus) list = list.filter(r => (r.musteri || "").toLowerCase().includes(mus));
-  /* Tarih filtresi — planlanan üzerinden (rapor = plan perspektifi) */
-  const mod = document.getElementById("rptTarih").value;
-  if (mod !== "all") {
-    let from = "";
-    if (mod === "week") {
-      const d = new Date();
-      d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-      from = isoFromDate(d);
-    } else if (mod === "month") from = isoFromDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-    else if (mod === "lastmonth") from = monthBounds(-1).from;
-    else if (mod === "d30") { const d = new Date(); d.setDate(d.getDate() - 29); from = isoFromDate(d); }
-    else if (mod === "d90") { const d = new Date(); d.setDate(d.getDate() - 89); from = isoFromDate(d); }
-    else if (mod === "year") from = new Date().getFullYear() + "-01-01";
-    const to = (mod === "lastmonth") ? monthBounds(-1).to : "9999-12-31";
-    list = list.filter(r => (r.planlananTarih || "") >= from && (r.planlananTarih || "") <= to);
-  }
-  return list;
-}
-
 async function switchReportTab(tab) {
   activeReportTab = tab;
   document.querySelectorAll(".rtab").forEach(b => b.classList.toggle("active", b.dataset.rtab === tab));
