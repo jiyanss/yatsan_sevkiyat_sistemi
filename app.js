@@ -5422,7 +5422,7 @@ async function switchReportTab(tab) {
   document.getElementById("reportPaneDetay").classList.toggle("hidden", tab !== "detay");
   document.getElementById("reportPaneArsiv").classList.toggle("hidden", tab !== "arsiv");
   document.getElementById("reportPaneEkip").classList.toggle("hidden", tab !== "ekip");
-  destroyCharts();}
+  destroyCharts();
   if (tab === "kapasite") { buildKapasite(); return; }
   if (tab === "sure") { buildSure(await raporHavuz()); return; }
   if (tab === "arsiv") { buildArsiv(); return; }
@@ -5436,7 +5436,8 @@ async function switchReportTab(tab) {
   if (tab === "genel") buildGenel(list);
   else if (tab === "analiz") buildAnaliz(list);
   else if (tab === "detay") buildDetay(list);
-   document.querySelectorAll(".rtab").forEach(b => {
+}   /* ⬅ fonksiyon BURADA kapanıyor */
+  document.querySelectorAll(".rtab").forEach(b => {
   b.addEventListener("click", () => switchReportTab(b.dataset.rtab));
 });
 document.getElementById("btnReports").addEventListener("click", () => {
