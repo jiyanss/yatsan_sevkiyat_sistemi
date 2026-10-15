@@ -3623,17 +3623,24 @@ function parseIslemHash() {
   else renderIslem(); /* aynı kayıt — yine de tazele */
 }
 function islemBtns(d) {
+  const tpOn = d.toplamaBasTs && !d.toplamaBittiTs;
+  const tpOk = !!d.toplamaBittiTs;
+  const tpBitmis = d.durum === "Yükleme Tamamlandı" && tpOk;
+  const tpBtns = tpBitmis ? "" : `
+    <div style="display:flex;gap:10px">
+      <button class="islem-btn b-geldi" data-iact="tp-basla" style="flex:1;background:#0f766e" ${tpOn ? "disabled" : ""}>📦 T.Başlat${tpOn ? " ✔" : ""}</button>
+      <button class="islem-btn b-bitir" data-iact="tp-bitti" style="flex:1;background:#4f46e5" ${!tpOn || tpOk ? "disabled" : ""}>📦 T.Bitir</button>
+    </div>`;
   if (d.durum === "Yükleme Bekliyor") {
     return `
-      <button class="islem-btn b-geldi" data-iact="geldi">🚛 Araç Geldi</button>
-      <button class="islem-btn b-basla" data-iact="baslat">▶️ Yüklemeyi Başlat</button>`;
+      <button class="islem-btn b-geldi" data-iact="geldi">🚛 Araç Geldi${d.araciGeldi === "GELDİ" ? " ✔" : ""}</button>
+      <button class="islem-btn b-basla" data-iact="baslat">▶️ Yüklemeyi Başlat</button>
+      ${tpBtns}`;
   }
-   if (d.durum === "Yükleniyor") {
-    return `<button class="islem-btn b-bitir" data-iact="bitir">✅ Yüklemeyi Bitir</button>
-      <button class="islem-btn b-geldi" data-iact="tp-basla" style="background:#0f766e">📦 Toplamayı Başlat${d.toplamaBasTs && !d.toplamaBittiTs ? " ✔ sürüyor" : ""}</button>
-      <button class="islem-btn b-bitir" data-iact="tp-bitti" style="background:#0f766e">📦 Toplamayı Bitir</button>`;
+  if (d.durum === "Yükleniyor") {
+    return `<button class="islem-btn b-bitir" data-iact="bitir">✅ Yüklemeyi Bitir</button>${tpBtns}`;
   }
-  return "";
+  return tpBtns;
 }
 function renderIslem() {
   const c = document.getElementById("islemContent");
@@ -3662,6 +3669,9 @@ function renderIslem() {
       <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b></div>
       <div><span>Açıklama:</span> ${r.aciklama ? esc(r.aciklama) : "-"}</div>
     </div>
+    ${r.ekip && ekipler[r.ekip] ? `<div style="margin:6px 0">${ekipChipHtml(r.ekip)}</div>` : ""}
+    ${r.toplamaBasTs && !r.toplamaBittiTs ? `<div class="islem-done" style="background:#2d2410;border-color:#fbbf24;color:#fbbf24">📦 Toplama sürüyor — ${fmtTime(r.toplamaBasTs)}'dan beri</div>` : ""}
+    ${r.toplamaBasTs && r.toplamaBittiTs ? `<div class="islem-done">📦 Toplama bitti ${fmtTime(r.toplamaBasTs)}→${fmtTime(r.toplamaBittiTs)} · ${fmtSure(r.toplamaBittiTs - r.toplamaBasTs)}</div>` : ""}
     ${b.durum === "live" ? `<div class="islem-done" style="background:#2d2410;border-color:#fbbf24;color:#fbbf24">⏱ Kronometre çalışıyor · <span id="islemElapsed">${elapsed}</span> geçti (${fmtTime(r.loadingStartedAt)}'da başladı)</div>` : ""}
     ${b.durum === "done" ? `<div class="islem-done">✅ Bu yükleme tamamlandı${r.loadingStartedAt && r.loadingEndedAt ? ` · Baş:${fmtTime(r.loadingStartedAt)} - Bitiş:${fmtTime(r.loadingEndedAt)}` : ""}</div>` : ""}
     <div class="islem-btns">${btns}</div>
