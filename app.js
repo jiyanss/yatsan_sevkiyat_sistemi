@@ -5430,6 +5430,28 @@ async function switchReportTab(tab) {
   if (tab === "genel") buildGenel(list);
   else if (tab === "analiz") buildAnaliz(list);
   else if (tab === "detay") buildDetay(list);
+   document.querySelectorAll(".rtab").forEach(b => {
+  b.addEventListener("click", () => switchReportTab(b.dataset.rtab));
+});
+document.getElementById("btnReports").addEventListener("click", () => {
+  document.getElementById("reportModal").classList.remove("hidden");
+  buildReports();
+});
+document.getElementById("btnCloseReport").addEventListener("click", () => {
+  destroyCharts();
+  document.getElementById("reportModal").classList.add("hidden");
+});
+document.getElementById("reportModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) { destroyCharts(); e.currentTarget.classList.add("hidden"); }
+});
+
+/* 📊 Rapor içi filtre değişimi → raporu yeniden çiz */
+["rptTarih", "rptMusteri"].forEach(id =>
+  document.getElementById(id).addEventListener("change", buildReports));
+document.getElementById("rptArsiv").addEventListener("change", () => {
+  rptArsivPool = null;   /* arşiv havuzunu tazele */
+  buildReports();
+});
 }
 
 /* ================= GEÇMİŞ ================= */
