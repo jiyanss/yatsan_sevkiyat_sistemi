@@ -6267,3 +6267,14 @@ document.addEventListener("keydown", e => {
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !document.getElementById("snakeModal").classList.contains("hidden")) closeSnakeGame();
 });
+
+/* Rapor butonu güvence bağlantısı */
+(function () {
+  const b = document.getElementById("btnReports");
+  if (!b) { console.warn("⚠️ btnReports HTML'de yok"); return; }
+  b.addEventListener("click", () => {
+    document.getElementById("reportModal").classList.remove("hidden");
+    buildReports();
+  });
+  console.info("✅ Rapor butonu bağlandı");
+})();
