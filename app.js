@@ -2597,6 +2597,68 @@ function etkinSureMs(r) {
   return Math.max(0, bitis - r.loadingStartedAt);
 }
 
+/* ═══════════════ 👷 EKİP SEÇİM KUTUSU (toplama öncesi zorunlu) ═══════════════ */
+function ekipSecModal(basarili) {
+  /* basarili(ekipKod) — seçim yapılırsa çağrılır; iptal edilirse hiç çağrılmaz */
+  const aktifler = aktifEkipler();
+  if (!aktifler.length) {
+    alert("⚠️ Hiç aktif ekip yok — önce Admin'den 👷 Ekipler panelinden ekip oluşturun.");
+    return;
+  }
+  const eski = document.getElementById("ekipSecModal");
+  if (eski) eski.remove();
+  const modal = document.createElement("div");
+  modal.id = "ekipSecModal";
+  modal.className = "modal-bg";
+  modal.style.zIndex = "96";
+  modal.innerHTML = `<div class="modal" style="max-width:400px">
+    <h2>👷 Ekip Seçimi</h2>
+    <p class="hint">Toplamayı başlatmak için <b>ekip seçimi zorunludur</b>. Yalnızca atama yapmak istiyorsanız "Sadece ata"yı seçin.</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${aktifler.map(k => `<button class="btn" data-eksec="${esc(k)}"
+        style="text-align:left;padding:12px 14px;font-size:14px;font-weight:700">
+        <span class="ekip-chip" style="background:${ekipRenk(k)}">👷 ${esc(ekipAd(k))}</span>
+      </button>`).join("")}
+      <button class="btn" data-eksec="__sadece__" style="text-align:left;padding:10px 14px;color:var(--muted)">
+        📌 Sadece ekip ata (toplamayı başlatma)
+      </button>
+    </div>
+    <div class="modal-actions"><button class="btn" data-eksec="__iptal__">Vazgeç</button></div>
+  </div>`;
+  modal.addEventListener("click", e => {
+    const b = e.target.closest("[data-eksec]");
+    if (!b) return;
+    modal.remove();
+    const v = b.dataset.eksec;
+    if (v === "__iptal__") return;
+    basarili(v);   /* "__sadece__" dahil — işleyen taraf kararlaştırır */
+  });
+  document.body.appendChild(modal);
+}
+async function ekipAtaVeTopla(row, kod) {
+  try {
+    const updated = { ...row, ekip: kod };
+    if (kod !== "__sadece__") {
+      updated.toplamaBasTs = Date.now();
+      updated.toplamaBittiTs = null;
+    }
+    const saved = await apiUpdate(row.id, updated);
+    rows = rows.map(r => r.id === row.id ? saved : r);
+    setSaveError("");
+    render();
+    const isOv = document.getElementById("islemOverlay");
+    if (isOv && !isOv.classList.contains("hidden")) renderIslem();
+    if (document.getElementById("opOverlay")) renderOpCard();
+    await apiLog("guncelleme", row.id, row.musteri,
+      kod === "__sadece__"
+        ? `👷 ekip atandı: ${ekipAd(kod) || kod} (toplama başlatılmadı)`
+        : `👷 ekip atandı: ${ekipAd(kod)} + 📦 toplama başlatıldı (${fmtTime(saved.toplamaBasTs)})`);
+    showToast(kod === "__sadece__"
+      ? `👷 ${esc(ekipAd(kod))} atandı.`
+      : `👷 ${esc(ekipAd(kod))} — 📦 toplama başladı!`);
+  } catch (e) { alert("Kaydedilemedi: " + e.message); }
+}
+
 /* ---------- 📦 TOPLAMA SÜRECİ (statüden bağımsız) ---------- */
 async function toplamaAction(action, idOverride = null) {
   const targetId = idOverride || currentOpId || islemId;
@@ -2606,8 +2668,13 @@ async function toplamaAction(action, idOverride = null) {
   if (!row) { alert("Kayıt bulunamadı."); return; }
   const updated = { ...row };
   let etiket = "";
-  if (action === "basla") {
+   if (action === "basla") {
     if (row.toplamaBasTs) { showToast("ℹ️ Toplama zaten başlatılmış (" + fmtTime(row.toplamaBasTs) + ")."); return; }
+    /* 👷 Ekipsiz toplama başlamaz — önce zorunlu ekip seçimi */
+    if (!row.ekip || !ekipler[row.ekip]) {
+      ekipSecModal(kod => ekipAtaVeTopla(row, kod));
+      return;
+    }
     updated.toplamaBasTs = Date.now();
     updated.toplamaBittiTs = null;
     etiket = "📦 toplama başlatıldı";
