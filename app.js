@@ -5352,8 +5352,7 @@ function buildDetay(list) {
 let rptArsivPool = null;   /* oturum başına bir kez çekilir */
 async function raporHavuz() {
   let list = enriched(rows);
-  const arsivOn = document.getElementById("rptArsiv").checked;
-  if (arsivOn) {
+    if (arsivOn) {
     if (!Array.isArray(rptArsivPool)) {
       try { rptArsivPool = (await fetchArsiv()).map(r => ({ ...r, _arsiv: true })); }
       catch (e) { rptArsivPool = []; showToast("⚠️ Arşiv yüklenemedi: " + e.message); }
