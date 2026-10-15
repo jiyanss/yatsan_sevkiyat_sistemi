@@ -5468,11 +5468,6 @@ document.getElementById("rptArsiv").addEventListener("change", async e => {
   }
   cb.disabled = false;
 });
-   
-  rptArsivPool = null;   /* arşiv havuzunu tazele */
-  buildReports();
-});
-}
 
 /* ================= GEÇMİŞ ================= */
 async function showHistory() {
