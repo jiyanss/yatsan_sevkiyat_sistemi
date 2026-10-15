@@ -5383,6 +5383,16 @@ async function raporHavuz() {
   return list;
 }
 async function buildReports() {
+   let _rptBusy = false;
+async function buildReports() {
+  if (_rptBusy) { console.info("rapor zaten çiziliyor — atlandı"); return; }
+  _rptBusy = true;
+  try {
+    /* ...mevcut gövdenin TAMAMI try içine... */
+  } finally {
+    _rptBusy = false;
+  }
+}
   destroyCharts();
   const list = await raporHavuz();
   /* Müşteri seçeneklerini tazele (havuzdan) */
@@ -5446,7 +5456,23 @@ document.getElementById("reportModal").addEventListener("click", e => {
 /* 📊 Rapor içi filtre değişimi → raporu yeniden çiz */
 ["rptTarih", "rptMusteri"].forEach(id =>
   document.getElementById(id).addEventListener("change", buildReports));
-document.getElementById("rptArsiv").addEventListener("change", () => {
+document.getElementById("rptArsiv").addEventListener("change", async e => {
+  const cb = e.target;
+  cb.disabled = true;                       /* çift tetiklenmeyi engelle */
+  try {
+    if (cb.checked) {
+      if (!Array.isArray(rptArsivPool)) {
+        cb.parentElement && (cb.parentElement.style.opacity = ".5");
+        rptArsivPool = (await fetchArsiv()).map(r => ({ ...r, _arsiv: true }));
+        cb.parentElement && (cb.parentElement.style.opacity = "");
+      }
+    }
+    await buildReports();
+  } catch (err) {
+    showToast("⚠️ Rapor yenilenemedi: " + err.message);
+  }
+  cb.disabled = false;
+});
   rptArsivPool = null;   /* arşiv havuzunu tazele */
   buildReports();
 });
