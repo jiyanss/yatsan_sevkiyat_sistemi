@@ -4853,6 +4853,7 @@ function buildGenel(list) {
   document.getElementById("reportPaneGenel").innerHTML = kpiBlock + chartBlock;
   if (typeof Chart === "undefined") return;
 
+  /* Donut — merkez: % + mutlak sayı */
   chartInstances.push(new Chart(document.getElementById("chDonut"), {
     type: "doughnut",
     data: {
@@ -4872,7 +4873,7 @@ function buildGenel(list) {
         centerText: {
           display: true,
           text: "%" + s.oran.toFixed(0),
-          subText: "tamamlanma",
+          subText: `tamamlanma · ${fmtN(s.tamamAd)}/${fmtN(s.toplamAd)}`,
           color: labelColor,
           subColor: textColor
         }
@@ -4880,35 +4881,47 @@ function buildGenel(list) {
     }
   }));
 
+  /* Gün bazlı — tamamlanan/kalan yığılmış */
   const gunCtx = document.getElementById("chGun").getContext("2d");
+  const gunDone = GUNLER.map(() => 0), gunLeft = GUNLER.map(() => 0);
+  list.forEach(r => {
+    const dt = parseLocalDate(gecikmeTarihi(r));
+    if (!dt) return;
+    const idx = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[dt.getDay()];
+    if (idx === undefined) return;
+    if (r.durum === "Yükleme Tamamlandı") gunDone[idx] += adet(r);
+    else gunLeft[idx] += adet(r);
+  });
   chartInstances.push(new Chart(gunCtx, {
     type: "bar",
-    data: { labels: GUNLER, datasets: [{
-      label: "Yükleme adedi",
-      data: s.gunAd,
-      backgroundColor: c => grad(c.chart.ctx, c.chart.chartArea, "#6366f1", "#c7d2fe"),
-      borderRadius: 6, maxBarThickness: 42
-    }]},
+    data: {
+      labels: GUNLER,
+      datasets: [
+        { label: "Tamamlanan", data: gunDone,
+          backgroundColor: "#059669", borderRadius: { topRight: 5 }, maxBarThickness: 40 },
+        { label: "Kalan", data: gunLeft,
+          backgroundColor: "#f59e0b", borderRadius: { topRight: 5 }, maxBarThickness: 40 }
+      ]
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
-        datalabels: {
-          anchor: "end", align: "end", offset: -2,
-          color: textColor, font: { weight: "700", size: 11 },
-          formatter: v => v > 0 ? fmtN(v) : ""
-        },
-        tooltip: { callbacks: { label: c => ` ${fmtN(c.parsed.y)} yükleme` } }
+        legend: { position: "bottom", labels: { color: textColor, usePointStyle: true, pointStyle: "circle", padding: 12, font: { size: 11 } } },
+        datalabels: { color: "#fff", font: { weight: "700", size: 10.5 },
+          display: c => c.dataset.data[c.dataIndex] > 0, formatter: v => fmtN(v) },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fmtN(c.parsed.y)} yükleme` } }
       },
       scales: {
-        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0, maxTicksLimit: 6 } },
-        x: { grid: { display: false }, ticks: { color: textColor } }
+        x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 11, weight: "600" } } },
+        y: { stacked: true, beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0, maxTicksLimit: 6 } }
       }
     }
   }));
 
+  /* Tip dağılımı — adet + m³ */
   const tipMap = groupStats(list, r => r.sevkiyatTipi);
   const tipTotal = [...tipMap.values()].reduce((a, g) => a + g.ad, 0) || 1;
+  const tipM3 = [...tipMap.values()].map(g => g.m3);
   const tipCtx = document.getElementById("chTip").getContext("2d");
   chartInstances.push(new Chart(tipCtx, {
     type: "bar",
@@ -4925,17 +4938,21 @@ function buildGenel(list) {
         datalabels: {
           anchor: "end", align: "end", clamp: true,
           color: textColor, font: { weight: "700", size: 10.5 },
-          formatter: v => `${fmtN(v)} · %${(v / tipTotal * 100).toFixed(0)}`
+          formatter: (v, c) => `${fmtN(v)} · %${(v / tipTotal * 100).toFixed(0)} · ${fmtN(tipM3[c.dataIndex])} m³`
         },
-        tooltip: { callbacks: { label: c => ` ${fmtN(c.parsed.x)} yükleme (%${(c.parsed.x / tipTotal * 100).toFixed(1)})` } }
+        tooltip: { callbacks: { label: c => {
+          const g = [...tipMap.values()][c.dataIndex];
+          return ` ${fmtN(g.ad)} yükleme · %${(g.ad / tipTotal * 100).toFixed(1)} · ${fmtN(g.m3)} m³ · tamamlanma %${g.ad ? (g.tamam / g.ad * 100).toFixed(0) : 0}`;
+        } } }
       },
       scales: {
-        x: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0, maxTicksLimit: 6 }, suggestedMax: Math.max(...[...tipMap.values()].map(g => g.ad), 1) * 1.25 },
+        x: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0, maxTicksLimit: 6 }, suggestedMax: Math.max(...[...tipMap.values()].map(g => g.ad), 1) * 1.45 },
         y: { grid: { display: false }, ticks: { color: textColor, font: { size: 11, weight: "600" } } }
       }
     }
   }));
 
+  /* BLM — yığılmış + tooltip tamamlanma % */
   const blmMap = groupStats(list, r => r.blm);
   const blmCtx = document.getElementById("chBlm").getContext("2d");
   chartInstances.push(new Chart(blmCtx, {
@@ -4956,7 +4973,13 @@ function buildGenel(list) {
           display: c => c.dataset.data[c.dataIndex] > 0,
           formatter: v => fmtN(v)
         },
-        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fmtN(c.parsed.y)}` } }
+        tooltip: { callbacks: {
+          label: c => ` ${c.dataset.label}: ${fmtN(c.parsed.y)}`,
+          afterBody: items => {
+            const g = [...blmMap.values()][items[0].dataIndex];
+            return g && g.ad ? ` Tamamlanma: %${(g.tamam / g.ad * 100).toFixed(0)}` : "";
+          }
+        } }
       },
       scales: {
         x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { size: 11, weight: "600" } } },
@@ -4965,6 +4988,8 @@ function buildGenel(list) {
     }
   }));
 }
+
+
 /* ⚠️ Gecikme nedeni dağılımı — grafik + tablo */
 function gecikmeNedenData() {
   const m = new Map();
