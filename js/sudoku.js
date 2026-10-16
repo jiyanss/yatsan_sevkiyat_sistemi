@@ -129,4 +129,177 @@ async function suRenderBoard(board) {
     const c = board.cells[i] || { v: 0, fixed: false, u: "" };
     let cls = "su-cell";
     if (c.fixed) cls += " su-fixed";
-    else if (c.u === me.isim &&
+    else if (c.u === me.isim && c.v) cls += " su-mine";
+    else if (c.u && c.v) cls += " su-other";
+    if (suSel === i) cls += " su-sel";
+    /* çakışma vurgusu: aynı satır/sütun/kutuda aynı değer */
+    if (c.v && !c.fixed && suCakisiyor(board, i)) cls += " su-err";
+    grid += `<div class="${cls}" data-suidx="${i}">${c.v || ""}${c.u && !c.fixed ? `<span class="su-name">${esc(c.u.split(" ")[0])}</span>` : ""}</div>`;
+  }
+
+  b.innerHTML = `
+    <div class="su-bar" style="max-width:432px;margin:0 auto 10px">
+      <span class="su-stat">${esc(board.puzzle != null && SU_PUZZLES[board.puzzle] ? SU_PUZZLES[board.puzzle].d : "")} · ⏱ ${sureTxt}</span>
+      <span class="su-players" id="suPlayers">👥 …</span>
+    </div>
+    ${bitmis ? `<div class="islem-done" style="max-width:432px;margin:0 auto 10px">🎉 ${esc(board.winner || "Çözüldü")} çözdü · ${sureTxt} · katkılar: ${esc((board.katkilar || []).join(", "))}</div>` : ""}
+    <div class="su-grid" id="suGrid">${grid}</div>
+    <div class="su-pad">
+      <div class="su-pad-row">${[1,2,3,4,5].map(n => `<button class="su-num-btn" data-sun="${n}">${n}</button>`).join("")}</div>
+      <div class="su-pad-row">${[6,7,8,9].map(n => `<button class="su-num-btn" data-sun="${n}">${n}</button>`).join("")}</div>
+      <div class="su-pad-row">
+        <button class="su-act-btn" data-sun="0">🧽 Temizle</button>
+        ${bitmis ? `<button class="su-act-btn" id="suYeni">🔢 Yeni Oyun</button>` : ""}
+      </div>
+    </div>`;
+
+  /* hücre seçimi */
+  b.querySelector("#suGrid").addEventListener("click", e => {
+    const cell = e.target.closest("[data-suidx]");
+    if (!cell) return;
+    const i = Number(cell.dataset.suidx);
+    if (board.cells[i] && board.cells[i].fixed) return;
+    if (bitmis) return;
+    suSel = i;
+    suRenderBoard(board);
+  });
+  /* sayı pedi */
+  b.querySelectorAll("[data-sun]").forEach(btn =>
+    btn.addEventListener("click", () => suYaz(Number(btn.dataset.sun))));
+  const yeniBtn = b.querySelector("#suYeni");
+  if (yeniBtn) yeniBtn.addEventListener("click", async () => {
+    await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`, { method: "PUT", body: "null" });
+    await suRenderStart();
+  });
+}
+
+/* Çakışma: aynı satır/sütun/3x3 kutuda aynı değerden başka var mı */
+function suCakisiyor(board, i) {
+  const [r, c] = suRowCol(i);
+  const v = board.cells[i].v;
+  for (let k = 0; k < 81; k++) {
+    if (k === i) continue;
+    const [kr, kc] = suRowCol(k);
+    if (board.cells[k].v !== v) continue;
+    if (kr === r || kc === c) return true;
+    const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
+    if (kr >= br && kr < br + 3 && kc >= bc && kc < bc + 3) return true;
+  }
+  return false;
+}
+
+/* ═══════════════ ✍️ HÜCRE YAZMA ═══════════════ */
+async function suYaz(v) {
+  if (suSel < 0 || !suBoard || suBoard.status === "done") return;
+  if (suBoard.cells[suSel] && suBoard.cells[suSel].fixed) return;
+  const me = suPlayer();
+  const cell = { v, fixed: false, u: v === 0 ? "" : me.isim };
+  suBoard.cells[suSel] = cell;                 /* optimistik yerel */
+  await fetch(`${FIREBASE_DB_URL}/${SU_NODE}/cells/${suSel}.json`, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cell)
+  });
+  const sonraki = suSonrakiBos(suBoard, suSel);
+  suSel = sonraki;
+  await suRenderBoard(suBoard);
+  await suBitisKontrol();
+}
+function suSonrakiBos(board, from) {
+  for (let k = 1; k <= 81; k++) {
+    const i = (from + k) % 81;
+    if (!board.cells[i].fixed && board.cells[i].v === 0) return i;
+  }
+  return from;
+}
+
+/* 🏁 Tamamlanma kontrolü — yalnız yazan taraf tetikler (çift duyuru olmaz) */
+async function suBitisKontrol() {
+  const board = await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`).then(r => r.json());
+  if (!board || board.status === "done") return;
+  const sol = board.solution;
+  for (let i = 0; i < 81; i++) {
+    if (Number(sol[i]) !== (board.cells[i]?.v || 0)) return;   /* yanlış/eksik var */
+  }
+  const finishedTs = Date.now();
+  const katkilar = [...new Set(Object.values(board.cells).filter(c => c.u).map(c => c.u))];
+  const sure = finishedTs - board.startedTs;
+  await fetch(`${FIREBASE_DB_URL}/${SU_NODE}/status.json`, { method: "PUT", body: '"done"' });
+  await fetch(`${FIREBASE_DB_URL}/${SU_NODE}/finishedTs.json`, { method: "PUT", body: String(finishedTs) });
+  await fetch(`${FIREBASE_DB_URL}/${SU_NODE}/winner.json`, { method: "PUT", body: JSON.stringify(suPlayer().isim) });
+  await fetch(`${FIREBASE_DB_URL}/${SU_NODE}/katkilar.json`, { method: "PUT", body: JSON.stringify(katkilar) });
+  await fetch(`${FIREBASE_DB_URL}/${SU_HIST}.json`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ts: finishedTs, sure, katkilar,
+      zorluk: SU_PUZZLES[board.puzzle]?.d || "", puzzle: board.puzzle })
+  });
+  centerNotify(`🎉 SUDOKU ÇÖZÜLDÜ! ${suPlayer().isim} son hücreyi koydu · ${fmtSure(sure)} · katkılar: ${katkilar.join(", ")}`, 12000);
+  bildirimDing();
+  await suRenderBoard(board);
+}
+
+/* ═══════════════ 🔴 SSE + 💓 MASA DAKİKALARI ═══════════════ */
+function suStartSync() {
+  const me = suPlayer();
+  /* SSE: tahta her değişince yeniden çiz */
+  if (suSub) suSub.close();
+  suSub = new EventSource(`${FIREBASE_DB_URL}/${SU_NODE}.json`);
+  suSub.onmessage = () => {
+    clearTimeout(suSub._t);
+    suSub._t = setTimeout(async () => {
+      if (document.getElementById("sudokuModal").classList.contains("hidden")) return;
+      const board = await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`).then(r => r.json());
+      if (board && board.cells) suRenderBoard(board);
+    }, 600);
+  };
+  /* Heartbeat: 30 sn'de bir "buradayım" + masadakileri tazele */
+  suHeartIv = setInterval(async () => {
+    const key = suFbKey(me.id);
+    await fetch(`${FIREBASE_DB_URL}/${SU_PLAYERS}/${key}.json`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: me.id, isim: me.isim, ts: Date.now() })
+    });
+    suMasadakiler();
+  }, 30000);
+  suHeartbeatOnce();
+  suTimerIv = setInterval(() => {
+    if (document.getElementById("sudokuModal").classList.contains("hidden") || !suBoard) return;
+    const sureEl = document.querySelector("#sudokuBody .su-stat");
+    if (sureEl && suBoard.startedTs && suBoard.status !== "done") {
+      const s = Math.floor((Date.now() - suBoard.startedTs) / 1000);
+      sureEl.innerHTML = `${suBoard.puzzle != null && SU_PUZZLES[suBoard.puzzle] ? esc(SU_PUZZLES[suBoard.puzzle].d) : ""} · ⏱ ${Math.floor(s / 60)}:${pad2(s % 60)}`;
+    }
+  }, 1000);
+}
+function suFbKey(s) { return encodeURIComponent(String(s)).replace(/\./g, "%2E"); }
+async function suHeartbeatOnce() {
+  const me = suPlayer();
+  try {
+    await fetch(`${FIREBASE_DB_URL}/${SU_PLAYERS}/${suFbKey(me.id)}.json`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: me.id, isim: me.isim, ts: Date.now() })
+    });
+    await suMasadakiler();
+  } catch (e) {}
+}
+async function suMasadakiler() {
+  try {
+    const players = await fetch(`${FIREBASE_DB_URL}/${SU_PLAYERS}.json`).then(r => r.json()) || {};
+    const simdi = Date.now();
+    const aktif = Object.values(players).filter(p => p && simdi - (p.ts || 0) < 120000);
+    const el = document.getElementById("suPlayers");
+    if (el) el.innerHTML = `👥 Masa: ${aktif.length ? aktif.map(p => esc(p.isim)).join(", ") : "boş"}`;
+    /* 2 dk sessiz olanları temizle */
+    Object.keys(players).forEach(k => {
+      if (!players[k] || simdi - (players[k].ts || 0) >= 120000)
+        fetch(`${FIREBASE_DB_URL}/${SU_PLAYERS}/${k}.json`, { method: "DELETE" });
+    });
+  } catch (e) {}
+}
+
+/* Klavye: sudoku açıkken 1-9 yaz, 0/Backspace temizle */
+document.addEventListener("keydown", e => {
+  const ov = document.getElementById("sudokuModal");
+  if (!ov || ov.classList.contains("hidden")) return;
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  if (/^[1-9]$/.test(e.key)) { e.preventDefault(); suYaz(Number(e.key)); }
+  else if (e.key === "0" || e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); suYaz(0); }
+});
