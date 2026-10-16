@@ -1070,3 +1070,31 @@ setInterval(() => {
     if (r && r.durum === "Yükleniyor" && r.loadingStartedAt) el.textContent = fmtSure(Date.now() - r.loadingStartedAt);
   }
 }, 1000);
+/* ================= Başlat ================= */
+updateUserUI();
+(async () => {
+  renderThead();
+  loadPrefs();
+  loadKapasitePrefs();
+  updateSortHeaders();
+  await loadSureAyarlari();
+  await loadEkipler();
+  const s = getAuthState();
+  if (s) {
+    try {
+      await ensureToken();
+      currentUser = { email: s.email };
+      await loadUserEntries();
+      updateUserUI();
+    } catch (e) { /* ensureToken gerekli temizliği yaptı */ }
+  }
+ render();
+  await load(true);
+  if (arsivDahil && !Array.isArray(arsivCache)) {
+    try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
+  }
+    parseIslemHash();
+  if (location.hash === "#operasyon") openOperasyon();
+  startLiveSync();
+  otomatikGunlukYedek();
+})();
