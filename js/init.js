@@ -843,12 +843,11 @@ function renderOpResults(q) {
     const today = todayISO();
     hits = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" && gecikmeTarihi(r) === today));
     if (!hits.length) {
-      /* Bugün iş bitti — net bildir; isteğe bağlı haftanın kalanını gün gün göster */
       const kalanISO = haftaSonuISO(today);
       const kalanlar = opSort(rows.filter(r => r.durum !== "Yükleme Tamamlandı" &&
         gecikmeTarihi(r) > today && gecikmeTarihi(r) <= kalanISO));
       const kalanAd = kalanlar.reduce((s2, r) => s2 + adet(r), 0);
-          const yediSet = new Set(sonraki7GunListesi(today));
+      const yediSet = new Set(sonraki7GunListesi(today));
       const yediList = rows.filter(r => r.durum !== "Yükleme Tamamlandı" && yediSet.has(gecikmeTarihi(r)));
       const yediAd = yediList.reduce((s, r) => s + adet(r), 0);
       res.innerHTML = `
@@ -862,7 +861,8 @@ function renderOpResults(q) {
       return;
     }
   } else hits = opMatches(s);
-    res.querySelectorAll("[data-opid]").forEach(el =>
+  res.innerHTML = hits.map(r => opHitHtml(r)).join("") || `<p class="hint" style="color:#8aa0b8">Eşleşme yok.</p>`;
+  res.querySelectorAll("[data-opid]").forEach(el =>
     el.addEventListener("click", () => openOpCard(el.dataset.opid)));
 }
 function openOpCard(id) {
