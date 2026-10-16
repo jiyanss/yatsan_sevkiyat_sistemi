@@ -38,18 +38,53 @@ function suPlayer() {
   if (!g || !g.id) {
     g = { id: "p-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), isim: "" };
   }
-  if (!g.isim) g.isim = currentUser ? shortUser(currentUser.email) : "Misafir-" + g.id.slice(-4);
   suMe = g;
   localStorage.setItem(SU_PLAYER_KEY, JSON.stringify(g));
   return g;
 }
+/* Misafir ilk kez masaya girerken isim sorulur (girişliler e-postadan alır) */
+function suIsimSor() {
+  return new Promise(resolve => {
+    const me = suPlayer();
+    if (currentUser || (me.isim && me.isim.trim())) { resolve(me.isim); return; }
+    const eski = document.getElementById("suIsimModal");
+    if (eski) eski.remove();
+    const modal = document.createElement("div");
+    modal.id = "suIsimModal";
+    modal.className = "modal-bg";
+    modal.style.zIndex = "98";
+    modal.innerHTML = `<div class="modal" style="max-width:360px">
+      <h2>🔢 Masaya katıl</h2>
+      <p class="hint">Yazdığın hücrelerde bu isim görünür. Cihazında saklanır.</p>
+      <input id="suIsimInput" maxlength="20" placeholder="Yarışmacı adın"
+        style="width:100%;padding:10px 12px;font-size:14px;text-align:center" />
+      <div class="modal-actions">
+        <button class="btn primary" id="suIsimOk" style="width:100%">✅ Katıl</button>
+      </div>
+    </div>`;
+    document.body.appendChild(modal);
+    const inp = modal.querySelector("#suIsimInput");
+    setTimeout(() => inp.focus(), 60);
+    const tamam = () => {
+      const v = inp.value.trim();
+      if (!v) { inp.focus(); return; }
+      me.isim = v.slice(0, 20);
+      localStorage.setItem(SU_PLAYER_KEY, JSON.stringify(me));
+      modal.remove();
+      resolve(me.isim);
+    };
+    modal.querySelector("#suIsimOk").addEventListener("click", tamam);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") tamam(); });
+  });
+}
 function suIdx(r, c) { return r * 9 + c; }
 function suRowCol(i) { return [Math.floor(i / 9), i % 9]; }
 
-function openSudoku() {
+async function openSudoku() {
+  await suIsimSor();   /* girişliyse es geçer, misafirse bir kez sorar */
   document.getElementById("sudokuModal").classList.remove("hidden");
-  suRenderStart();       /* tahta yüklenene kadar açılış ekranı */
-  suStartSync();         /* SSE + heartbeat hemen başlar */
+  suRenderStart();
+  suStartSync();
 }
 function closeSudoku() {
   if (suSub) { suSub.close(); suSub = null; }
@@ -289,7 +324,10 @@ async function suMasadakiler() {
     const simdi = Date.now();
     const aktif = Object.values(players).filter(p => p && simdi - (p.ts || 0) < 120000);
     const el = document.getElementById("suPlayers");
-    if (el) el.innerHTML = `👥 Masa: ${aktif.length ? aktif.map(p => esc(p.isim)).join(", ") : "boş"}`;
+        if (el) el.innerHTML = `👥 Masa: ${aktif.length ? aktif.map(p =>
+      p.id && p.id.startsWith("p-") && !p.email
+        ? `<span style="opacity:.75">${esc(p.isim)} *</span>`
+        : esc(p.isim)).join(", ") : "boş"}`;
     /* 2 dk sessiz olanları temizle */
     Object.keys(players).forEach(k => {
       if (!players[k] || simdi - (players[k].ts || 0) >= 120000)
