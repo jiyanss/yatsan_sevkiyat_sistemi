@@ -2735,13 +2735,13 @@ function ekipOzetMap(evren) {
 function ekipAd2(kod) { return kod === "__atanmamis__" ? "⚠ Atanmamış" : ekipAd(kod); }
 function ekipRenk2(kod) { return kod === "__atanmamis__" ? "#64748b" : ekipRenk(kod); }
 
-function buildEkip() {
+function buildEkip(list = null) {
   const c = document.getElementById("reportPaneEkip");
   if (!ekipSira.length) {
     c.innerHTML = `<p class="hint">Süre = 📦 <b>Toplama başlangıç → bitiş</b> (Operasyon/QR ekranındaki toplama butonlarıyla). Statü kronometresinden bağımsızdır — üretim beklemesi etkilemez. Sapma: standart hedefe (⏱️ Süreler × AD) göre fark.</p>`;
     return;
   }
-  const evren = ekipEvren(filtered());
+  const evren = ekipEvren(list || filtered());
   if (!evren.length) {
     c.innerHTML = `<p class="hint">⏱️ Performans verisi yok — kronometresi başlamış ve (📦 toplama bitti işaretli veya ✔ tamamlanmış) kayıt bulunamadı.</p>`;
     return;
@@ -2750,7 +2750,7 @@ function buildEkip() {
   const enCok = [...ozet.values()].sort((a, b) => b.n - a.n)[0];
   const hizlis = [...ozet.values()].filter(g => g.n >= 3 && g.etkin > 0);
   const enHizli = hizlis.length ? hizlis.sort((a, b) => (a.etkin / a.n) - (b.etkin / b.n))[0] : null;
-  const atanmamisN = filtered().filter(r => !r.ekip && !r._arsiv).length;
+  const atanmamisN = (list || filtered()).filter(r => !r.ekip && !r._arsiv).length;
   const toplamDk = evren.reduce((s, x) => s + x.etkinDk, 0);
   const kpi = `<div class="kpi-grid">
     <div class="kpi c-primary"><div class="kpi-head">🥇 En çok yükleyen</div><div class="kpi-val" style="font-size:18px">${esc(ekipAd2(enCok.ekip))}</div><div class="kpi-sub">${enCok.n} yükleme · ${fmtN(enCok.m3)} m³</div></div>
@@ -5200,14 +5200,15 @@ function buildAnaliz(list) {
 /* ============================================================
    👷 KAPASİTE ANALİZİ (dakika bazlı gösterim)
    ============================================================ */
-function kapasiteData() {
+function kapasiteData(list = null) {
   const today = todayISO();
-  const list = enriched(rows).filter(r => {
+  const kaynak = list || enriched(rows);
+  const filtreli = kaynak.filter(r => {
     const d = gecikmeTarihi(r);
     return d && d >= today && r.durum !== "Yükleme Tamamlandı";
   });
   const m = new Map();
-  list.forEach(r => {
+  filtreli.forEach(r => {      
     const d = gecikmeTarihi(r);
     const g = m.get(d) || { yukleme: 0, saatDk: 0, tanimsiz: 0 };
     g.yukleme += adet(r);
@@ -5223,9 +5224,9 @@ function kapasiteData() {
       return { tarih, ...g, gerekliEkip, kapasite, fark: kapasite - g.saatDk };
     });
 }
-function buildKapasite() {
+ function buildKapasite(list = null) {
   const c = document.getElementById("reportPaneKapasite");
-  const gunler = kapasiteData();
+  const gunler = kapasiteData(list || null);
   if (!gunler.length) {
     c.innerHTML = `<p class="hint">Bugün ve sonrasında planlanmış (tamamlanmamış) yükleme yok — kapasite analizi için gelecek tarihe kayıt ekle.</p>`;
     return;
@@ -5491,10 +5492,10 @@ async function switchReportTab(tab) {
   document.getElementById("reportPaneArsiv").classList.toggle("hidden", tab !== "arsiv");
   document.getElementById("reportPaneEkip").classList.toggle("hidden", tab !== "ekip");
   destroyCharts();
-  if (tab === "kapasite") { buildKapasite(); return; }
+  if (tab === "kapasite") { buildKapasite(await raporHavuz()); return; }
+  if (tab === "ekip") { buildEkip(await raporHavuz()); return; }
   if (tab === "sure") { buildSure(await raporHavuz()); return; }
   if (tab === "arsiv") { buildArsiv(); return; }
-  if (tab === "ekip") { buildEkip(); return; }
   const list = await raporHavuz();
   if (!list.length) {
     ["reportPaneGenel","reportPaneAnaliz","reportPaneDetay"].forEach(id =>
