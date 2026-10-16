@@ -381,7 +381,7 @@ async function quizDeleteQuestion(key) {
 }
 /* --- Bağlantılar --- */
 
-document.getElementById("btnSnake").addEventListener("click", openSnakeGame);
+
 document.getElementById("btnSnakeClose").addEventListener("click", closeSnakeGame);
 document.getElementById("btnQuizClose").addEventListener("click", () => {
   clearInterval(quizTimerIv);
