@@ -965,11 +965,7 @@ setInterval(() => {
     if (r && r.durum === "Yükleniyor" && r.loadingStartedAt) el.textContent = fmtSure(Date.now() - r.loadingStartedAt);
   }
 }, 1000);
-  } else hits = opMatches(s);
-  res.innerHTML = hits.map(r => opHitHtml(r)).join("") || `<p class="hint" style="color:#8aa0b8">Eşleşme yok.</p>`;
-  res.querySelectorAll("[data-opid]").forEach(el =>
-    el.addEventListener("click", () => openOpCard(el.dataset.opid)));
-}
+
 function openOpCard(id) {
   currentOpId = id;
   renderOpCard(true);
