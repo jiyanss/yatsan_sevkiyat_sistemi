@@ -120,7 +120,8 @@ function teSpawn() {
 }
 
 function teMerge() {
-  const { shape, px, py, color } = teState.piece;
+  const { shape, color } = teState.piece;
+  const px = teState.px, py = teState.py;
   shape.forEach((row, y) => row.forEach((v, x) => {
     if (v && py + y >= 0) teState.grid[py + y][px + x] = color;
   }));
@@ -209,7 +210,8 @@ function teDraw() {
     }
   /* aktif parça */
   if (teState.piece) {
-    const { shape, px, py, color } = teState.piece;
+    const { shape, color } = teState.piece;
+    const px = teState.px, py = teState.py;
     shape.forEach((row, y) => row.forEach((v, x) => {
       if (v && py + y >= 0) teCell(ctx, px + x, py + y, cell, color);
     }));
