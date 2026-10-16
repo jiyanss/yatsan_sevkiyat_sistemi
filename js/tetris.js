@@ -1,9 +1,9 @@
-/* ═══════════════ 🧱 TETRIS — kişisel rekor ═══════════════ */
+/* ═══════════════ 🧱 TETRIS v2 — kişisel rekor ═══════════════ */
+console.info("🧱 Tetris v2 yüklendi");
 const TE_KEY = "sevkiyat_tetris_best";
 let teBest = Number(localStorage.getItem(TE_KEY) || 0);
 let teState = null;
 let teTimer = null;
-let teNextPiece = null;
 
 const TE_SHAPES = {
   I: [[1,1,1,1]],
@@ -76,6 +76,7 @@ function teRenderBody() {
   c.querySelectorAll("[data-te]").forEach(b =>
     b.addEventListener("click", () => teMove(b.dataset.te)));
 }
+
 function teStart() {
   teStop();
   teState = {
@@ -86,9 +87,10 @@ function teStart() {
     score: 0, lines: 0, level: 1
   };
   document.getElementById("teOver").classList.add("hidden");
-  teDraw();
   teSpawn();
+  teDraw();
   teTickStart();
+  console.info("🧱 oyun başladı · parça:", teState.piece.k);
 }
 
 function teTickStart() {
@@ -122,7 +124,6 @@ function teMerge() {
   shape.forEach((row, y) => row.forEach((v, x) => {
     if (v && py + y >= 0) teState.grid[py + y][px + x] = color;
   }));
-  /* çizgi temizleme */
   let cleared = 0;
   teState.grid = teState.grid.filter(row => {
     if (row.every(c => c)) { cleared++; return false; }
@@ -133,7 +134,6 @@ function teMerge() {
     teState.lines += cleared;
     teState.score += [0, 100, 300, 500, 800][cleared] * teState.level;
     teState.level = Math.floor(teState.lines / 5) + 1;
-    teScoreUpdate();
     teTickStart(); /* seviye hızlandı */
   }
 }
@@ -149,8 +149,9 @@ function teMove(dir) {
   }
   else if (dir === "drop") {
     while (!teCollide(teState.piece.shape, teState.px, teState.py + 1)) teState.py++;
-    teScoreUpdate(2);
+    teState.score += 2;
   }
+  teScoreUpdate();
   teDraw();
 }
 
@@ -166,9 +167,8 @@ function teTick() {
   teDraw();
 }
 
-function teScoreUpdate(extra = 0) {
+function teScoreUpdate() {
   if (!teState) return;
-  teState.score += extra;
   const sc = document.getElementById("teScore");
   if (sc) sc.textContent = teState.score;
   const ln = document.getElementById("teLines");
@@ -193,25 +193,33 @@ function teDraw() {
   if (!cv) return;
   const ctx = cv.getContext("2d");
   const cell = cv.width / TE_W;
+  /* zemin */
   ctx.fillStyle = "#0b1220";
   ctx.fillRect(0, 0, cv.width, cv.height);
+  /* grid çizgileri */
   ctx.strokeStyle = "#1c2942";
   for (let i = 1; i < TE_W; i++) { ctx.beginPath(); ctx.moveTo(i*cell,0); ctx.lineTo(i*cell,cv.height); ctx.stroke(); }
   for (let i = 1; i < TE_H; i++) { ctx.beginPath(); ctx.moveTo(0,i*cell); ctx.lineTo(cv.width,i*cell); ctx.stroke(); }
   /* yerleşmiş bloklar */
-  teState.grid.forEach((row, y) => row.forEach((c, x) => {
-    if (!c) return;
-    ctx.fillStyle = c;
-    ctx.fillRect(x*cell+1, y*cell+1, cell-2, cell-2);
-  }));
+  for (let y = 0; y < teState.grid.length; y++)
+    for (let x = 0; x < teState.grid[y].length; x++) {
+      const c = teState.grid[y][x];
+      if (!c) continue;
+      teCell(ctx, x, y, cell, c);
+    }
   /* aktif parça */
   if (teState.piece) {
     const { shape, px, py, color } = teState.piece;
-    ctx.fillStyle = color;
     shape.forEach((row, y) => row.forEach((v, x) => {
-      if (v && py + y >= 0) ctx.fillRect((px+x)*cell+1, (py+y)*cell+1, cell-2, cell-2);
+      if (v && py + y >= 0) teCell(ctx, px + x, py + y, cell, color);
     }));
   }
+}
+function teCell(ctx, x, y, cell, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x*cell + 1, y*cell + 1, cell - 2, cell - 2);
+  ctx.strokeStyle = "rgba(0,0,0,.35)";
+  ctx.strokeRect(x*cell + 1.5, y*cell + 1.5, cell - 3, cell - 3);
 }
 
 function teDrawNext() {
@@ -219,13 +227,19 @@ function teDrawNext() {
   if (!cv) return;
   const ctx = cv.getContext("2d");
   ctx.clearRect(0, 0, cv.width, cv.height);
+  if (!teState || !teState.next) return;
   const { shape, color } = teState.next;
   const cell = 18;
   const offX = (cv.width - shape[0].length * cell) / 2;
   const offY = (cv.height - shape.length * cell) / 2;
-  ctx.fillStyle = color;
   shape.forEach((row, y) => row.forEach((v, x) => {
-    if (v) ctx.fillRect(offX + x*cell + 1, offY + y*cell + 1, cell - 2, cell - 2);
+    if (v) teCell(ctx, 0, 0, 0, "transparent"); /* no-op koruması gerekmiyor — aşağı gerçek çizim */
+  }));
+  shape.forEach((row, y) => row.forEach((v, x) => {
+    if (v) {
+      ctx.fillStyle = color;
+      ctx.fillRect(offX + x*cell + 1, offY + y*cell + 1, cell - 2, cell - 2);
+    }
   }));
 }
 
@@ -238,11 +252,11 @@ document.addEventListener("keydown", e => {
   e.preventDefault();
   teMove(map[e.key]);
 });
-/* ESC kapatınca oyunu durdur */
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !document.getElementById("tetrisModal").classList.contains("hidden")) closeTetris();
 });
-/* Modal butonları — dosya yüklendiğinde bir kez bağlanır */
+
+/* Modal butonları — bir kez bağlanır */
 document.getElementById("btnTetrisClose").addEventListener("click", closeTetris);
 document.getElementById("tetrisModal").addEventListener("click", e => {
   if (e.target === e.currentTarget) closeTetris();
