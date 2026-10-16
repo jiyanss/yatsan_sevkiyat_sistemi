@@ -239,3 +239,8 @@ document.addEventListener("keydown", e => {
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !document.getElementById("tetrisModal").classList.contains("hidden")) closeTetris();
 });
+/* Modal butonları — dosya yüklendiğinde bir kez bağlanır */
+document.getElementById("btnTetrisClose").addEventListener("click", closeTetris);
+document.getElementById("tetrisModal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeTetris();
+});
