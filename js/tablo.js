@@ -712,35 +712,6 @@ function applyMenuLayout() {
   });
 }
 
-/* ================= Başlat ================= */
-updateUserUI();
-(async () => {
-  renderThead();
-  loadPrefs();
-  loadKapasitePrefs();
-  updateSortHeaders();
-  await loadSureAyarlari();
-  await loadEkipler();
-  const s = getAuthState();
-  if (s) {
-    try {
-      await ensureToken();
-      currentUser = { email: s.email };
-      await loadUserEntries();
-      updateUserUI();
-    } catch (e) { /* ensureToken gerekli temizliği yaptı */ }
-  }
- render();
-  await load(true);
-  if (arsivDahil && !Array.isArray(arsivCache)) {
-    try { arsivCache = await fetchArsiv(); render(); } catch (e) { arsivCache = []; }
-  }
-    parseIslemHash();
-  if (location.hash === "#operasyon") openOperasyon();
-  startLiveSync();
-  otomatikGunlukYedek();
-})();
-
 /* ================= 🐍 YILAN OYUNU ================= */
 let snakeTimer = null;
 let snakeState = null;
