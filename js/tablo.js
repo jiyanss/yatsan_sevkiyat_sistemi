@@ -96,22 +96,28 @@ async function raporHavuz() {
   const musEl = document.getElementById("rptMusteri");
   const mus = musEl ? musEl.value.trim().toLowerCase() : "";
   if (mus) list = list.filter(r => (r.musteri || "").toLowerCase().includes(mus));
-  /* 📅 Tarih filtresi — planlanan üzerinden */
+  /* 📅 Tarih filtresi — REEL PLAN bazlı (gecikmeTarihi: reelPlan || planlanan) */
   const tEl = document.getElementById("rptTarih");
   const mod = tEl ? tEl.value : "all";
   if (mod !== "all") {
-    let from = "";
-    if (mod === "week") {
-      const d = new Date();
-      d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-      from = isoFromDate(d);
-    } else if (mod === "month") from = isoFromDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-    else if (mod === "lastmonth") from = monthBounds(-1).from;
-    else if (mod === "d30") { const d = new Date(); d.setDate(d.getDate() - 29); from = isoFromDate(d); }
-    else if (mod === "d90") { const d = new Date(); d.setDate(d.getDate() - 89); from = isoFromDate(d); }
-    else if (mod === "year") from = new Date().getFullYear() + "-01-01";
-    const to = (mod === "lastmonth") ? monthBounds(-1).to : "9999-12-31";
-    list = list.filter(r => (r.planlananTarih || "") >= from && (r.planlananTarih || "") <= to);
+    const thisWeek = getISOWeek(new Date());
+    const today = todayISO();
+    const yilBasi = new Date().getFullYear() + "-01-01";
+    list = list.filter(r => {
+      const t = gecikmeTarihi(r);
+      if (!t) return false;
+      if (mod === "week") {
+        /* Ana tabloyla aynı: bu hafta planlılar + tamamlanmamış gecikenler */
+        const geciken = t < today && r.durum !== "Yükleme Tamamlandı";
+        return String(r.hafta) === String(thisWeek) || geciken;
+      }
+      if (mod === "month") return t >= isoFromDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+      if (mod === "lastmonth") { const b = monthBounds(-1); return t >= b.from && t <= b.to; }
+      if (mod === "d30") { const d = new Date(); d.setDate(d.getDate() - 29); return t >= isoFromDate(d); }
+      if (mod === "d90") { const d = new Date(); d.setDate(d.getDate() - 89); return t >= isoFromDate(d); }
+      if (mod === "year") return t >= yilBasi;
+      return true;
+    });
   }
   return list;
 }
