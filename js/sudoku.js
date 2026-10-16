@@ -129,13 +129,14 @@ async function suRenderBoard(board) {
     const c = board.cells[i] || { v: 0, fixed: false, u: "" };
     let cls = "su-cell";
     if (c.fixed) cls += " su-fixed";
-    else if (c.u === me.isim && c.v) cls += " su-mine";
+    else if (c.pid === me.id && c.v) cls += " su-mine";
     else if (c.u && c.v) cls += " su-other";
     if (suSel === i) cls += " su-sel";
     /* çakışma vurgusu: aynı satır/sütun/kutuda aynı değer */
     if (c.v && !c.fixed && suCakisiyor(board, i)) cls += " su-err";
-    grid += `<div class="${cls}" data-suidx="${i}">${c.v || ""}${c.u && !c.fixed ? `<span class="su-name">${esc(c.u.split(" ")[0])}</span>` : ""}</div>`;
-  }
+    const kisa = c.u ? c.u.split(/[\s.@]/)[0].slice(0, 3) : "";
+    grid += `<div class="${cls}" data-suidx="${i}">${c.v || ""}${kisa && !c.fixed ? `<span class="su-name">${esc(kisa)}</span>` : ""}</div>`;
+    }
 
   b.innerHTML = `
     <div class="su-bar" style="max-width:432px;margin:0 auto 10px">
@@ -149,7 +150,8 @@ async function suRenderBoard(board) {
       <div class="su-pad-row">${[6,7,8,9].map(n => `<button class="su-num-btn" data-sun="${n}">${n}</button>`).join("")}</div>
       <div class="su-pad-row">
         <button class="su-act-btn" data-sun="0">🧽 Temizle</button>
-        ${bitmis ? `<button class="su-act-btn" id="suYeni">🔢 Yeni Oyun</button>` : ""}
+        <button class="su-act-btn" id="suYeni">🔢 Yeni Oyun</button>
+      </div>
       </div>
     </div>`;
 
@@ -166,8 +168,9 @@ async function suRenderBoard(board) {
   /* sayı pedi */
   b.querySelectorAll("[data-sun]").forEach(btn =>
     btn.addEventListener("click", () => suYaz(Number(btn.dataset.sun))));
-  const yeniBtn = b.querySelector("#suYeni");
+    const yeniBtn = b.querySelector("#suYeni");
   if (yeniBtn) yeniBtn.addEventListener("click", async () => {
+    if (!confirm("Mevcut oyun kapatılıp yeni masa açılacak. Onaylıyor musunuz?")) return;
     await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`, { method: "PUT", body: "null" });
     await suRenderStart();
   });
@@ -193,7 +196,7 @@ async function suYaz(v) {
   if (suSel < 0 || !suBoard || suBoard.status === "done") return;
   if (suBoard.cells[suSel] && suBoard.cells[suSel].fixed) return;
   const me = suPlayer();
-  const cell = { v, fixed: false, u: v === 0 ? "" : me.isim };
+  const cell = { v, fixed: false, u: v === 0 ? "" : me.isim, pid: v === 0 ? "" : me.id };
   suBoard.cells[suSel] = cell;                 /* optimistik yerel */
   await fetch(`${FIREBASE_DB_URL}/${SU_NODE}/cells/${suSel}.json`, {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cell)
