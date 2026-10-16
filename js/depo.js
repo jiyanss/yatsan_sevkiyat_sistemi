@@ -72,7 +72,7 @@ function updateSureCells() {
   });
 }
 
-/* ============================================================
+  /* ============================================================
    🆕 TABLO BAŞLIĞI — ALL_COLS'tan üretilir (hizalama garantisi)
    ============================================================ */
 function renderThead() {
@@ -303,7 +303,7 @@ function renderTable(list) {
   updateBulkBar();
 }
 
-/* ============================================================
+ /* ============================================================
    🆕 YÜZEN HÜCRE DÜZENLEME KATMANI
    ============================================================ */
 function openCellEditor(td, id, field) {
@@ -1009,9 +1009,57 @@ async function openMusteriKart(id) {
   document.body.appendChild(modal);
   modal.querySelector("#btnMKClose").addEventListener("click", () => modal.remove());
 }
-/* ============================================================
+  /* ============================================================
    ⚙️ TOPLU DÜZENLEME
    ============================================================ */
+function updateBulkBar() {
+  const bar = document.getElementById("bulkBar");
+  if (!selectedIds.size) { bar.classList.add("hidden"); return; }
+  document.getElementById("bulkCount").textContent = `${selectedIds.size} kayıt seçili`;
+  bar.classList.remove("hidden");
+}
+document.getElementById("btnBulkCancel").addEventListener("click", () => {
+  selectedIds.clear();
+  render();
+});
+document.getElementById("btnBulkApply").addEventListener("click", async () => {
+  if (!selectedIds.size) return;
+  const yeniTarih = document.getElementById("bulkDate").value;
+  const yeniDurum = document.getElementById("bulkDurum").value;
+  if (!yeniTarih && !yeniDurum) { alert("Tarih veya durum seç."); return; }
+  const secili = rows.filter(r => selectedIds.has(r.id));
+  const detay = secili.map(r => `${r.musteri}`).join(", ");
+  const notlar = [];
+  if (yeniTarih) notlar.push(`planlanan + reel plan → ${formatDate(yeniTarih)}`);
+  if (yeniDurum) notlar.push(`durum → ${yeniDurum}`);
+  if (!confirm(`${secili.length} kayıt güncellenecek:\n${detay}\n\n${notlar.join(" · ")}\n\nOnaylıyor musun?`)) return;
+  const btn = document.getElementById("btnBulkApply");
+  btn.disabled = true; btn.textContent = "Uygulanıyor…";
+  try {
+    let done = 0;
+    for (const r of secili) {
+      const updated = { ...r };
+      if (yeniTarih) { updated.planlananTarih = yeniTarih; updated.reelPlan = yeniTarih; }
+      const eskiDurum = updated.durum;
+      if (yeniDurum) updated.durum = yeniDurum;
+      if (yeniDurum && yeniDurum !== eskiDurum) applyDurumSideEffects(updated);
+      const saved = await apiUpdate(r.id, updated);
+      rows = rows.map(x => x.id === r.id ? saved : x);
+      done++;
+    }
+    await apiLog("guncelleme", "", secili.map(r => r.musteri).join(", "),
+      `⚙️ toplu düzenleme (${done} kayıt): ${notlar.join(" · ")}`);
+    selectedIds.clear();
+    setSaveError("");
+    render();
+    showToast(`✅ ${done} kayıt güncellendi.`);
+  } catch (e) {
+    setSaveError(e.message);
+    alert("Toplu güncelleme hatası: " + e.message);
+  }
+  btn.disabled = false; btn.textContent = "Uygula";
+});
+/* ================= ⚙️ TOPLU DÜZENLEME ================= */
 function updateBulkBar() {
   const bar = document.getElementById("bulkBar");
   if (!selectedIds.size) { bar.classList.add("hidden"); return; }
