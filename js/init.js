@@ -380,7 +380,7 @@ async function quizDeleteQuestion(key) {
   } catch (e) { alert("Silinemedi: " + e.message); }
 }
 /* --- Bağlantılar --- */
-document.getElementById("btnQuiz").addEventListener("click", openQuiz);
+
 document.getElementById("btnSnake").addEventListener("click", openSnakeGame);
 document.getElementById("btnSnakeClose").addEventListener("click", closeSnakeGame);
 document.getElementById("btnQuizClose").addEventListener("click", () => {
