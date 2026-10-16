@@ -106,3 +106,27 @@ async function suYeniOyun(pIdx) {
   });
   showToast("🔢 Yeni ortak masa açıldı — herkes katılabilir!");
 }
+/* ═══════════════ 🎨 TAHTA RENDER + CANLI SENKRON ═══════════════ */
+let suBoard = null;   /* son bilinen tahta (render + local yazım için) */
+
+async function suRenderBoard(board) {
+  if (!board) {
+    board = await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`).then(r => r.json());
+  }
+  suBoard = board;
+  const b = document.getElementById("sudokuBody");
+  if (!board || !board.cells) { await suRenderStart(); return; }
+
+  const me = suPlayer();
+  const bitmis = board.status === "done";
+  const sure = Math.floor((Date.now() - board.startedTs) / 1000);
+  const sureTxt = bitmis && board.finishedTs
+    ? fmtSure(board.finishedTs - board.startedTs)
+    : `${Math.floor(sure / 60)}:${pad2(sure % 60)}`;
+
+  let grid = "";
+  for (let i = 0; i < 81; i++) {
+    const c = board.cells[i] || { v: 0, fixed: false, u: "" };
+    let cls = "su-cell";
+    if (c.fixed) cls += " su-fixed";
+    else if (c.u === me.isim &&
