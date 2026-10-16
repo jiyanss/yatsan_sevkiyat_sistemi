@@ -116,6 +116,12 @@ async function raporHavuz() {
       if (mod === "d30") { const d = new Date(); d.setDate(d.getDate() - 29); return t >= isoFromDate(d); }
       if (mod === "d90") { const d = new Date(); d.setDate(d.getDate() - 89); return t >= isoFromDate(d); }
       if (mod === "year") return t >= yilBasi;
+             if (mod === "custom") {
+        const f = (document.getElementById("rptFrom") || {}).value || "";
+        const u = (document.getElementById("rptTo") || {}).value || "9999-12-31";
+        if (f && u && f > u) return t >= u && t <= f;   /* ters girilirse yer değiştir */
+        return t >= f && t <= u;
+      }
       return true;
     });
   }
@@ -208,6 +214,49 @@ document.getElementById("rptArsiv").addEventListener("change", async e => {
   }
   cb.disabled = false;
 });
+
+/* 📆 Tarih aralığı — select'e "custom" seçeneği + Başlangıç/Bitiş kutuları (HTML'e dokunmadan) */
+(function rptAralikKur() {
+  const sel = document.getElementById("rptTarih");
+  if (!sel || sel.querySelector('option[value="custom"]')) return;   /* çift kurulum koruması */
+
+  /* 1) Seçenek — "Tüm zamanlar"ın hemen üstüne */
+  const opt = document.createElement("option");
+  opt.value = "custom";
+  opt.textContent = "📆 Tarih aralığı";
+  sel.insertBefore(opt, sel.querySelector('option[value="all"]') || null);
+
+  /* 2) Başlangıç/Bitiş kutusu — select'in yanına, gizli başlar */
+  const box = document.createElement("span");
+  box.id = "rptAralikBox";
+  box.style.display = "none";
+  box.style.alignItems = "center";
+  box.style.gap = "4px";
+  box.style.marginLeft = "6px";
+  box.innerHTML =
+    `<span style="font-size:12px;color:var(--muted)">Başlangıç</span>` +
+    `<input type="date" id="rptFrom" style="padding:5px 6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)">` +
+    `<span style="font-size:12px;color:var(--muted)">→</span>` +
+    `<span style="font-size:12px;color:var(--muted)">Bitiş</span>` +
+    `<input type="date" id="rptTo" style="padding:5px 6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)">`;
+  sel.insertAdjacentElement("afterend", box);
+
+  /* Tarihleri şimdiden doldur (ayın 1'i → bugün) — seçildiğinde filtre hazır olsun */
+  const f0 = document.getElementById("rptFrom"), t0 = document.getElementById("rptTo");
+  if (f0) f0.value = isoFromDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  if (t0) t0.value = isoFromDate(new Date());
+
+  /* 3) Seçim değişince kutuyu göster/gizle */
+  sel.addEventListener("change", () => {
+    box.style.display = sel.value === "custom" ? "inline-flex" : "none";
+  });
+
+  /* 4) Tarih değişince raporu yeniden çiz */
+  ["rptFrom", "rptTo"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", () => { if (sel.value === "custom") buildReports(); });
+  });
+})();
 
 /* ================= GEÇMİŞ ================= */
 async function showHistory() {
