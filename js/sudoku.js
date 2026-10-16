@@ -81,10 +81,12 @@ function suIdx(r, c) { return r * 9 + c; }
 function suRowCol(i) { return [Math.floor(i / 9), i % 9]; }
 
 async function openSudoku() {
-  await suIsimSor();   /* girişliyse es geçer, misafirse bir kez sorar */
+  await suIsimSor();
   document.getElementById("sudokuModal").classList.remove("hidden");
-  suRenderStart();
-  suStartSync();
+  /* 🔴 Her açılışta GARANTİLİ taze çekim — kapat-aç arasında başkası oynadıysa görünür */
+  await suRenderStart();          /* bu zaten board'u fetch edip çiziyor */
+  suStartSync();                  /* SSE yeniden kurulur (eski kapatılır) */
+  await suMasadakiler();          /* masa listesi taze */
 }
 function closeSudoku() {
   if (suSub) { suSub.close(); suSub = null; }
