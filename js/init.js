@@ -862,8 +862,7 @@ function renderOpResults(q) {
       return;
     }
   } else hits = opMatches(s);
-  res.innerHTML = hits.map(r => opHitHtml(r)).join("") || `<p class="hint" style="color:#8aa0b8">Eşleşme yok.</p>`;
-  res.querySelectorAll("[data-opid]").forEach(el =>
+    res.querySelectorAll("[data-opid]").forEach(el =>
     el.addEventListener("click", () => openOpCard(el.dataset.opid)));
 }
 function openOpCard(id) {
@@ -966,4 +965,108 @@ setInterval(() => {
     if (r && r.durum === "Yükleniyor" && r.loadingStartedAt) el.textContent = fmtSure(Date.now() - r.loadingStartedAt);
   }
 }, 1000);
-
+  } else hits = opMatches(s);
+  res.innerHTML = hits.map(r => opHitHtml(r)).join("") || `<p class="hint" style="color:#8aa0b8">Eşleşme yok.</p>`;
+  res.querySelectorAll("[data-opid]").forEach(el =>
+    el.addEventListener("click", () => openOpCard(el.dataset.opid)));
+}
+function openOpCard(id) {
+  currentOpId = id;
+  renderOpCard(true);
+}
+async function renderOpCard(scrollToIt = false) {
+  const holder = document.getElementById("opCard");
+  if (!holder || !currentOpId) return;
+  let r = null;
+  try { r = await freshRow(currentOpId); } catch (e) {}
+  if (!r) r = rows.find(x => x.id === currentOpId);
+  if (!r) { holder.innerHTML = `<div class="op-card"><div class="m">Kayıt bulunamadı</div></div>`; return; }
+  const b = sureBilgi(r);
+  const notlar = (r.comments || []).slice(-3).reverse();
+  const btns = r.durum === "Yükleme Tamamlandı" ? `
+    <div class="islem-done">✅ Bu yükleme tamamlandı${r.loadingStartedAt && r.loadingEndedAt ? ` · Baş:${fmtTime(r.loadingStartedAt)} - Bitiş:${fmtTime(r.loadingEndedAt)}` : ""}</div>` : `
+    <button class="islem-btn b-geldi" data-opact="geldi">🚛 Araç Geldi${r.araciGeldi === "GELDİ" ? " ✔" : ""}</button>
+    <button class="islem-btn b-basla" data-opact="baslat">▶️ Yüklemeyi Başlat${r.durum === "Yükleniyor" ? " (çalışıyor)" : ""}</button>
+    <div style="display:flex;gap:10px;margin-top:2px">
+      <button class="islem-btn b-geldi" data-opact="toplama-basla" style="flex:1">📦 Toplamayı Başlat${r.toplamaBasTs && !r.toplamaBittiTs ? " ✔ sürüyor" : r.toplamaBasTs ? " (bitti)" : ""}</button>
+      <button class="islem-btn b-bitir" data-opact="toplama-bitti" style="flex:1">📦 Toplamayı Bitir</button>
+    </div>`;
+  holder.innerHTML = `
+    <div class="op-card">
+      <div class="m">${esc(r.musteri)}</div>
+      <div class="sub">${esc(r.blm)} · ${esc(r.sevkiyatTipi)} · ${esc(r.ad)} yükleme · #${esc(r.id.slice(-6))}</div>
+      <div class="op-info">
+        <div><span>Reel Plan:</span> <b>${formatDate(gecikmeTarihi(r))}</b></div>
+        <div><span>Durum:</span> <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></div>
+        <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b></div>
+        <div><span>Açıklama:</span> ${r.aciklama ? esc(r.aciklama) : "-"}</div>
+      </div>
+      ${r.ekip && ekipler[r.ekip] ? `<div style="margin:6px 0">${ekipChipHtml(r.ekip)}</div>` : ""}
+      ${r.toplamaBasTs && !r.toplamaBittiTs ? `<div class="islem-done" style="background:#2d2410;border-color:#fbbf24;color:#fbbf24">📦 Toplama sürüyor — ${fmtTime(r.toplamaBasTs)}'dan beri</div>` : ""}
+      ${r.toplamaBasTs && r.toplamaBittiTs ? `<div class="islem-done">📦 Toplama bitti ${fmtTime(r.toplamaBasTs)}→${fmtTime(r.toplamaBittiTs)} · ${fmtSure(r.toplamaBittiTs - r.toplamaBasTs)}</div>` : ""}
+      ${b.durum === "live" ? `<div class="islem-done" style="background:#2d2410;border-color:#fbbf24;color:#fbbf24">⏱ <span id="opElapsed">${fmtSure(Date.now() - r.loadingStartedAt)}</span> geçti · ${fmtTime(r.loadingStartedAt)}'da başladı</div>` : ""}
+      ${notlar.length ? `<div class="op-notes">${notlar.map(cm => `<div class="op-note-item">💬 ${esc(cm.text)}<span>${esc(shortUser(cm.user))} · ${fmtDateTime(cm.ts)}</span></div>`).join("")}</div>` : ""}
+      <div class="islem-btns">${btns}</div>
+      <div class="op-note">
+        <textarea id="opNotText" placeholder="📝 Özel not yaz… (örn. araç 2 sa gecikmeli, evrak eksik)"></textarea>
+        <button class="op-btn-not" id="btnOpNot">+ Not Ekle</button>
+      </div>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn" id="btnOpBack">↩ Listeye dön</button>
+      </div>
+    </div>`;
+  if (scrollToIt) {
+    requestAnimationFrame(() => holder.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+  holder.querySelectorAll("[data-opact]").forEach(btn =>
+    btn.addEventListener("click", () => {
+      const act = btn.dataset.opact;
+      if (act === "toplama-basla" || act === "toplama-bitti") toplamaAction(act === "toplama-basla" ? "basla" : "bitti", currentOpId);
+      else islemAction(act, currentOpId);
+    }));
+  holder.querySelector("#btnOpNot").addEventListener("click", opNotEkle);
+  holder.querySelector("#btnOpBack").addEventListener("click", () => {
+    currentOpId = null;
+    holder.innerHTML = "";
+    renderOpResults(document.getElementById("opSearch").value);
+    const ov = document.getElementById("opOverlay");
+    if (ov) ov.scrollTo({ top: 0, behavior: "smooth" });
+  });
+}
+async function opNotEkle() {
+  const ta = document.getElementById("opNotText");
+  if (!ta) return;
+  const text = ta.value.trim();
+  if (!text) { alert("Not metni yaz."); return; }
+  if (!currentOpId) { alert("Önce bir kayıt seç."); return; }
+  if (!currentUser) { showLogin("Not eklemek için giriş yapın."); return; }
+  if (!hasPerm("edit")) { alert("Bu işlem için düzenleme yetkiniz yok."); return; }
+  try {
+    const row = await freshRow(currentOpId);
+    if (!row) { alert("Kayıt bulunamadı."); return; }
+    const comments = (row.comments || []).slice();
+    comments.push({ ts: Date.now(), user: currentUser.email, text });
+    const saved = await apiUpdate(row.id, { ...row, comments });
+    rows = rows.map(r => r.id === row.id ? saved : r);
+    setSaveError("");
+    await apiLog("yorum", row.id, saved.musteri, `📱 operasyon notu: ${text.length > 70 ? text.slice(0, 70) + "…" : text}`);
+    showToast("✅ Not eklendi.");
+    renderOpCard();
+  } catch (e) { alert("Not kaydedilemedi: " + e.message); }
+}
+document.getElementById("btnOpOpen").addEventListener("click", openOperasyon);
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("opOverlay")) closeOperasyon();
+});
+setInterval(() => {
+  const ov = document.getElementById("opOverlay");
+  if (!ov) return;
+  const d = new Date();
+  const clk = document.getElementById("opClock");
+  if (clk) clk.textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const el = document.getElementById("opElapsed");
+  if (el) {
+    const r = rows.find(x => x.id === currentOpId);
+    if (r && r.durum === "Yükleniyor" && r.loadingStartedAt) el.textContent = fmtSure(Date.now() - r.loadingStartedAt);
+  }
+}, 1000);
