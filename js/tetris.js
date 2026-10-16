@@ -41,13 +41,17 @@ function teRenderBody() {
   const c = document.getElementById("tetrisBody");
   const skor = teState ? teState.score : 0;
   c.innerHTML = `
+    <div class="su-bar" style="max-width:396px;margin:0 auto 10px">
+      <button class="btn primary" id="teStartBtn">▶️ Başla</button>
+      <div class="te-stat">🏆 Rekor: <b>${teBest}</b></div>
+    </div>
     <div class="te-wrap">
       <div style="position:relative">
         <canvas id="teCanvas" class="te-canvas" width="220" height="396"></canvas>
         <div id="teOver" class="te-over hidden">
           <div style="font-size:26px;font-weight:800;color:#e2e8f0">💀 Oyun Bitti</div>
           <div style="color:#8aa0b8">Skor: <b id="teOverScore">${skor}</b> · Rekor: <b>${teBest}</b></div>
-          <button class="btn primary" id="teStartBtn">▶️ Başla</button>
+          <button class="btn primary" id="teAgainBtn">🔁 Tekrar</button>
         </div>
       </div>
       <div class="te-side">
@@ -55,7 +59,6 @@ function teRenderBody() {
         <div class="te-stat">Skor<br><b id="teScore">${skor}</b></div>
         <div class="te-stat">Çizgi<br><b id="teLines">0</b></div>
         <div class="te-stat">Seviye<br><b id="teLevel">1</b></div>
-        <div class="te-stat">🏆 Rekor<br><b>${teBest}</b></div>
       </div>
     </div>
     <div class="te-pad">
@@ -69,10 +72,10 @@ function teRenderBody() {
     </div>
     <p class="hint" style="margin-top:10px">Klavye: ← → hareket · ↑ döndür · ↓ hızlı in · Boşluk bırak</p>`;
   document.getElementById("teStartBtn").addEventListener("click", teStart);
+  document.getElementById("teAgainBtn").addEventListener("click", teStart);
   c.querySelectorAll("[data-te]").forEach(b =>
     b.addEventListener("click", () => teMove(b.dataset.te)));
 }
-
 function teStart() {
   teStop();
   teState = {
