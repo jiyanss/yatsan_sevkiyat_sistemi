@@ -55,7 +55,7 @@ const ALL_COLS = [
   ["musteri","Müşteri"],["blm","BLM"],["kategori","Kategori"],["sevkiyatTipi","Sevkiyat Tipi"],
   ["ad","AD"],["planlananTarih","Planlanan Tarih"],["hafta","Hafta"],["ay","Ay"],
   ["reelPlan","Reel Plan"],["gerceklesenTarih","Gerçekleşen"],["durum","Durum"],
-  ["sure","Süre"],["ekip","Ekip"],,
+  ["sure","Süre"],["ekip","Ekip"],
   ["aciklama","Açıklama"],["araciGeldi","Aracı Geldi"],["status","Status"],
   ["prsM3","PRS M3"],["m3","M3"],["createdBy","Ekleyen"]
 ];
