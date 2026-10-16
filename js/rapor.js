@@ -272,11 +272,11 @@ document.getElementById("btnFit").addEventListener("click", () => {
 document.getElementById("btnInlineAdd").addEventListener("click", () => gate("inline-add"));
 document.getElementById("btnShowForm").addEventListener("click", () => gate("form-add"));
 document.getElementById("btnImportOpen").addEventListener("click", () => gate("import"));
-document.getElementById("btnExport").addEventListener("click", exportExcel);
-document.getElementById("btnHistory").addEventListener("click", showHistory);
-document.getElementById("btnCalendar").addEventListener("click", openTakvim);
-document.getElementById("btnDepo").addEventListener("click", openDepo);
-document.getElementById("btnBackup").addEventListener("click", openBackup);
+document.getElementById("btnExport").addEventListener("click", () => exportExcel());
+document.getElementById("btnHistory").addEventListener("click", () => showHistory());
+document.getElementById("btnCalendar").addEventListener("click", () => openTakvim());
+document.getElementById("btnDepo").addEventListener("click", () => openDepo());
+document.getElementById("btnBackup").addEventListener("click", () => openBackup());
 document.getElementById("btnAdminPanel").addEventListener("click", openAdminPanel);
 document.getElementById("btnSurePanel").addEventListener("click", openSurePanel);
 document.getElementById("btnPrint").addEventListener("click", () => {
