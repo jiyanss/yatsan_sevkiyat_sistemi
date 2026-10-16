@@ -967,3 +967,23 @@ function depoEkipSatiri(r) {
     toplamaBittiTs: (r.toplamaBittiTs == null) ? null : Number(r.toplamaBittiTs),
 */
 
+/* ═══════════════ 🎮 GAME MENÜSÜ ═══════════════ */
+const gameMenuEl = document.getElementById("gameMenu");
+document.getElementById("btnGameMenu").addEventListener("click", e => {
+  e.stopPropagation();
+  gameMenuEl.classList.toggle("hidden");
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest(".game-wrap")) gameMenuEl.classList.add("hidden");
+});
+gameMenuEl.addEventListener("click", e => {
+  const b = e.target.closest("[data-game]");
+  if (!b) return;
+  gameMenuEl.classList.add("hidden");
+  const g = b.dataset.game;
+  if (g === "quiz") openQuiz();
+  else if (g === "snake") openSnakeGame();
+  else if (g === "sudoku") openSudoku();
+  else if (g === "tetris") openTetris();
+});
+
