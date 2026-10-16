@@ -424,7 +424,6 @@ async function arsivle() {
     await apiLog("guncelleme", "", adaylar.slice(0, 20).map(r => r.musteri).join(", ") + (adaylar.length > 20 ? "…" : ""),
       `🗄️ ${adaylar.length} kayıt arşive taşındı (sınır: ${formatDate(kesin)})`);
     showToast(`✅ ${adaylar.length} kayıt arşive taşındı.`);
-    (updated.toplamaBasTs ? ` · 📦 toplama: ${fmtDateTime(updated.toplamaBasTs)} → ${updated.toplamaBittiTs ? fmtDateTime(updated.toplamaBittiTs) : "sürüyor"}` : "") +
     await load(false);
     await renderArsiv();
   } catch (e) {
@@ -925,37 +924,6 @@ async function loadEkipler() {
     ekipSira = Object.keys(ekipler).sort((a, b) =>
       (parseInt(a.replace(/\D/g, ""), 10) || 0) - (parseInt(b.replace(/\D/g, ""), 10) || 0));
   } catch (e) { console.warn("Ekipler yüklenemedi:", e.message); ekipler = {}; ekipSira = []; }
-}
-
-/* ---------- Toplu ekip ataması (bulkBar) ---------- */
-async function bulkEkipUygula() {
-  const kod = document.getElementById("bulkEkip").value;
-  if (!kod) return;
-  if (!selectedIds.size) return;
-  const secili = rows.filter(r => selectedIds.has(r.id));
-  if (!secili.length) return;
-  if (!confirm(`${secili.length} kayda "${ekipAd(kod)}" atanacak. Onaylıyor musun?`)) return;
-  const btn = document.getElementById("btnBulkApply");
-  btn.disabled = true; btn.textContent = "Atanıyor…";
-  try {
-    let done = 0;
-    for (const r of secili) {
-      const updated = { ...r, ekip: kod };
-      const saved = await apiUpdate(r.id, updated);
-      rows = rows.map(x => x.id === r.id ? saved : x);
-      done++;
-    }
-    await apiLog("guncelleme", "", secili.map(r => r.musteri).slice(0, 15).join(", ") + (secili.length > 15 ? "…" : ""),
-      `👷 toplu ekip ataması (${done} kayıt): ${ekipAd(kod)}`);
-    selectedIds.clear();
-    setSaveError("");
-    render();
-    showToast(`👷 ${done} kayda ${ekipAd(kod)} atandı.`);
-  } catch (e) {
-    setSaveError(e.message);
-    alert("Ekip atama hatası: " + e.message);
-  }
-  btn.disabled = false; btn.textContent = "Uygula";
 }
 /* ---------- 📦 Toplama Bitti (QR + Operasyon) ---------- */
 /* Fiziksel toplama bitti ama statü bekliyor olabilir (üretim eksiği) —
