@@ -1050,27 +1050,30 @@ body[data-theme="grape"] .tool-group {
     box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
   }
 }
-/* 📌 Yapışkan Tablo Başlığı (Sticky Header) — Sığdırmayı Bozmayan Yapı */
+/* 📌 Sığdırma (fit-table) Dostu Sticky Header */
 .table-wrap {
   position: relative;
-  max-height: calc(100vh - 210px);
+  max-height: calc(100vh - 215px);
   overflow-y: auto;
-  overflow-x: hidden; /* Sığdır modunda yatay kaydırma çubuğunu gizler */
+  overflow-x: hidden !important; /* Sağa taşmayı tam engeller */
 }
 
 .table-wrap table {
-  width: 100%;
+  width: 100% !important;
+  table-layout: fixed; /* Kolonların ekrana tam sığmasını garanti eder */
 }
 
+/* Başlıkları dondur */
 thead th {
-  position: sticky;
+  position: sticky !important;
   top: 0;
-  z-index: 25;
-  background: #1e293b; /* Başlık zemin rengi kayarken altını göstermez */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  background-color: #1e293b !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
-/* Farklı temalar için yapışkan başlık arka plan uyumu */
-body[data-theme="ocean"] thead th { background: #134e4a; }
-body[data-theme="forest"] thead th { background: #22331f; }
-body[data-theme="grape"] thead th { background: #241a40; }
+/* Tema arka plan uyumu */
+body.dark thead th { background-color: #151f31 !important; }
+body[data-theme="ocean"] thead th { background-color: #134e4a !important; }
+body[data-theme="forest"] thead th { background-color: #22331f !important; }
+body[data-theme="grape"] thead th { background-color: #241a40 !important; }
