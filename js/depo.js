@@ -141,21 +141,27 @@ function renderSummary(list) {
   document.getElementById("sum-geciken").textContent = fmtN(s.gecikenAd);
   document.getElementById("sum-m3").textContent = fmtN(s.toplamM3);
   document.getElementById("sum-verimlilik").textContent = s.oran.toFixed(1) + "%";
-  // 1. Progress Bar genişliğini % oranına göre güncelle
-const pctVal = parseFloat(verimlilikOrani) || 0; // örn: 91.9
+ // Progress Bar & Geciken Uyarısı Güncellemesi
+const verimlilikEl = document.getElementById("sum-verimlilik");
 const progressFill = document.getElementById("sum-progress-fill");
-if (progressFill) {
+
+if (verimlilikEl && progressFill) {
+  // Ekranda yazan "%91.9" metninden sayısal değeri güvenle alıyoruz
+  const pctVal = parseFloat(verimlilikEl.textContent.replace("%", "").trim()) || 0;
   progressFill.style.width = Math.min(100, Math.max(0, pctVal)) + "%";
 }
 
-// 2. Geciken sayısı > 0 ise kartı kırmızı pulse efektiyle vurgula
-const gecikenCount = parseInt(gecikenSayisi) || 0;
-const gecikenStatCard = document.getElementById("sum-geciken")?.parentElement;
-if (gecikenStatCard) {
-  if (gecikenCount > 0) {
-    gecikenStatCard.classList.add("stat-alert-active");
-  } else {
-    gecikenStatCard.classList.remove("stat-alert-active");
+// Geciken Kartı Uyarısı
+const gecikenEl = document.getElementById("sum-geciken");
+if (gecikenEl) {
+  const gecikenCount = parseInt(gecikenEl.textContent.trim()) || 0;
+  const gecikenStatCard = gecikenEl.parentElement;
+  if (gecikenStatCard) {
+    if (gecikenCount > 0) {
+      gecikenStatCard.classList.add("stat-alert-active");
+    } else {
+      gecikenStatCard.classList.remove("stat-alert-active");
+    }
   }
 }
   const todayDow = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[new Date().getDay()];
