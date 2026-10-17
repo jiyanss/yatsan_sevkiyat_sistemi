@@ -1,0 +1,163 @@
+/* =========================================================
+   1. TEK EKRAN (SINGLE SCREEN) DÜZENİ
+   ========================================================= */
+html, body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden !important; /* Dış sayfa kaymasını engeller */
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.statbar {
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+/* =========================================================
+   2. AÇILIR MENÜLERİ (DROPDOWN) BUTON ALTINA SABİTLEME
+   ========================================================= */
+/* Ekran görüntüsündeki Oyunlar ve Araçlar menülerinin çakışmasını engeller */
+.game-wrap, 
+.colmenu-wrap {
+  position: relative !important;
+}
+
+.game-menu, 
+.colmenu {
+  position: absolute !important;
+  top: calc(100% + 6px) !important;
+  left: 0 !important;
+  z-index: 100 !important;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  min-width: 180px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+/* Araçlar menüsü ekranın sağından dışarı taşmasın */
+#toolsMenu {
+  left: auto !important;
+  right: 0 !important;
+}
+
+.gm-item {
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 7px 10px;
+  border-radius: 6px;
+  width: 100%;
+  display: block;
+}
+.gm-item:hover {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+/* =========================================================
+   3. TABLO KAPSAYICISI VE SAĞA TAŞMAMA (FIT-TABLE)
+   ========================================================= */
+.table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto !important;  /* Sadece veri alanı dikey kayar */
+  overflow-x: hidden !important; /* Sağa taşmayı ve kaydırma çubuğunu kilitler */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+}
+
+.table-wrap table {
+  width: 100% !important;
+  table-layout: fixed !important; /* Tüm sütunları ekrana tam sığdırır */
+  border-collapse: collapse;
+}
+
+.table-wrap thead tr th {
+  position: sticky !important;
+  top: 0;
+  z-index: 25;
+  background-color: #1e293b !important;
+  color: #cbd5e1;
+  padding: 6px 4px !important;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+/* Temalara Göre Başlık Zemin Rengi */
+body.dark .table-wrap thead tr th { background-color: #151f31 !important; }
+body[data-theme="ocean"] .table-wrap thead tr th { background-color: #134e4a !important; }
+body[data-theme="forest"] .table-wrap thead tr th { background-color: #22331f !important; }
+body[data-theme="grape"] .table-wrap thead tr th { background-color: #241a40 !important; }
+
+/* Hücre Alanları & Taşma Engelleme */
+.table-wrap td {
+  padding: 4px 4px !important;
+  border-top: 1px solid var(--border);
+  font-size: 10.5px !important;
+  white-space: nowrap;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Sığmayan metin sonuna ... koyar */
+}
+
+/* Kolon Genişlik Oranları (%) — Toplam %100 Ekran Genişliği */
+th[data-col="select"], td:first-child { width: 3%; text-align: center; }
+th[data-col="musteri"], td[data-col="musteri"] { width: 11%; }
+th[data-col="blm"], td[data-col="blm"] { width: 7%; }
+th[data-col="sevkiyatTipi"], td[data-col="sevkiyatTipi"] { width: 6%; }
+th[data-col="ad"], td[data-col="ad"] { width: 3%; text-align: center; }
+th[data-col="planlananTarih"], td[data-col="planlananTarih"] { width: 7%; }
+th[data-col="hafta"], td[data-col="hafta"] { width: 3%; text-align: center; }
+th[data-col="ay"], td[data-col="ay"] { width: 4%; }
+th[data-col="reelPlan"], td[data-col="reelPlan"] { width: 7%; }
+th[data-col="gerceklesenTarih"], td[data-col="gerceklesenTarih"] { width: 8%; font-size: 9.5px !important; }
+th[data-col="durum"], td[data-col="durum"] { width: 8%; }
+th[data-col="sure"], td[data-col="sure"] { width: 10%; }
+th[data-col="ekip"], td[data-col="ekip"] { width: 7%; }
+th[data-col="aciklama"], td[data-col="aciklama"] { width: 9%; }
+th[data-col="araciGeldi"], td[data-col="araciGeldi"] { width: 4%; text-align: center; }
+th[data-col="prsM3"], td[data-col="prsM3"] { width: 3%; text-align: center; }
+th[data-col="m3"], td[data-col="m3"] { width: 3%; text-align: center; }
+td:last-child { width: 4%; text-align: right; }
