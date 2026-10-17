@@ -655,8 +655,8 @@ function applyFit() {
   const wrap = document.querySelector(".table-wrap");
   const tbl = wrap ? wrap.querySelector("table") : null;
   if (!tbl) return;
-  document.body.classList.toggle("fit-table", fitMode);
-  wrap.style.zoom = "";
+// Sayfa yüklendiğinde otomatik sığdır
+document.body.classList.add("fit-table");  wrap.style.zoom = "";
   if (!fitMode) return;
   /* kompakt sınıf uygulandıktan SONRA ölç → zoom değeri küçük kalır */
   const need = tbl.scrollWidth;
