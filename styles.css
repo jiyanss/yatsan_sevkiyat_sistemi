@@ -800,9 +800,27 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 #depoMini .dm-table tr:hover td { background: #1e2a44 !important; }
 
 /* 👷 Ekip rozetleri */
+/* 👷 Ekip rozetleri — Zarif & Modern Görünüm */
 .ekip-chip {
-  display:inline-block; font-size:11.5px; font-weight:800; padding:3px 10px;
-  border-radius:999px; color:#fff; letter-spacing:.02em; white-space:nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;                     /* Kalınlık 800'den 600'e indirildi */
+  padding: 2px 8px;                     /* İç boşluklar inceltildi */
+  border-radius: 6px;                   /* Kaba kapsül yerine hafif yuvarlatılmış köşe */
+  background: var(--primary-soft);      /* Baskın mor yerine yumuşak tema rengi */
+  color: var(--primary);                /* Beyaz yazı yerine tema rengi yazı */
+  border: 1px solid rgba(99, 102, 241, 0.25); /* İnce şık kenarlık */
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+/* Üzerine gelince zarif renk değişimi */
+.ekip-chip:hover {
+  background: var(--primary);
+  color: #ffffff;
 }
 .ekip-toplam-bitti {
   display:inline-block; font-size:12px; font-weight:700; color:#34d399;
