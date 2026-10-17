@@ -93,36 +93,45 @@ main {
 }
 
 /* =========================================================
-   3. TABLO KAPSAYICISI VE SAĞA TAŞMAMA (FIT-TABLE)
+   GÜNCEL TABLE-WRAP & SCROLL DÜZENLEMESİ
    ========================================================= */
+
+/* Tablo kapsayıcısı: Sadece kendi içinde dikey ve yatay kaydırma yapar */
 .table-wrap {
   flex: 1;
   min-height: 0;
-  overflow-y: auto !important;  /* Sadece veri alanı dikey kayar */
-  overflow-x: hidden !important; /* Sağa taşmayı ve kaydırma çubuğunu kilitler */
+  overflow-y: auto !important;  /* Dikey kaydırma aktif */
+  overflow-x: auto !important;  /* Yatay kaydırma çubuğu GERİ GELDİ (Görünmeyen kolon kalmaz) */
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
 }
 
+/* Tablonun doğal genişliğini koruması */
 .table-wrap table {
-  width: 100% !important;
-  table-layout: fixed !important; /* Tüm sütunları ekrana tam sığdırır */
+  width: 100%;
+  table-layout: auto !important; /* Esnek kolon genişlikleri */
   border-collapse: collapse;
 }
 
-.table-wrap thead tr th {
-  position: sticky !important;
-  top: 0;
-  z-index: 25;
-  background-color: #1e293b !important;
-  color: #cbd5e1;
-  padding: 6px 4px !important;
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  white-space: nowrap;
+/* Şık ve ince kaydırma çubuğu (Scrollbar) tasarımı */
+.table-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px; /* Yatay scrollbar yüksekliği */
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
 
 /* Temalara Göre Başlık Zemin Rengi */
