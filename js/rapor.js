@@ -263,11 +263,12 @@ document.getElementById("btnToggleSummary").addEventListener("click", () => {
   document.getElementById("btnToggleSummary").textContent = s.classList.contains("hidden") ? "Özet" : "Özeti gizle";
   savePrefs();
 });
-// ✅ Güvenli kullanım:
+
+document.getElementById("btnFit").addEventListener("click", () => {
+  // ✅ Güvenli kullanım:
 document.getElementById("btnArayuzElemani")?.addEventListener("click", () => {
   // işlem kodları
 });
-document.getElementById("btnFit").addEventListener("click", () => {
   fitMode = !fitMode;
   document.getElementById("btnFit").classList.toggle("primary", fitMode);
   savePrefs();
