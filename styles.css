@@ -170,10 +170,13 @@ th[data-col="araciGeldi"], td[data-col="araciGeldi"] { width: 4%; text-align: ce
 th[data-col="prsM3"], td[data-col="prsM3"] { width: 3%; text-align: center; }
 th[data-col="m3"], td[data-col="m3"] { width: 3%; text-align: center; }
 td:last-child { width: 4%; text-align: right; }
+
+
 /* =========================================================
-   📱 MOBİL KUSURSUZ UYUM DÜZENİ (≤ 768px)
+   📱 MOBİL NOKTA ATIŞI DÜZENLEME (≤ 768px)
    ========================================================= */
 @media (max-width: 768px) {
+  /* 1. Dış Çerçeve Kilitleri (Ekran Titremesini / Sayfa Kaymasını Engeller) */
   html, body {
     height: 100vh;
     overflow: hidden !important;
@@ -184,7 +187,7 @@ td:last-child { width: 4%; text-align: right; }
     overflow: hidden;
   }
 
-  /* 1. Header & Filtre Alanı (Tüm Elemanlar Ekrana Sıfırlanır) */
+  /* 2. Header & Filtreler */
   header {
     padding: 8px !important;
     gap: 6px !important;
@@ -193,15 +196,13 @@ td:last-child { width: 4%; text-align: right; }
   .brand h1 { font-size: 13px !important; }
   .subtitle { display: none !important; }
 
-  /* Toolbar: Filtre ve Elemanları Mobilde Esnek Satırlara Dağıtma */
   .toolbar {
     width: 100% !important;
     display: flex !important;
     flex-wrap: wrap !important;
-    gap: 6px !important;
+    gap: 5px !important;
   }
 
-  /* Arama Kutusunun ve Filtre Seçimlerinin Mobilde Sağa Taşmasını Engelleme */
   .toolbar input, 
   .toolbar select {
     max-width: 100% !important;
@@ -210,80 +211,61 @@ td:last-child { width: 4%; text-align: right; }
     padding: 5px 8px !important;
   }
 
-  .tool-group {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 4px !important;
-    padding: 0 !important;
-    border: none !important;
-    background: transparent !important;
-    width: 100% !important;
-  }
-
   .btn {
     font-size: 11px !important;
     padding: 5px 8px !important;
     white-space: nowrap !important;
   }
 
-  /* 2. Açılır Menüleri (Dropdowns) Mobilde Ekranın Ortasına Hizalama */
+  /* 3. Açılır Menüleri (Dropdown) Doğrudan Butonun Altına Hizalama */
   .game-wrap, 
-  .colmenu-wrap, 
-  .tool-group {
+  .colmenu-wrap {
     position: relative !important;
   }
 
   .game-menu, 
   .colmenu, 
   #toolsMenu {
-    position: fixed !important;
-    top: auto !important;
-    bottom: 20px !important;
-    left: 12px !important;
-    right: 12px !important;
-    width: auto !important;
-    max-height: 50vh !important;
+    position: absolute !important;
+    top: calc(100% + 4px) !important; /* Menü tam butonun altında açılır */
+    left: 0 !important;
+    right: auto !important;
+    bottom: auto !important; /* Alt kısma yapışmasını iptal eder */
+    width: max-content !important;
+    min-width: 180px !important;
+    max-width: 280px !important;
+    max-height: 55vh !important;
     z-index: 9999 !important;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
-    border: 1px solid var(--border) !important;
-    background: var(--surface) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
   }
 
-  /* 3. Statbar (Özet Paneli Mobilde Sıkıştırılmış İki Satır) */
-  .statbar {
-    padding: 6px 8px !important;
-    gap: 6px 12px !important;
-    margin-bottom: 6px !important;
-    display: flex !important;
-    flex-wrap: wrap !important;
-    justify-content: space-between !important;
+  /* Ekranın sağ kenarındaki menülerin dışarı taşmasını engelleme */
+  #toolsMenu {
+    left: auto !important;
+    right: 0 !important;
   }
 
-  .stat {
-    min-width: 50px !important;
-  }
-
-  .s-val { font-size: 14px !important; }
-  .s-label { font-size: 8px !important; }
-  .s-div, .days { display: none !important; }
-
-  /* 4. Tablo (Sayfa Kaymaz, Tablo İçi Dikey ve Yatay Pürüzsüz Kayar) */
+  /* 4. TABLO İÇİ YATAY / DİKEY DOKUNMATİK KAYDIRMA (TOUCH-SCROLL) */
   .table-wrap {
-    flex: 1;
-    overflow: auto !important;
+    flex: 1 !important;
+    overflow-x: auto !important; /* Sağa/sola kaydırma kesinlikle aktif */
+    overflow-y: auto !important; /* Aşağı/yukarı kaydırma aktif */
+    -webkit-overflow-scrolling: touch !important; /* iOS/Android yumuşak kaydırma */
+    touch-action: pan-x pan-y !important; /* Dokunmatik jestleri tabloy yönlendirir */
     border: 1px solid var(--border);
     border-radius: var(--radius);
   }
 
   .table-wrap table {
-    width: 100%;
+    width: max-content !important; /* Tablonun doğal genişliğini korur, kaydırmaya izin verir */
+    min-width: 850px !important;   /* Mobilde kolonların sıkışmasını engeller */
     table-layout: auto !important;
   }
 
   .table-wrap th, 
   .table-wrap td {
-    padding: 5px 6px !important;
-    font-size: 10.5px !important;
+    padding: 6px 8px !important;
+    font-size: 11px !important;
     white-space: nowrap !important;
   }
 }
