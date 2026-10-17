@@ -1085,3 +1085,76 @@ body.dark .table-wrap thead tr th { background-color: #151f31 !important; }
 body[data-theme="ocean"] .table-wrap thead tr th { background-color: #134e4a !important; }
 body[data-theme="forest"] .table-wrap thead tr th { background-color: #22331f !important; }
 body[data-theme="grape"] .table-wrap thead tr th { background-color: #241a40 !important; }
+
+/* 🖥️ TEK EKRAN UYGULAMA DÜZENİ (Sayfa kaymaz, tablo sağa kaymaz, sadece iç veri kayar) */
+html, body {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden !important; /* Bütün sayfanın aşağı/sağa kaymasını tamamen engeller */
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  flex-shrink: 0; /* Header sabit */
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px 12px;
+  min-height: 0; /* Flex alt elemanlarının taşmasını önler */
+  overflow: hidden;
+}
+
+.statbar {
+  flex-shrink: 0; /* Özet kartları sabit */
+  margin-bottom: 10px;
+}
+
+/* 📊 Tablo Kapsayıcısı: Kalan tüm dikey alanı kaplar ve sadece kendi içinde dikey kayar */
+.table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto !important;  /* Yalnızca dikey (iç tablo) kaydırma */
+  overflow-x: hidden !important; /* Sağa yatay kaydırmayı tamamen kapatır */
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+}
+
+/* Tablonun ekrana tam oturması */
+.table-wrap table {
+  width: 100% !important;
+  border-collapse: collapse;
+}
+
+/* Tablonun koyu renkli başlık şeridini en üste kilitler */
+.table-wrap thead tr th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background-color: #1e293b !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Temalara göre yapışkan başlık zemin koruması */
+body.dark .table-wrap thead tr th { background-color: #151f31 !important; }
+body[data-theme="ocean"] .table-wrap thead tr th { background-color: #134e4a !important; }
+body[data-theme="forest"] .table-wrap thead tr th { background-color: #22331f !important; }
+body[data-theme="grape"] .table-wrap thead tr th { background-color: #241a40 !important; }
+
+/* Kompakt görünüm hücre aralıkları (Sıkışmayı ve üst üste binmeyi önler) */
+body.fit-table td {
+  padding: 5px 6px;
+  font-size: 11px;
+}
+body.fit-table th {
+  padding: 7px 6px;
+  font-size: 9.5px;
+}
