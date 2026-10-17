@@ -1063,3 +1063,25 @@ body.dark thead th { background-color: #151f31; }
 body[data-theme="ocean"] thead th { background-color: #134e4a; }
 body[data-theme="forest"] thead th { background-color: #22331f; }
 body[data-theme="grape"] thead th { background-color: #241a40; }
+
+/* 📌 Tablo Kapsayıcısı: Sayfa kaydırması yerine tablo içi kaydırma ve Sticky Header desteği */
+.table-wrap {
+  position: relative;
+  max-height: calc(100vh - 210px);
+  overflow-y: auto;
+}
+
+/* Başlık hücrelerini üstte dondur */
+.table-wrap thead tr th {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  background-color: #1e293b !important; /* Alt satırların yazıları arkadan gözükmez */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Farklı temalar için başlık zemin renkleri */
+body.dark .table-wrap thead tr th { background-color: #151f31 !important; }
+body[data-theme="ocean"] .table-wrap thead tr th { background-color: #134e4a !important; }
+body[data-theme="forest"] .table-wrap thead tr th { background-color: #22331f !important; }
+body[data-theme="grape"] .table-wrap thead tr th { background-color: #241a40 !important; }
