@@ -263,6 +263,9 @@ document.getElementById("btnToggleSummary").addEventListener("click", () => {
   document.getElementById("btnToggleSummary").textContent = s.classList.contains("hidden") ? "Özet" : "Özeti gizle";
   savePrefs();
 });
+document.getElementById("btnFit").addEventListener("click", () => {
+  fitMode = !fitMode;
+  document.getElementById("btnFit").classList.toggle("primary", fitMode);
   savePrefs();
   applyFit();
 });
