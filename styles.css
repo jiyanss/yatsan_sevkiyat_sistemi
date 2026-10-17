@@ -170,3 +170,122 @@ th[data-col="araciGeldi"], td[data-col="araciGeldi"] { width: 4%; text-align: ce
 th[data-col="prsM3"], td[data-col="prsM3"] { width: 3%; text-align: center; }
 th[data-col="m3"], td[data-col="m3"] { width: 3%; text-align: center; }
 td:last-child { width: 4%; text-align: right; }
+
+/* =========================================================
+   📱 MOBİL EKRAN OPTİMİZASYONU (≤ 768px)
+   ========================================================= */
+@media (max-width: 768px) {
+  /* 1. Dış Çerçeve ve Ana Alan */
+  html, body {
+    height: 100vh;
+    height: -webkit-fill-available; /* Mobil tarayıcı alt bar uyumu */
+    overflow: hidden !important;
+  }
+
+  main {
+    padding: 6px 8px !important;
+  }
+
+  /* 2. Header Kompaktlaştırma */
+  header {
+    padding: 6px 10px !important;
+    gap: 6px !important;
+  }
+
+  .brand h1 {
+    font-size: 13px !important;
+  }
+
+  .subtitle {
+    display: none !important; /* Mobilde alan kazanmak için ikincil yazıyı gizler */
+  }
+
+  /* 3. Toolbar: Butonları Yatay Kaydırılabilir Tek Satır Yapma */
+  .toolbar {
+    width: 100%;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding-bottom: 4px;
+    gap: 6px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .toolbar::-webkit-scrollbar {
+    display: none; /* Kaydırma çubuğunu gizler, daha temiz görünür */
+  }
+
+  .tool-group {
+    flex-shrink: 0 !important; /* Buton gruplarının sıkışmasını engeller */
+    padding: 2px 4px !important;
+  }
+
+  .btn, select, input {
+    font-size: 11px !important;
+    padding: 4px 7px !important;
+    white-space: nowrap !important;
+  }
+
+  /* 4. Statbar (Özet Kartları): Yatay Kaydırılabilir Satır */
+  .statbar {
+    padding: 6px 10px !important;
+    gap: 10px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    margin-bottom: 6px !important;
+  }
+
+  .stat {
+    min-width: 60px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .s-val {
+    font-size: 15px !important;
+  }
+
+  .s-label {
+    font-size: 8px !important;
+  }
+
+  .days {
+    margin-left: 0 !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .day {
+    min-width: 24px !important;
+  }
+
+  .day b {
+    font-size: 11px !important;
+  }
+
+  /* 5. Tablo Alanını Maksimuma Çıkarma */
+  .table-wrap {
+    flex: 1 !important;
+    margin-top: 2px;
+  }
+
+  .table-wrap table {
+    min-width: 750px !important; /* Mobilde tablonun rahat kayması için minimum genişlik */
+    table-layout: auto !important;
+  }
+
+  .table-wrap th, 
+  .table-wrap td {
+    padding: 4px 5px !important;
+    font-size: 10px !important;
+  }
+
+  /* 6. Açılır Menülerin Mobilde Düzgün Açılması */
+  .colmenu, .game-menu {
+    position: fixed !important;
+    top: 60px !important;
+    left: 10px !important;
+    right: 10px !important;
+    max-width: none !important;
+    z-index: 999 !important;
+  }
+}
