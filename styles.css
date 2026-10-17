@@ -974,3 +974,28 @@ html, body { overflow-x: hidden; }
 
 .su-name { color: rgba(15,23,42,.45); font-size: 7.5px; }
 .su-mine .su-name { color: var(--primary); }
+
+/* Toolbar gruplama ve düzeni */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 3px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+body.dark .tool-group,
+body[data-theme="ocean"] .tool-group,
+body[data-theme="forest"] .tool-group,
+body[data-theme="grape"] .tool-group {
+  background: rgba(255, 255, 255, 0.04);
+}
