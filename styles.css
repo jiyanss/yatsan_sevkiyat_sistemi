@@ -170,9 +170,8 @@ th[data-col="araciGeldi"], td[data-col="araciGeldi"] { width: 4%; text-align: ce
 th[data-col="prsM3"], td[data-col="prsM3"] { width: 3%; text-align: center; }
 th[data-col="m3"], td[data-col="m3"] { width: 3%; text-align: center; }
 td:last-child { width: 4%; text-align: right; }
-
 /* =========================================================
-   📱 MOBİL TEMİZ TABLO & HEADER DÜZENİ (≤ 768px)
+   📱 MOBİL KUSURSUZ UYUM DÜZENİ (≤ 768px)
    ========================================================= */
 @media (max-width: 768px) {
   html, body {
@@ -185,61 +184,90 @@ td:last-child { width: 4%; text-align: right; }
     overflow: hidden;
   }
 
-  /* 1. Header & Buton Alanı */
+  /* 1. Header & Filtre Alanı (Tüm Elemanlar Ekrana Sıfırlanır) */
   header {
-    padding: 6px 10px !important;
+    padding: 8px !important;
     gap: 6px !important;
   }
 
-  .brand h1 {
-    font-size: 13px !important;
-  }
-  .subtitle {
-    display: none !important;
-  }
+  .brand h1 { font-size: 13px !important; }
+  .subtitle { display: none !important; }
 
+  /* Toolbar: Filtre ve Elemanları Mobilde Esnek Satırlara Dağıtma */
   .toolbar {
-    width: 100%;
+    width: 100% !important;
     display: flex !important;
     flex-wrap: wrap !important;
-    gap: 4px !important;
+    gap: 6px !important;
+  }
+
+  /* Arama Kutusunun ve Filtre Seçimlerinin Mobilde Sağa Taşmasını Engelleme */
+  .toolbar input, 
+  .toolbar select {
+    max-width: 100% !important;
+    flex: 1 1 auto !important;
+    font-size: 11px !important;
+    padding: 5px 8px !important;
   }
 
   .tool-group {
-    padding: 2px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    padding: 0 !important;
     border: none !important;
     background: transparent !important;
+    width: 100% !important;
   }
 
-  .btn, select, input {
+  .btn {
     font-size: 11px !important;
-    padding: 4px 6px !important;
+    padding: 5px 8px !important;
+    white-space: nowrap !important;
   }
 
-  /* 2. Statbar (Özet Paneli) */
+  /* 2. Açılır Menüleri (Dropdowns) Mobilde Ekranın Ortasına Hizalama */
+  .game-wrap, 
+  .colmenu-wrap, 
+  .tool-group {
+    position: relative !important;
+  }
+
+  .game-menu, 
+  .colmenu, 
+  #toolsMenu {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 20px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-height: 50vh !important;
+    z-index: 9999 !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+    border: 1px solid var(--border) !important;
+    background: var(--surface) !important;
+  }
+
+  /* 3. Statbar (Özet Paneli Mobilde Sıkıştırılmış İki Satır) */
   .statbar {
     padding: 6px 8px !important;
-    gap: 8px !important;
+    gap: 6px 12px !important;
     margin-bottom: 6px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: space-between !important;
   }
 
   .stat {
-    min-width: 55px !important;
+    min-width: 50px !important;
   }
 
-  .s-val {
-    font-size: 15px !important;
-  }
+  .s-val { font-size: 14px !important; }
+  .s-label { font-size: 8px !important; }
+  .s-div, .days { display: none !important; }
 
-  .s-label {
-    font-size: 8px !important;
-  }
-
-  .s-div, .days {
-    display: none !important; /* Mobilde dikey yer kazanmak için */
-  }
-
-  /* 3. Tablo (Orijinal Tablo Yapısını Korur, İçi Dikey/Yatay Pürüzsüz Kayar) */
+  /* 4. Tablo (Sayfa Kaymaz, Tablo İçi Dikey ve Yatay Pürüzsüz Kayar) */
   .table-wrap {
     flex: 1;
     overflow: auto !important;
