@@ -1158,3 +1158,50 @@ body.fit-table th {
   padding: 7px 6px;
   font-size: 9.5px;
 }
+
+/* 📌 AKILLI SÜTUN SIĞDIRMA (Tüm Kolonlar Sağa Taşmadan Ekrana Sığar) */
+
+/* Tablo Hücre Kuralları */
+body.fit-table table {
+  width: 100% !important;
+  table-layout: auto !important; /* Kolonların içeriklerine göre esnek dağılmasını sağlar */
+}
+
+body.fit-table th,
+body.fit-table td {
+  padding: 4px 4px !important;    /* İç boşlukları daraltarak alan kazanır */
+  font-size: 10.5px !important;   /* Metin boyutunu optimum düzeye çeker */
+  white-space: nowrap;           /* Satır kırılmasını önler */
+}
+
+/* Genişlik Alanı Fazla Kaplayan Kolonları Akıllı Daraltma */
+body.fit-table td.truncate,
+body.fit-table td[data-col="aciklama"],
+body.fit-table td[data-col="musteri"] {
+  max-width: 110px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tarih ve Saat Sütunlarını Sıkılaştırma */
+body.fit-table td[data-col="planlananTarih"],
+body.fit-table td[data-col="reelPlan"],
+body.fit-table td[data-col="gerceklesenTarih"] {
+  font-size: 10px !important;
+  padding: 2px 3px !important;
+}
+
+/* Süre Kolonu Görsel Sıkılaştırması */
+body.fit-table .sure-wrap {
+  min-width: 70px !important;
+}
+body.fit-table .surebar {
+  width: 70px !important;
+}
+
+/* Sağ En Uçtaki İşlem/Aksiyon Butonlarını Daraltma */
+body.fit-table td:last-child {
+  padding: 2px 2px !important;
+  width: 1%; /* Son kolonu sadece buton kadar daraltır */
+}
