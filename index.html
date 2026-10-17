@@ -28,12 +28,14 @@
       <p class="subtitle">Canlı senkron · süre takibi · kapasite · takvim · depo modu</p>
     </div>
   </div>
-     <div class="toolbar">
+  <div class="toolbar">
+  <!-- 🔍 Arama ve Filtreleme Grubu -->
+  <div class="tool-group">
     <select id="searchScope" title="Arama kapsamı">
       <option value="musteri">Müşteri</option>
       <option value="wide">Her yerde</option>
     </select>
-    <input id="search" placeholder="🔍 Müşteri ara" style="min-width:120px" />
+    <input id="search" placeholder="🔍 Ara..." style="min-width:110px" />
     <select id="dateFilter"></select>
     <label class="arsiv-chk" title="Arşivdeki kayıtları listeye ve raporlara dahil et">
       <input type="checkbox" id="arsivDahil" /> 🗄️
@@ -50,51 +52,73 @@
       <option value="yukleniyor">Yükleniyor</option>
       <option value="tamamlandi">Tamamlandı</option>
     </select>
-     <button class="btn primary" id="btnDepo">🖥️ Depo</button>
+  </div>
+
+  <!-- 📱 Saha / Operasyon Butonları (Öncelikli Mavi Aksiyonlar) -->
+  <div class="tool-group">
+    <button class="btn primary" id="btnDepo">🖥️ Depo</button>
     <button class="btn primary" id="btnOpOpen">📱 Operasyon</button>
-    <button class="btn primary" id="btnQrPrint">📱 QR Yazdır</button>
     <button class="btn primary" id="btnScanMain">📡 Okut</button>
-        <div class="game-wrap">
-      <button class="btn" id="btnGameMenu">🎮 Game ▼</button>
-      <div id="gameMenu" class="game-menu hidden">
-        <button class="gm-item" data-game="quiz">🧠 Bilgi Yarışması</button>
-        <button class="gm-item" data-game="snake">🐍 Yılan</button>
-        <button class="gm-item" data-game="sudoku">🔢 Sudoku (ortak masa)</button>
-        <button class="gm-item" data-game="tetris">🧱 Tetris</button>
-      </div>
-    </div>
-    <button class="btn" id="btnFit" title="Tabloyu ekran genişliğine otomatik sığdır">⤢ Sığdır</button>
-    <button class="btn" id="btnToggleSummary">Özeti gizle</button>
-    <button class="btn" id="btnReports">📊 Raporlar</button>
-    <button class="btn" id="btnCalendar">📅 Takvim</button>
-    <button class="btn" id="btnHistory">🕘 Geçmiş</button>
-    <button class="btn" id="btnPrint">🖨️ Yazdır</button>
-    <button class="btn" id="btnExport">📤 Excel</button>
-    <button class="btn" id="btnImportOpen">📥 Excel Yükle</button>
-     <select id="themeSelect" title="Tema seç" style="width:auto">
-      <option value="light">☀️ Aydınlık</option>
-      <option value="dark">🌙 Karanlık</option>
-      <option value="ocean">🌊 Okyanus</option>
-      <option value="forest">🌲 Orman</option>
-      <option value="grape">🍇 Mor Neon</option>
-    </select>
-    <button class="btn" id="btnReload">↻</button>
+    <a class="btn primary" id="btnOrderHazir" href="order-hazir.html" title="Order Hazır — yükleme hazırlık analizi">📦 Order Hazır</a>
+  </div>
+
+  <!-- ⚡ Hızlı Veri Ekleme & Aksiyonlar -->
+  <div class="tool-group">
+    <button class="btn primary" id="btnInlineAdd">+ Yeni Kayıt</button>
     <button class="btn" id="btnShowForm">+ Form</button>
-    <button class="btn" id="btnInlineAdd">+ Yeni kayıt</button>
-      
-    <div class="colmenu-wrap">
+    <button class="btn" id="btnExport">📤 Excel</button>
+  </div>
+
+  <!-- 🛠️ Araçlar ve Görünüm Menüsü (Dropdown) -->
+  <div class="game-wrap">
+    <button class="btn" id="btnToolsMenu">🛠️ Araçlar ▼</button>
+    <div id="toolsMenu" class="game-menu hidden">
+      <button class="gm-item" id="btnReports">📊 Raporlar</button>
+      <button class="gm-item" id="btnCalendar">📅 Takvim</button>
+      <button class="gm-item" id="btnHistory">🕘 Geçmiş</button>
+      <button class="gm-item" id="btnQrPrint">📱 QR Yazdır</button>
+      <button class="gm-item" id="btnImportOpen">📥 Excel Yükle</button>
+      <button class="gm-item" id="btnPrint">🖨️ Yazdır</button>
+      <button class="gm-item hidden" id="btnBackup">💾 Yedek</button>
+      <button class="gm-item hidden" id="btnSurePanel">⏱️ Süreler</button>
+      <button class="gm-item hidden" id="btnArsiv">🗄️ Arşiv</button>
+      <button class="gm-item hidden" id="btnEkip">👷 Ekipler</button>
+      <button class="gm-item hidden" id="btnAdminPanel">🛡️ Admin Panel</button>
+    </div>
+  </div>
+
+  <!-- 🎮 Oyunlar Menüsü -->
+  <div class="game-wrap">
+    <button class="btn" id="btnGameMenu">🎮 Oyunlar ▼</button>
+    <div id="gameMenu" class="game-menu hidden">
+      <button class="gm-item" data-game="quiz">🧠 Bilgi Yarışması</button>
+      <button class="gm-item" data-game="snake">🐍 Yılan</button>
+      <button class="gm-item" data-game="sudoku">🔢 Sudoku (ortak masa)</button>
+      <button class="gm-item" data-game="tetris">🧱 Tetris</button>
+    </div>
+  </div>
+
+  <!-- 🎨 Tema, Kolonlar ve Ayarlar -->
+  <div class="colmenu-wrap">
     <button class="btn" id="btnCols" title="Kolonları gizle/göster">▦ Kolonlar</button>
     <div id="colMenu" class="colmenu hidden"></div>
-    </div>
-    <button class="btn hidden" id="btnBackup">💾 Yedek</button>
-    <button class="btn hidden" id="btnSurePanel">⏱️ Süreler</button>
-    <button class="btn hidden" id="btnArsiv">🗄️ Arşiv</button>
-    <button class="btn hidden" id="btnEkip">👷 Ekipler</button>
-    <button class="btn hidden" id="btnAdminPanel">🛡️ Admin Panel</button>
-    <button class="btn hidden" id="btnPwaInstall">📲 Uygulamayı Yükle</button>
-    <a class="btn primary" id="btnOrderHazir" href="order-hazir.html" title="Order Hazır — yükleme hazırlık analizi">📦 Order Hazır</a>
-    <div class="user-box" id="userBox"></div>
   </div>
+
+  <select id="themeSelect" title="Tema seç" style="width:auto">
+    <option value="light">☀️ Aydınlık</option>
+    <option value="dark">🌙 Karanlık</option>
+    <option value="ocean">🌊 Okyanus</option>
+    <option value="forest">🌲 Orman</option>
+    <option value="grape">🍇 Mor Neon</option>
+  </select>
+
+  <button class="btn" id="btnToggleSummary" title="Özeti Gizle/Göster">👁️</button>
+  <button class="btn" id="btnFit" title="Sığdır">⤢</button>
+  <button class="btn" id="btnReload" title="Yenile">↻</button>
+  <button class="btn hidden" id="btnPwaInstall">📲 Yükle</button>
+
+  <div class="user-box" id="userBox"></div>
+</div>
   
   </header>
 <main>
