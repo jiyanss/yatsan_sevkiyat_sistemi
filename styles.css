@@ -1062,18 +1062,3 @@ body[data-theme="grape"] .tool-group {
   width: 100% !important;
   table-layout: fixed; /* Kolonların ekrana tam sığmasını garanti eder */
 }
-
-/* Başlıkları dondur */
-thead th {
-  position: sticky !important;
-  top: 0;
-  z-index: 10;
-  background-color: #1e293b !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
-}
-
-/* Tema arka plan uyumu */
-body.dark thead th { background-color: #151f31 !important; }
-body[data-theme="ocean"] thead th { background-color: #134e4a !important; }
-body[data-theme="forest"] thead th { background-color: #22331f !important; }
-body[data-theme="grape"] thead th { background-color: #241a40 !important; }
