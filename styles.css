@@ -1050,3 +1050,16 @@ body[data-theme="grape"] .tool-group {
     box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
   }
 }
+/* 📌 Yapışkan Tablo Başlığı (Sticky Header) */
+.table-wrap {
+  position: relative;
+  max-height: calc(100vh - 210px); /* Ekran yüksekliğine göre otomatik kaydırma alanı */
+  overflow-y: auto;
+}
+
+thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Tablo kayarken başlığın altına hafif gölge */
+}
