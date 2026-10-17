@@ -1,10 +1,28 @@
 :root {
-  --bg: #f1f5f9; --surface: #ffffff; --border: #e2e8f0;
-  --text: #0f172a; --muted: #64748b;
-  --primary: #4f46e5; --primary-dark: #4338ca; --primary-soft: #eef2ff;
-  --green: #059669; --green-soft: #ecfdf5;
-  --amber: #d97706; --amber-soft: #fffbeb;
-  --red: #dc2626; --red-soft: #fef2f2;
+  /* Ana Zemin ve Panel Renkleri */
+  --bg: #f8fafc;                /* Soğuk, gözü yormayan açık gri (Slate-50) */
+  --surface: #ffffff;            /* Saf beyaz kart/panel zemini */
+  --border: #e2e8f0;             /* İnce, modern kenarlık gri (Slate-200) */
+  
+  /* Metin Renkleri */
+  --text: #0f172a;               /* Ana yazılar için koyu füme (Slate-900) */
+  --muted: #64748b;              /* Etiket ve ikincil yazılar (Slate-500) */
+  
+  /* Birincil Renk (Kurumsal Mavi/Lacivert) */
+  --primary: #2563eb;            /* Canlı ve kurumsal mavi (Blue-600) */
+  --primary-dark: #1d4ed8;       /* Hover/Aktif buton mavisi (Blue-700) */
+  --primary-soft: #eff6ff;       /* Vurgu ve satır hover zemin rengi (Blue-50) */
+  
+  /* Durum (Status) Renkleri */
+  --green: #059669;              /* Tamamlandı / Başarılı yeşili */
+  --green-soft: #ecfdf5;         /* Yeşil arka plan yumuşatma */
+  
+  --amber: #d97706;              /* Yükleniyor / Uyarı turuncusu */
+  --amber-soft: #fffbeb;         /* Turuncu arka plan yumuşatma */
+  
+  --red: #dc2626;                /* Bekliyor / Gecikme kırmızısı */
+  --red-soft: #fef2f2;           /* Kırmızı arka plan yumuşatma */
+  
   --radius: 12px;
 }
 body.dark {
