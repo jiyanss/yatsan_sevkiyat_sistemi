@@ -257,18 +257,21 @@ document.getElementById("btnReload").addEventListener("click", async () => {
   if (editingCell) await commitCell();
   load(true);
 });
-document.getElementById("btnToggleSummary").addEventListener("click", () => {
+document.getElementById("btnToggleSummary")?.addEventListener("click", () => {
   const s = document.getElementById("summary");
+  if (!s) return;
   s.classList.toggle("hidden");
-  document.getElementById("btnToggleSummary").textContent = s.classList.contains("hidden") ? "Özet" : "Özeti gizle";
+  const btn = document.getElementById("btnToggleSummary");
+  if (btn) {
+    btn.textContent = s.classList.contains("hidden") ? "Özet" : "Özeti gizle";
+  }
   savePrefs();
 });
-  // ✅ Güvenli kullanım:
-document.getElementById("btnArayuzElemani")?.addEventListener("click", () => {
-  // işlem kodları
-});
+
+// Sığdır (btnFit) butonu tıklama dinleyicisi (Eğer HTML'de buton varsa çalışır, yoksa patlamaz)
+document.getElementById("btnFit")?.addEventListener("click", () => {
   fitMode = !fitMode;
-  document.getElementById("btnFit").classList.toggle("primary", fitMode);
+  document.getElementById("btnFit")?.classList.toggle("primary", fitMode);
   savePrefs();
   applyFit();
 });
