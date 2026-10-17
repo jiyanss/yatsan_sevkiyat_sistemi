@@ -1058,4 +1058,23 @@ document.addEventListener("keydown", e => {
   console.info("✅ Rapor butonu bağlandı");
 })();
 
+// Tablo oluşturulduğunda veya güncellendiğinde hücrelere otomatik etiket atayan yardımcı fonksiyon
+function updateMobileTableLabels() {
+  const table = document.querySelector('.table-wrap table');
+  if (!table) return;
+
+  const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.innerText.trim());
+
+  table.querySelectorAll('tbody tr').forEach(row => {
+    const cells = row.querySelectorAll('td');
+    cells.forEach((cell, index) => {
+      if (headers[index]) {
+        cell.setAttribute('data-col-label', headers[index] + ':');
+      }
+    });
+  });
+}
+
+// Tablo her render edildiğinde bu fonksiyonu çağırabilirsiniz
+
   
