@@ -987,3 +987,21 @@ gameMenuEl.addEventListener("click", e => {
   else if (g === "tetris") openTetris();
 });
 
+// Araçlar menüsü aç/kapat
+const btnToolsMenu = document.getElementById("btnToolsMenu");
+const toolsMenu = document.getElementById("toolsMenu");
+
+if (btnToolsMenu && toolsMenu) {
+  btnToolsMenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toolsMenu.classList.toggle("hidden");
+    if (document.getElementById("gameMenu")) {
+      document.getElementById("gameMenu").classList.add("hidden");
+    }
+  });
+
+  document.addEventListener("click", () => {
+    toolsMenu.classList.add("hidden");
+  });
+}
+
