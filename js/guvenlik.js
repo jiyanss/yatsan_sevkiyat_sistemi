@@ -70,6 +70,7 @@
     sonSnapshotNeden: "-",
     snapSayisi: 0,
     copSayisi: null,
+    kuralEksik: null,        // true = giris yapilmisken cop kutusuna erisilemiyor (kurallar eksik)
     sarmalayici: { apiDelete: false, apiUpdate: false, apiInsert: false, apiBulkInsert: false },
   };
 
@@ -472,6 +473,7 @@
         sonSnapshotNeden: bilgi.sonSnapshotNeden,
         snapshotlar: snapListesi(),
         cop: bilgi.copSayisi,
+        kuralEksik: bilgi.kuralEksik,
         ayar: Object.assign({}, AYAR),
       };
     },
@@ -524,7 +526,15 @@
       const res = await authF(dbUrl(COP_NODE) + "?shallow=true", {});
       const d = await res.json();
       bilgi.copSayisi = d ? Object.keys(d).length : 0;
-    } catch (_) { /* sessiz */ }
+      if (bilgi.kuralEksik) bilgi.kuralEksik = false; // erisim geri geldi
+    } catch (e) {
+      /* Sessiz degil: giris yapilmisken 401/403 geliyorsa kurallarda "sevkiyat_cop" tanimli
+         degildir ve silme korumasi (çöp yazimi) surekli bloklanir -> kullaniciyi uyar. */
+      const m = (e && e.message) || "";
+      if (/401|403|reddedildi|izin vermiyor|izin vermiyor/i.test(m)) {
+        bilgi.kuralEksik = true;
+        uyariGoster("🛡️ KURAL EKSİK: giriş yapılmışken çöp kutusuna erişilemiyor (" + m + ") — silme koruması bu yüzden engelleniyor. Firebase Console → Realtime Database → Rules'a guvenlik-rehberi.md → ADIM 1'deki tam JSON'u yapıştırıp Publish edin (sevkiyat_cop düğümü dahil).");
+      }
+    }
   }
 })();
-
