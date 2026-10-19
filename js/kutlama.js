@@ -56,7 +56,7 @@
     sureTamamlanmaMs: 4800, // tamamlanma kutlaması süresi
     sureEkranMs: 3600,      // depo/operasyon açılış kutlaması
     minAralikMs: 12000,     // iki kutlama arası en kısa boşluk
-    ekranAralikMs: 30000,   // aynı ekran için iki kutlama arası soğuma
+    ekranAralikMs: 600000,   // aynı ekran için iki kutlama arası soğuma
   };
 
   /* ---------------- Durum ---------------- */
