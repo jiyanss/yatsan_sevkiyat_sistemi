@@ -1,6 +1,5 @@
-/* ═══════════════ 🔢 SUDOKU — ORTAK MASA (v2.0) ═══════════════
-   v2.0 düzeltmeleri (Task 20):
-   1) CANLI SENKRON: RTDB REST akışı "put"/"patch" adlı event yollar;
+/* ═══════════════ 🔢 SUDOKU — ORTAK MASA (v2.1) ═══════════════
+      1) CANLI SENKRON: RTDB REST akışı "put"/"patch" adlı event yollar;
       eski kod onmessage dinliyordu → ASLA tetiklenmiyordu. Bu yüzden
       diğer oyuncuların hamleleri ve masa değişimleri canlı görünmüyordu.
    2) BULMACA HAVUZU: eski havuzun 6 bulmacasından 5'i hatalıydı
@@ -261,9 +260,26 @@ function suCakisiyor(board, i) {
 }
 
 /* ═══════════════ ✍️ HÜCRE YAZMA ═══════════════ */
+/* 🛡 Tazelik kalkanı: yazım öncesi masanın hâlâ bildiğimiz oyun olup olmadığı
+   kontrol edilir (ufak/ucuz bir GET). Masa yenilendiyse yazım iptal + tazele. */
+async function suTazelikKontrol() {
+  try {
+    const ts = await fetch(`${FIREBASE_DB_URL}/${SU_NODE}/startedTs.json`).then(r => r.json());
+    if (!ts || Number(ts) !== Number(suBoard.startedTs)) {
+      showToast("♻️ Masa bu arada yenilendi — tahta tazeleniyor…");
+      suSel = -1;
+      const fresh = await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`).then(r => r.json());
+      if (fresh && fresh.cells && fresh.schema === SU_SCHEMA) await suRenderBoard(fresh);
+      else await suRenderStart();
+      return false;
+    }
+  } catch (e) { /* ağ hatasında akış kesilmesin */ }
+  return true;
+}
 async function suYaz(v) {
   if (suSel < 0 || !suBoard || suBoard.status === "done") return;
   if (suBoard.cells[suSel] && suBoard.cells[suSel].fixed) return;
+  if (!(await suTazelikKontrol())) return;   /* 🛡 masa değişmişse yazma */
   const me = suPlayer();
   const cell = { v, fixed: false, u: v === 0 ? "" : me.isim, pid: v === 0 ? "" : me.id };
   suBoard.cells[suSel] = cell;                 /* optimistik yerel */
