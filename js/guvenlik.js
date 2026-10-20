@@ -1,5 +1,5 @@
 /* =========================================================
-   YATSAN — guvenlik.js v1
+   YATSAN — guvenlik.js v1.2
    ---------------------------------------------------------
    TEK DOSYA (index.html'e 1 satır script etiketi dışında
    dokunulmaz, mevcut modüller değişmez). 4 KATMAN:
@@ -21,6 +21,15 @@
 
    4) 📦 ACİL DURUM KİTİ — Guvenlik.tamYedekIndir(): tüm
       düğümleri tek JSON dosyasına indirir (bilgisayara).
+
+   5) 🔎 YETKİ TEŞHİSİ (v1.2) — "normal kullanıcı toplama/
+      yükleme başlat-bitir yapamıyor (401)" sorununun kök
+      nedenini tek komutla bulur:
+      Guvenlik.yetkiTesti()      → ETKİLENEN kullanıcının
+        oturumuyla çalıştır: whitelist kaydı + gerçek yazma
+        testi + Türkçe karar raporu
+      Guvenlik.kullanicilar("e") → sevkiyat_users listesini
+        anahtar formatıyla listeler (admin doğrulaması)
 
    ---------------------------------------------------------
    GARANTİLER:
@@ -46,6 +55,8 @@
      Guvenlik.yazmaTesti()   → anonim YAZMA testi (kritik test)
      Guvenlik.tamYedekIndir()→ tüm veriyi JSON indir
      Guvenlik.snapshotAl()   → şimdi yerel yedek al
+     Guvenlik.yetkiTesti()   → v1.2: 401 yetki teşhisi (girişli kullanıcıyla)
+     Guvenlik.kullanicilar("e") → v1.2: sevkiyat_users whitelist listesi
    ========================================================= */
 (function () {
   "use strict";
@@ -463,6 +474,154 @@
     return a.download;
   }
 
+  /* ============ 5) YETKİ TEŞHİSİ (v1.2) ============ */
+  /* Giriş durumu: core.js sevkiyat_auth'a {idToken, refreshToken, email, exp} yazar.
+     tokenEmail = idToken JWT içinden çözülür — RULES'un gördüğü e-posta budur. */
+  function authDurum() {
+    try {
+      const s = JSON.parse(localStorage.getItem("sevkiyat_auth") || "null");
+      if (!s || !s.idToken) return { giris: false };
+      let tokEmail = "";
+      try {
+        const parca = s.idToken.split(".")[1] || "";
+        const b64 = parca.replace(/-/g, "+").replace(/_/g, "/");
+        const pad = b64 + "===".slice((b64.length + 3) % 4);
+        tokEmail = (JSON.parse(atob(pad)) || {}).email || "";
+      } catch (_) {}
+      return { giris: true, email: s.email || "", tokenEmail: tokEmail, exp: s.exp || 0 };
+    } catch (_) { return { giris: false }; }
+  }
+
+  /* sevkiyat_users whitelist listesi (okuma kuralı: auth != null → her girişli görebilir).
+     arama verilirse o e-posta vurgulanır. Admin Panel'deki kaydın RTDB'deki
+     GERÇEK anahtarını görmek için birebir doğru yol. */
+  async function kullanicilar(arama) {
+    const out = { ts: Date.now(), giris: null, liste: [], aranan: null, benVarim: null };
+    const a = authDurum();
+    out.giris = a.giris;
+    if (!a.giris) {
+      console.warn("Guvenlik.kullanicilar: önce giriş yap — liste auth != null gerektirir.");
+      return out;
+    }
+    try {
+      const res = await authF(dbUrl("sevkiyat_users"), {});
+      if (!res || !res.ok) {
+        console.warn("sevkiyat_users okunamadı (HTTP " + (res ? res.status : "?") + ") — rules'ta .read 'auth != null' olmalı.");
+        return out;
+      }
+      const d = (await res.json()) || {};
+      out.liste = Object.keys(d).map(function (k) {
+        const v = d[k] || {};
+        const email = v.email || k.replace(/,/g, ".");
+        return {
+          anahtar: k,
+          email: email,
+          rol: v.role || "user",
+          formatOk: k === String(email).replace(/\./g, ","),   // anahtar = noktalar virgüle çevrilmiş mi
+          kucukHarf: k === k.toLowerCase(),                     // rules araması büyük/küçük harfe duyarlı
+        };
+      });
+      console.table(out.liste.map(function (u) {
+        return { anahtar: u.anahtar, email: u.email, rol: u.rol,
+                 format: u.formatOk ? "ok" : "ANAHTAR≠EMAIL!",
+                 harf: u.kucukHarf ? "ok" : "BÜYÜK HARF VAR!" };
+      }));
+      if (arama) {
+        const arK = String(arama).replace(/\./g, ",");
+        const hit = out.liste.find(function (u) {
+          return u.anahtar === arK || String(u.email).toLowerCase() === String(arama).toLowerCase();
+        });
+        if (hit) {
+          out.aranan = hit;
+          console.info("🔎 " + arama + " BULUNDU → rules şu anahtara bakar: 'sevkiyat_users/" + hit.anahtar + "'");
+        } else {
+          console.warn("🔎 " + arama + " LİSTEDE YOK! Admin Panel'e yazılan e-postanın yazımını/büyük-küçük harfini kontrol et.");
+        }
+      }
+      const benim = ((a.tokenEmail || a.email || "")).replace(/\./g, ",");
+      if (benim) {
+        out.benVarim = out.liste.some(function (u) { return u.anahtar === benim; });
+        console.info((out.benVarim ? "✅ Girişli kullanıcı (" + benim.replace(/,/g, ".") + ") whitelist'te."
+                                   : "❌ Girişli kullanıcı (" + benim.replace(/,/g, ".") + ") whitelist'te YOK — kurallar yazmayı reddeder."));
+      }
+    } catch (e) { console.warn("kullanicilar hatası:", e.message); }
+    return out;
+  }
+
+  /* 401 teşhisi — ETKİLENEN kullanıcının oturumuyla çalıştır.
+     A) whitelist kaydı var mı  B) gerçek yazma testi (no-op PATCH, veri değişmez)
+     → Türkçe karar: giris-yok / whitelist-yok / kurallar-eski / hersey-tamam */
+  async function yetkiTesti() {
+    const a = authDurum();
+    const sonuc = { ts: Date.now(), giris: a.giris, email: a.tokenEmail || a.email || "", adimlar: {}, karar: "" };
+    console.log("🔎 Guvenlik.yetkiTesti başlıyor…");
+    if (!a.giris) {
+      sonuc.karar = "giris-yok";
+      console.warn("❌ GİRİŞ YAPILMAMIŞ. Bu testi etkilenen kullanıcıyla (ör. halil.ozcelik@yatsan.com) GİRİŞ YAPDIKTAN sonra çalıştır. Görüntüleme modunda (misafir) her yazma 401 alır — bu beklenen davranıştır.");
+      return sonuc;
+    }
+    const benimAnahtar = sonuc.email.replace(/\./g, ",");
+    console.info("1) Girişli e-posta: " + sonuc.email + " → rules arama anahtarı: 'sevkiyat_users/" + benimAnahtar + "'");
+    /* ADIM A — whitelist kaydı */
+    try {
+      const res = await authF(dbUrl("sevkiyat_users"), {});
+      if (!res || !res.ok) throw new Error("HTTP " + (res ? res.status : "?"));
+      const d = (await res.json()) || {};
+      const kayit = d[benimAnahtar] || null;
+      sonuc.adimlar.whitelist = kayit ? "var" : "yok";
+      if (kayit) {
+        console.info("✅ A) whitelist kaydın var: rol=" + (kayit.role || "?") + " · email=" + (kayit.email || "?"));
+      } else {
+        const yakin = Object.keys(d).filter(function (x) { return x.toLowerCase() === benimAnahtar.toLowerCase(); });
+        sonuc.adimlar.whitelistYakin = yakin;
+        console.warn("❌ A) sevkiyat_users'ta '" + benimAnahtar + "' anahtarı YOK." +
+          (yakin.length ? " Yakın eşleşme: " + yakin.join(", ") + " → BÜYÜK/KÜÇÜK HARF FARKI var; Admin Panel'den düzelt."
+                        : " Admin Panel'den bu e-posta eklenmeli (yazım hatalarına bak)."));
+      }
+    } catch (e) {
+      sonuc.adimlar.whitelist = "hata: " + e.message;
+      console.warn("⚠️ A) sevkiyat_users okunamadı:", e.message, "→ rules'ta sevkiyat_users .read 'auth != null' olmalı (ADIM 1). Oturumun süresi bitmiş de olabilir — yeniden giriş yap.");
+    }
+    /* ADIM B — gerçek yazma testi: ilk kaydı kendi verisiyle PATCH (değişiklik yok) */
+    try {
+      const sh = await fetch(dbUrl(anaNode()) + "?shallow=true", { cache: "no-store" });
+      const keys = sh.ok ? await sh.json() : null;
+      const ilk = keys ? Object.keys(keys)[0] : null;
+      if (!ilk) {
+        sonuc.adimlar.yazma = "kayit-yok";
+        console.warn("⚠️ B) yazma testi için kayıt bulunamadı.");
+      } else {
+        const row = await fetch(dbUrl(anaNode() + "/" + ilk), { cache: "no-store" }).then(function (r) { return r.json(); });
+        const wRes = await authF(dbUrl(anaNode() + "/" + ilk), {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(row) /* kendi verisi → içerik DEĞİŞMEZ */
+        });
+        sonuc.adimlar.yazma = wRes.ok ? "basarili" : "reddedildi-" + wRes.status;
+        sonuc.adimlar.testKayit = ilk;
+        if (wRes.ok) console.info("✅ B) YAZMA TESTİ BAŞARILI: sevkiyat/" + ilk + " no-op PATCH kabul edildi (veri değişmedi). Bu hesap yazabilir.");
+        else console.warn("❌ B) YAZMA TESTİ REDDEDİLDİ (HTTP " + wRes.status + ").");
+      }
+    } catch (e) {
+      sonuc.adimlar.yazma = "hata: " + e.message;
+      console.warn("❌ B) yazma testi başarısız:", e.message);
+    }
+    /* KARAR */
+    if (sonuc.adimlar.whitelist === "var" && sonuc.adimlar.yazma === "basarili") {
+      sonuc.karar = "hersey-tamam";
+      console.info("🎉 KARAR: HER ŞEY TAMAM — hesap whitelist'te ve yazabiliyor. 401 hâlâ görülüyorsa eski bir oturum/ekran olabilir; sayfayı yenileyip (Ctrl+Shift+R) tekrar dene.");
+    } else if (sonuc.adimlar.whitelist === "var" && String(sonuc.adimlar.yazma).indexOf("reddedildi") === 0) {
+      sonuc.karar = "kurallar-eski";
+      console.warn("🛡️ KARAR: whitelist'tesin AMA kurallar yazmana izin vermiyor. Neredeyse her zaman sebebi: yayındaki Rules metninde replace('.', ',') yazması (regex tuzağı). Doğrusu replace('[.]', ',') — guvenlik-rehberi.md → ADIM 1'deki JSON'u açıp Publish et.");
+    } else if (sonuc.adimlar.whitelist === "yok") {
+      sonuc.karar = "whitelist-yok";
+      console.warn("🛡️ KARAR: hesabın sevkiyat_users whitelist'inde yok → Admin Panel'den eklenmeli. Panel eklemesi rules'ta kod değişikliği gerektirmez (kurallar canlı olarak sevkiyat_users'a bakar).");
+    } else {
+      sonuc.karar = "belirsiz";
+      console.warn("🛡️ KARAR: yukarıdaki A/B çıktılarına bak; çıktıyı ekran görüntüsüyle paylaş.");
+    }
+    return sonuc;
+  }
+
   /* ============ Dış API ============ */
   window.Guvenlik = {
     durum: function () {
@@ -486,6 +645,8 @@
     kuralDenetle: kuralDenetle,
     yazmaTesti: yazmaTesti,
     tamYedekIndir: tamYedekIndir,
+    yetkiTesti: yetkiTesti,
+    kullanicilar: kullanicilar,
     ayarla: function (yeni) { Object.assign(AYAR, yeni || {}); },
   };
 
