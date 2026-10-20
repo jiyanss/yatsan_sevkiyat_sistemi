@@ -1,5 +1,5 @@
 /* =========================================================
-   YATSAN — guvenlik.js v1.2.1
+   YATSAN — guvenlik.js v1.3
    ---------------------------------------------------------
    TEK DOSYA (index.html'e 1 satır script etiketi dışında
    dokunulmaz, mevcut modüller değişmez). 4 KATMAN:
@@ -22,9 +22,13 @@
    4) 📦 ACİL DURUM KİTİ — Guvenlik.tamYedekIndir(): tüm
       düğümleri tek JSON dosyasına indirir (bilgisayara).
 
-   5) 🔎 YETKİ TEŞHİSİ (v1.2) — "normal kullanıcı toplama/
+   5) 🔎 YETKİ TEŞHİSİ (v1.3) — "normal kullanıcı toplama/
       yükleme başlat-bitir yapamıyor (401)" sorununun kök
       nedenini tek komutla bulur:
+      v1.3 DEĞİŞİKLİK: JWT e-posta decode düzeltildi (v1.2'nin dolgu
+      formülü bazı token boylarında sessizce çökerdi); e-posta artık
+      SADECE token claim'inden okunur, okunamazsa test TOKEN-ANORMAL
+      verdict'iyle durur (sessiz localStorage fallback'i kaldırıldı).
       Guvenlik.yetkiTesti()      → ETKİLENEN kullanıcının
         oturumuyla çalıştır: whitelist kaydı + gerçek yazma
         testi + Türkçe karar raporu
@@ -484,9 +488,12 @@
       let tokEmail = "";
       try {
         const parca = s.idToken.split(".")[1] || "";
-        const b64 = parca.replace(/-/g, "+").replace(/_/g, "/");
-        const pad = b64 + "===".slice((b64.length + 3) % 4);
-        tokEmail = (JSON.parse(atob(pad)) || {}).email || "";
+        let b64 = parca.replace(/-/g, "+").replace(/_/g, "/");
+        /* v1.3 DÜZELTME: v1.2'nin "(uzunluk+3)%4" dolgu formülü bazı token
+           boylarında atob exception'ı yutuyordu → e-posta sessizce kaybolur,
+           araç yanlış e-postaya bakardı. Doğru dolgu: uzunluğu 4'ün katı yap. */
+        while (b64.length % 4 !== 0) b64 += "=";
+        tokEmail = (JSON.parse(atob(b64)) || {}).email || "";
       } catch (_) {}
       return { giris: true, email: s.email || "", tokenEmail: tokEmail, exp: s.exp || 0 };
     } catch (_) { return { giris: false }; }
@@ -550,18 +557,27 @@
 
   /* 401 teşhisi — ETKİLENEN kullanıcının oturumuyla çalıştır.
      A) whitelist kaydı var mı  B) gerçek yazma testi (no-op PATCH, veri değişmez)
-     → Türkçe karar: giris-yok / whitelist-yok / kurallar-eski / hersey-tamam */
+     → Türkçe karar: giris-yok / token-anormal / whitelist-yok / kurallar-eski / hersey-tamam
+     v1.3: e-posta SADECE token claim'inden okunur (RULES'un gördüğü budur);
+     okunamazsa test token-anormal ile DURUR — sessiz fallback yok. */
   async function yetkiTesti() {
     const a = authDurum();
-    const sonuc = { ts: Date.now(), giris: a.giris, email: a.tokenEmail || a.email || "", adimlar: {}, karar: "" };
+    const sonuc = { ts: Date.now(), giris: a.giris, tokenEmail: a.tokenEmail || "", oturumEmail: a.email || "", email: a.tokenEmail || "", adimlar: {}, karar: "" };
     console.log("🔎 Guvenlik.yetkiTesti başlıyor…");
     if (!a.giris) {
       sonuc.karar = "giris-yok";
       console.warn("❌ GİRİŞ YAPILMAMIŞ. Bu testi etkilenen kullanıcıyla (ör. halil.ozcelik@yatsan.com) GİRİŞ YAPDIKTAN sonra çalıştır. Görüntüleme modunda (misafir) her yazma 401 alır — bu beklenen davranıştır.");
       return sonuc;
     }
+    if (!sonuc.tokenEmail) {
+      sonuc.karar = "token-anormal";
+      console.error("❌ TOKEN'DAKİ E-POSTA OKUNAMADI — kurallar whitelist'e bakamaz, her yazma 401 alır! ÇIKIŞ yapıp e-posta/şifreyle TEKRAR giriş yap, sonra bu testi tekrarla. (Tekrarlanırsa ekran görüntüsü at.)");
+      return sonuc;
+    }
     const benimAnahtar = sonuc.email.replace(/\./g, ",");
-    console.info("1) Girişli e-posta: " + sonuc.email + " → rules arama anahtarı: 'sevkiyat_users/" + benimAnahtar + "'");
+    console.info("1) TOKEN e-postası (RULES'un gördüğü): " + sonuc.tokenEmail + " → rules anahtarı: 'sevkiyat_users/" + benimAnahtar + "'" +
+      (sonuc.oturumEmail && sonuc.oturumEmail.toLowerCase() !== sonuc.tokenEmail.toLowerCase()
+        ? "  · ⚠️ oturum kaydındaki e-posta farklı: " + sonuc.oturumEmail : ""));
     /* ADIM A — whitelist kaydı */
     try {
       const res = await authF(dbUrl("sevkiyat_users"), {});
@@ -615,7 +631,7 @@
       console.info("🎉 KARAR: HER ŞEY TAMAM — hesap whitelist'te ve yazabiliyor. 401 hâlâ görülüyorsa eski bir oturum/ekran olabilir; sayfayı yenileyip (Ctrl+Shift+R) tekrar dene.");
     } else if (sonuc.adimlar.whitelist === "var" && String(sonuc.adimlar.yazma).indexOf("reddedildi") === 0) {
       sonuc.karar = "kurallar-eski";
-      console.warn("🛡️ KARAR: whitelist'tesin AMA kurallar yazmana izin vermiyor. Neredeyse her zaman sebebi: yayındaki Rules metninde replace('.', ',') yazması (regex tuzağı). Doğrusu replace('[.]', ',') — guvenlik-rehberi.md → ADIM 1'deki JSON'u açıp Publish et.");
+      console.warn("🛡️ KARAR: whitelist'tesin AMA kurallar yazmana izin vermiyor → yayındaki kurallar, beklenen metin DEĞİL. ÇÖZÜM: kurallar-v3.json'ı Realtime Database → Rules'a yapıştır → PUBLISH → rules sayfasını KAPATIP AÇ; baştaki '// KURALLAR-V3' işareti duruyorsa publish yapışmıştır. Sonra bu testi tekrarla. (v3 sonrası da reddedilirse: sevkiyat .write'ı GEÇİCİ olarak 'auth != null' yapıp publish et — yazma geçerse sorun publish'in yapışmamasında; geçmezse kuralları düzenlediğin DB örneği/proje yanlıştır.)");
     } else if (sonuc.adimlar.whitelist === "yok") {
       sonuc.karar = "whitelist-yok";
       console.warn("🛡️ KARAR: hesabın sevkiyat_users whitelist'inde yok → Admin Panel'den eklenmeli. Panel eklemesi rules'ta kod değişikliği gerektirmez (kurallar canlı olarak sevkiyat_users'a bakar).");
