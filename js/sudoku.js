@@ -1,34 +1,42 @@
-/* ═══════════════ 🔢 SUDOKU — ORTAK MASA ═══════════════ */
+/* ═══════════════ 🔢 SUDOKU — ORTAK MASA (v2 · 2026-10-20) ═══════════════ */
+/* v2 FIX: RTDB REST akışı "put"/"patch" İSİMLİ event basar; EventSource.onmessage
+   yalnız isimsiz eventleri dinlediği için HİÇ tetiklenmiyordu (canlı senkron ölüydü).
+   → addEventListener("put"/"patch") ile dinlenir.
+   + Oyuncu listesi için ikinci akış (katılma anında görünür)
+   + Her tahta çiziminde masa listesi tazelenir (…'da kalması düzeltildi)
+   + Girişli kullanıcıya e-postadan isim (masada görünmez olmaması için)
+   + Heartbeat 30sn → 15sn (daha canlı mevcudiyet) */
 const SU_NODE = "sudoku_board";
 const SU_PLAYERS = "sudoku_players";
 const SU_HIST = "sudoku_history";
 const SU_PLAYER_KEY = "sevkiyat_sudoku_player";
-let suSub = null;        /* EventSource */
+let suSub = null;        /* EventSource — board */
+let suSubP = null;       /* EventSource — players */
 let suHeartIv = null;
 let suTimerIv = null;
 let suSel = -1;          /* seçili hücre index 0..80 */
 let suMe = null;         /* { id, isim } */
 
-/* ---- Hazır bulmaca havuzu (0 = boş; tek çözümlü, doğrulanmış) ---- */
+/* ---- Bulmaca havuzu (0 = boş; v2: üretici+çözücü ile DOĞRULANMIŞ, her biri eşsiz çözümlü) ---- */
 const SU_PUZZLES = [
   { d: "Kolay",
-    p: "530070000600195000098000060800060003400803001700020006060000280000419005000080079",
-    s: "534678912672195348198342567859761423426853791713924856961537284287419635345286179" },
+    p: "180600070020004608094508030015000200000083015830700009206439000308127946001860000",
+    s: "183692574527314698694578132715946283469283715832751469276439851358127946941865327" },
   { d: "Kolay",
-    p: "000000907000420180000705026100904000050000040000507009920108000034059000507000000",
-    s: "162857493538426187947135826173964528256781349489513769925148673864592317571673952" },
+    p: "052630401000520080400010602007205948069003007004100530040050800630090004008340200",
+    s: "952638471176524389483917652317265948569483127824179536241756893635892714798341265" },
   { d: "Orta",
-    p: "100489006730000040000001295007000600800020009006000700431000000250000086900738004",
-    s: "152489736736521848948736295275943618893126574416857932584362917257914386961273854" },
+    p: "004030200050040980003070460602050000009600875005000020000024598407100002000060010",
+    s: "964831257751246983283579461672358149349612875815497326136724598497185632528963714" },
   { d: "Orta",
-    p: "000000012000000003002300400001800005060070800000009000008500000900040500470000000",
-    s: "945867312768429153532316498891743625463978521257691834318562749926435187472138965" },
+    p: "090006523020080006000003890040030605050008000600500010060800030200070000078010260",
+    s: "897146523325789146416253897742931685159468372683527419564892731231674958978315264" },
   { d: "Zor",
-    p: "000008050300040000000700000000200006085000340090703000400000020000600000050100000",
-    s: "647928153315746982982713564573284916185967343296473825468135297729651438354872691" },
+    p: "106009008200000000580001020000005040000203600090000000002984030050000080001600074",
+    s: "176429358249538167583761429627195843418273695395846712762984531954317286831652974" },
   { d: "Zor",
-    p: "030050000000600000500000108006000020700903004050001300000004006020000050000010380",
-    s: "836451972419726835572938164943615728768293514251847396395584216427869351685312487" }
+    p: "207008000360000009090340007000200400800900000006001030000000902600010073150000000",
+    s: "217698345364157829598342167735286491821934756946571238473865912682419573159723684" }
 ];
 
 function suPlayer() {
@@ -38,6 +46,13 @@ function suPlayer() {
   if (!g || !g.id) {
     g = { id: "p-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), isim: "" };
   }
+  /* Girişli kullanıcı isimsizse e-postadan türet (masada görünmez kalmasın) */
+  if (!g.isim || !String(g.isim).trim()) {
+    try {
+      if (typeof currentUser !== "undefined" && currentUser && currentUser.email)
+        g.isim = String(currentUser.email).split("@")[0];
+    } catch (e) {}
+  }
   suMe = g;
   localStorage.setItem(SU_PLAYER_KEY, JSON.stringify(g));
   return g;
@@ -46,7 +61,7 @@ function suPlayer() {
 function suIsimSor() {
   return new Promise(resolve => {
     const me = suPlayer();
-    if (currentUser || (me.isim && me.isim.trim())) { resolve(me.isim); return; }
+    if ((me.isim && me.isim.trim()) || (typeof currentUser !== "undefined" && currentUser)) { resolve(me.isim); return; }
     const eski = document.getElementById("suIsimModal");
     if (eski) eski.remove();
     const modal = document.createElement("div");
@@ -90,6 +105,7 @@ async function openSudoku() {
 }
 function closeSudoku() {
   if (suSub) { suSub.close(); suSub = null; }
+  if (suSubP) { suSubP.close(); suSubP = null; }
   if (suHeartIv) { clearInterval(suHeartIv); suHeartIv = null; }
   if (suTimerIv) { clearInterval(suTimerIv); suTimerIv = null; }
   document.getElementById("sudokuModal").classList.add("hidden");
@@ -173,7 +189,7 @@ async function suRenderBoard(board) {
     if (c.v && !c.fixed && suCakisiyor(board, i)) cls += " su-err";
     const kisa = c.u ? c.u.split(/[\s.@]/)[0].slice(0, 3) : "";
     grid += `<div class="${cls}" data-suidx="${i}">${c.v || ""}${kisa && !c.fixed ? `<span class="su-name">${esc(kisa)}</span>` : ""}</div>`;
-    }
+  }
 
   b.innerHTML = `
     <div class="su-bar" style="max-width:432px;margin:0 auto 10px">
@@ -188,7 +204,6 @@ async function suRenderBoard(board) {
       <div class="su-pad-row">
         <button class="su-act-btn" data-sun="0">🧽 Temizle</button>
         <button class="su-act-btn" id="suYeni">🔢 Yeni Oyun</button>
-      </div>
       </div>
     </div>`;
 
@@ -205,12 +220,15 @@ async function suRenderBoard(board) {
   /* sayı pedi */
   b.querySelectorAll("[data-sun]").forEach(btn =>
     btn.addEventListener("click", () => suYaz(Number(btn.dataset.sun))));
-    const yeniBtn = b.querySelector("#suYeni");
+  const yeniBtn = b.querySelector("#suYeni");
   if (yeniBtn) yeniBtn.addEventListener("click", async () => {
     if (!confirm("Mevcut oyun kapatılıp yeni masa açılacak. Onaylıyor musunuz?")) return;
     await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`, { method: "PUT", body: "null" });
     await suRenderStart();
   });
+
+  /* Masa listesi her çizimde tazelensin — "👥 …" da takılı kalmasın */
+  suMasadakiler();
 }
 
 /* Çakışma: aynı satır/sütun/3x3 kutuda aynı değerden başka var mı */
@@ -276,29 +294,49 @@ async function suBitisKontrol() {
   await suRenderBoard(board);
 }
 
-/* ═══════════════ 🔴 SSE + 💓 MASA DAKİKALARI ═══════════════ */
+/* ═══════════════ 🔴 SSE + 💓 MASA DAKİKALARI (v2: put/patch dinleyicisi) ═══════════════ */
+function suEmail() {
+  try { return (typeof currentUser !== "undefined" && currentUser && currentUser.email) || ""; }
+  catch (e) { return ""; }
+}
 function suStartSync() {
   const me = suPlayer();
-  /* SSE: tahta her değişince yeniden çiz */
+  /* SSE: RTDB "put"/"patch" isimli event basar — onmessage ASLA tetiklenmez! */
   if (suSub) suSub.close();
   suSub = new EventSource(`${FIREBASE_DB_URL}/${SU_NODE}.json`);
-  suSub.onmessage = () => {
+  const suBoardRefresh = () => {
     clearTimeout(suSub._t);
     suSub._t = setTimeout(async () => {
       if (document.getElementById("sudokuModal").classList.contains("hidden")) return;
-      const board = await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`).then(r => r.json());
-      if (board && board.cells) suRenderBoard(board);
+      try {
+        const board = await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`).then(r => r.json());
+        if (board && board.cells) suRenderBoard(board);
+        else suRenderStart();          /* masa başkası tarafından kapatıldıysa seçim ekranına dön */
+      } catch (e) {}
     }, 600);
   };
-  /* Heartbeat: 30 sn'de bir "buradayım" + masadakileri tazele */
+  suSub.addEventListener("put", suBoardRefresh);
+  suSub.addEventListener("patch", suBoardRefresh);
+  /* Oyuncu listesi akışı: biri katıldı/ayrıldı/anında masa listesi tazelenir */
+  if (suSubP) suSubP.close();
+  suSubP = new EventSource(`${FIREBASE_DB_URL}/${SU_PLAYERS}.json`);
+  const suPlayersRefresh = () => {
+    if (document.getElementById("sudokuModal").classList.contains("hidden")) return;
+    suMasadakiler();
+  };
+  suSubP.addEventListener("put", suPlayersRefresh);
+  suSubP.addEventListener("patch", suPlayersRefresh);
+  /* Heartbeat: 15 sn'de bir "buradayım" (ts tazelik süresi 2 dk) */
   suHeartIv = setInterval(async () => {
     const key = suFbKey(me.id);
-    await fetch(`${FIREBASE_DB_URL}/${SU_PLAYERS}/${key}.json`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: me.id, isim: me.isim, ts: Date.now() })
-    });
-    suMasadakiler();
-  }, 30000);
+    try {
+      await fetch(`${FIREBASE_DB_URL}/${SU_PLAYERS}/${key}.json`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: me.id, isim: me.isim, email: suEmail(), ts: Date.now() })
+      });
+      suMasadakiler();
+    } catch (e) {}
+  }, 15000);
   suHeartbeatOnce();
   suTimerIv = setInterval(() => {
     if (document.getElementById("sudokuModal").classList.contains("hidden") || !suBoard) return;
@@ -315,7 +353,7 @@ async function suHeartbeatOnce() {
   try {
     await fetch(`${FIREBASE_DB_URL}/${SU_PLAYERS}/${suFbKey(me.id)}.json`, {
       method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: me.id, isim: me.isim, ts: Date.now() })
+      body: JSON.stringify({ id: me.id, isim: me.isim, email: suEmail(), ts: Date.now() })
     });
     await suMasadakiler();
   } catch (e) {}
@@ -326,7 +364,7 @@ async function suMasadakiler() {
     const simdi = Date.now();
     const aktif = Object.values(players).filter(p => p && simdi - (p.ts || 0) < 120000);
     const el = document.getElementById("suPlayers");
-        if (el) el.innerHTML = `👥 Masa: ${aktif.length ? aktif.map(p =>
+    if (el) el.innerHTML = `👥 Masa: ${aktif.length ? aktif.map(p =>
       p.id && p.id.startsWith("p-") && !p.email
         ? `<span style="opacity:.75">${esc(p.isim)} *</span>`
         : esc(p.isim)).join(", ") : "boş"}`;
