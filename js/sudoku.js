@@ -1,19 +1,3 @@
-/* ═══════════════ 🔢 SUDOKU — ORTAK MASA (v2.1) ═══════════════
-      1) CANLI SENKRON: RTDB REST akışı "put"/"patch" adlı event yollar;
-      eski kod onmessage dinliyordu → ASLA tetiklenmiyordu. Bu yüzden
-      diğer oyuncuların hamleleri ve masa değişimleri canlı görünmüyordu.
-   2) BULMACA HAVUZU: eski havuzun 6 bulmacasından 5'i hatalıydı
-      (3'ü çözülemez-çelişkili, 1'inin kayıtlı çözümü yanlış, 1'inin
-      2 çözümü var) → oyun asla bitmezdi, tahta çakışmalarla dolardı.
-      Yeni havuz programatik üretildi + tek çözümlülüğü doğrulandı.
-   3) MASA LİSTESİ: her yeniden çizimde "👥 …" sıfırlanıyordu;
-      artık önbellekten anında çizilir + her çizimden sonra tazelenir.
-   4) ŞEMA KORUMASI: eski sürümün bozuk havuzundan kalan tahtalar
-      otomatik temizlenip yeni oyun ekranı gösterilir (schema: 2).
-   5) İSİM: girişli kullanıcıların adı hesaptan otomatik alınır
-      (eski sürümde düşmüştü, hücre etiketleri boş kalıyordu).
-   6) BİTİŞ: tahta doluysa her istemci bitiş kontrolünü tetikleyebilir
-      (yazan tarafın isteği başarısız olsa bile oyun kapanır).       */
 const SU_NODE = "sudoku_board";
 const SU_PLAYERS = "sudoku_players";
 const SU_HIST = "sudoku_history";
@@ -25,6 +9,9 @@ let suTimerIv = null;
 let suSel = -1;          /* seçili hücre index 0..80 */
 let suMe = null;         /* { id, isim } */
 let suMasaCache = [];    /* son bilinen masa listesi (yeniden çizimde kaybolmaz) */
+let suDurum = null;      /* son bilinen masa status'ü — "active → done" geçişi kutlamayı tetikler */
+let suKutlamaZam = null; /* kutlama açıkken dolu + 15 sn kapanış zamanlayıcısı */
+let suKutlamaSayIv = null; /* kutlama geri sayım aralığı */
 
 /* ---- Doğrulanmış bulmaca havuzu (0 = boş; her p tek çözümlü, s = p'nin çözümü) ---- */
 const SU_PUZZLES = [
@@ -115,6 +102,7 @@ function closeSudoku() {
   if (suSub) { suSub.close(); suSub = null; }
   if (suHeartIv) { clearInterval(suHeartIv); suHeartIv = null; }
   if (suTimerIv) { clearInterval(suTimerIv); suTimerIv = null; }
+  suKutlamaKapat();               /* 🎉 kutlama da ekranla birlikte kapanır */
   document.getElementById("sudokuModal").classList.add("hidden");
 }
 document.getElementById("btnSudokuClose").addEventListener("click", closeSudoku);
@@ -131,6 +119,7 @@ async function suRenderStart() {
   catch (e) { b.innerHTML = `<p class="hint">Yüklenemedi: ${esc(e.message)}</p>`; return; }
   const eskiTahta = board && board.cells && board.schema !== SU_SCHEMA;
   if (!board || !board.cells || eskiTahta) {
+    suDurum = null;             /* masa yok → status tabanı sıfırlanır */
     const uyari = eskiTahta
       ? `<p class="hint" style="color:var(--red)">🧹 Masada eski sürümden kalma bir oyun vardı (o havuzdaki bulmacalar hatalıydı, tamamlanamıyordu). Aşağıdan yeni bulmaca seçin.</p>`
       : ``;
@@ -147,11 +136,11 @@ async function suRenderStart() {
     b.querySelectorAll("[data-sunew]").forEach(btn =>
       btn.addEventListener("click", async () => {
         const body = await suYeniOyun(Number(btn.dataset.sunew));
-        if (body) { suSel = -1; await suRenderBoard(body); }
+        if (body) { suSel = -1; await suTahtaGeldi(body); }
       }));
     return;
   }
-  await suRenderBoard(board);
+  await suTahtaGeldi(board);   /* açılışta status tabanı kurulur — eski "done" kutlama patlatmaz */
 }
 async function suYeniOyun(pIdx) {
   const p = SU_PUZZLES[pIdx];
@@ -170,6 +159,117 @@ async function suYeniOyun(pIdx) {
   });
   showToast("🔢 Yeni ortak masa açıldı — herkes katılabilir!");
   return body;
+}
+
+/* ═══════════════ 🎉 KUTLAMA (15 sn) ═══════════════ */
+/* Tahta her geldiğinde status tabanını günceller; "active → done" geçişini
+   yakalayıp kutlamayı ateşler (yalnız taze bitişse — 60 sn penceresi). */
+async function suTahtaGeldi(board) {
+  const onceki = suDurum;
+  suDurum = (board && board.status) || "";
+  await suRenderBoard(board);
+  if (board && board.status === "done" && onceki === "active" &&
+      board.finishedTs && Date.now() - board.finishedTs < 60000) {
+    suKutlama(board);
+  }
+}
+function suKutlamaStil() {
+  if (document.getElementById("suKutlamaStil")) return;
+  const st = document.createElement("style");
+  st.id = "suKutlamaStil";
+  st.textContent = `
+#suKutlama{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.su-konfeti{position:absolute;top:-24px;border-radius:2px;opacity:.92;animation:suDus linear infinite}
+@keyframes suDus{0%{transform:translateY(-6vh) rotate(0)}100%{transform:translateY(112vh) rotate(760deg)}}
+.su-emoji{position:absolute;font-size:34px;animation:suUcus 2.4s ease-in-out infinite alternate}
+@keyframes suUcus{from{transform:translateY(0) rotate(-8deg)}to{transform:translateY(-26px) rotate(9deg)}}
+.su-kart{pointer-events:auto;position:relative;background:#fff;border-radius:20px;padding:26px 36px 20px;text-align:center;box-shadow:0 20px 60px rgba(15,23,42,.42);max-width:min(92vw,420px);animation:suZipla .7s cubic-bezier(.18,1.4,.4,1) both}
+@keyframes suZipla{0%{transform:scale(.3) rotate(-4deg);opacity:0}55%{transform:scale(1.07) rotate(1deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+.su-kart .su-kapat{position:absolute;top:6px;right:10px;border:none;background:none;font-size:16px;cursor:pointer;color:#94a3b8;padding:4px}
+.su-kart .su-kapat:hover{color:#334155}
+.su-buyuk{font-size:28px;font-weight:800;letter-spacing:.5px;margin-top:2px;background:linear-gradient(90deg,#f43f5e,#f59e0b,#8b5cf6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+@keyframes suFadeOutK{to{opacity:0}}`;
+  document.head.appendChild(st);
+}
+/* Minik zafer fanfarı (WebAudio — dış dosya yok, sessizce başarısız olabilir) */
+function suFanfar() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    suFanfar.ctx = suFanfar.ctx || new AC();
+    const ctx = suFanfar.ctx;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const notalar = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+    notalar.forEach((f, i) => {
+      const t0 = ctx.currentTime + i * 0.16;
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = "triangle"; osc.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.16, t0 + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + (i === notalar.length - 1 ? 0.7 : 0.22));
+      osc.connect(g).connect(ctx.destination);
+      osc.start(t0); osc.stop(t0 + 0.8);
+    });
+  } catch (e) {}
+}
+function suKutlama(board) {
+  if (suKutlamaZam) return;                       /* zaten kutlanıyor */
+  if (!board || typeof board !== "object") board = suBoard || {};
+  suKutlamaStil();
+  const eski = document.getElementById("suKutlama");
+  if (eski) eski.remove();
+  clearInterval(suKutlamaSayIv);
+  const renkler = ["#f43f5e","#f59e0b","#10b981","#3b82f6","#8b5cf6","#ec4899","#facc15"];
+  let konf = "";
+  for (let i = 0; i < 130; i++) {
+    const sure = 2.6 + Math.random() * 2.4;
+    konf += `<span class="su-konfeti" style="left:${(Math.random() * 100).toFixed(1)}%;` +
+      `background:${renkler[i % renkler.length]};` +
+      `width:${6 + Math.round(Math.random() * 7)}px;height:${9 + Math.round(Math.random() * 8)}px;` +
+      `animation-duration:${sure.toFixed(2)}s;animation-delay:-${(Math.random() * sure).toFixed(2)}s"></span>`;
+  }
+  const emojiler = ["🎉","🏆","🎈","✨","🎊","🥳"];
+  let emj = "";
+  emojiler.forEach((e, i) => {
+    emj += `<span class="su-emoji" style="left:${8 + i * 16}%;top:${12 + (i % 3) * 22}%;animation-delay:-${(i * 0.37).toFixed(2)}s">${e}</span>`;
+  });
+  const me = suPlayer();
+  const benim = board.winner && me.isim && board.winner === me.isim;
+  const kim = benim ? "Son hücreyi <b>sen</b> koydun!" : `🏆 <b>${esc(board.winner || "?")}</b> son hücreyi koydu!`;
+  const dz = board.puzzle != null && SU_PUZZLES[board.puzzle] ? SU_PUZZLES[board.puzzle].d : "";
+  const sureTxt = board.finishedTs && board.startedTs
+    ? fmtSure(Math.max(0, board.finishedTs - board.startedTs)) : "";
+  const katTxt = (board.katkilar || []).join(", ");
+  const ov = document.createElement("div");
+  ov.id = "suKutlama";
+  ov.innerHTML = `<div style="position:absolute;inset:0;overflow:hidden">${konf}${emj}</div>
+    <div class="su-kart">
+      <button class="su-kapat" title="Kapat">✕</button>
+      <div style="font-size:46px;line-height:1.1">🎉</div>
+      <div class="su-buyuk">${benim ? "TEBRİKLER!" : "ÇÖZÜLDÜ!"}</div>
+      <div style="font-size:16px;margin-top:8px">${kim}</div>
+      <div style="font-size:14px;color:#475569;margin-top:8px">⏱ ${sureTxt || "—"}${dz ? ` · 🧩 ${esc(dz)}` : ""}</div>
+      ${katTxt ? `<div style="font-size:13px;color:#64748b;margin-top:6px">Katkılar: ${esc(katTxt)}</div>` : ""}
+      <div style="font-size:12px;color:#94a3b8;margin-top:12px" id="suKutlamaSayac">⏳ 15 sn</div>
+    </div>`;
+  document.body.appendChild(ov);
+  try { navigator.vibrate && navigator.vibrate([90, 60, 90, 60, 180]); } catch (e) {}
+  suFanfar();
+  let kalan = 15;
+  suKutlamaSayIv = setInterval(() => {
+    kalan--;
+    const s = document.getElementById("suKutlamaSayac");
+    if (s && kalan > 0) s.textContent = `⏳ ${kalan} sn`;
+  }, 1000);
+  suKutlamaZam = setTimeout(suKutlamaKapat, 15000);   /* tam 15 sn */
+}
+function suKutlamaKapat() {
+  if (!suKutlamaZam) return;
+  clearTimeout(suKutlamaZam);
+  suKutlamaZam = null;
+  clearInterval(suKutlamaSayIv);
+  const ov = document.getElementById("suKutlama");
+  if (ov) { ov.style.animation = "suFadeOutK .45s ease forwards"; setTimeout(() => ov.remove(), 500); }
 }
 /* ═══════════════ 🎨 TAHTA RENDER + CANLI SENKRON ═══════════════ */
 let suBoard = null;   /* son bilinen tahta (render + local yazım için) */
@@ -269,7 +369,7 @@ async function suTazelikKontrol() {
       showToast("♻️ Masa bu arada yenilendi — tahta tazeleniyor…");
       suSel = -1;
       const fresh = await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`).then(r => r.json());
-      if (fresh && fresh.cells && fresh.schema === SU_SCHEMA) await suRenderBoard(fresh);
+      if (fresh && fresh.cells && fresh.schema === SU_SCHEMA) await suTahtaGeldi(fresh);
       else await suRenderStart();
       return false;
     }
@@ -323,7 +423,11 @@ async function suBitisKontrol() {
   });
   centerNotify(`🎉 SUDOKU ÇÖZÜLDÜ! ${suPlayer().isim} son hücreyi koydu · ${fmtSure(sure)} · katkılar: ${katkilar.join(", ")}`, 12000);
   bildirimDing();
+  suDurum = "done";
+  board.status = "done"; board.finishedTs = finishedTs;   /* bitti bandı anında görünsün */
+  board.winner = suPlayer().isim; board.katkilar = katkilar;
   await suRenderBoard(board);
+  suKutlama(board);                /* 🎉 kazanan için anında 15 sn kutlama */
 }
 function suTasiDolu(board) {
   for (let i = 0; i < 81; i++) if (!board.cells[i] || !board.cells[i].v) return false;
@@ -345,7 +449,7 @@ function suStartSync() {
       try {
         const board = await fetch(`${FIREBASE_DB_URL}/${SU_NODE}.json`).then(r => r.json());
         if (board && board.cells && board.schema === SU_SCHEMA) {
-          await suRenderBoard(board);
+          await suTahtaGeldi(board);   /* active→done geçişi burada yakalanır → 🎉 */
           /* emniyet ağı: tahta doluysa bitiş kontrolü herkes tarafından koşabilir */
           if (board.status !== "done" && suTasiDolu(board)) suBitisKontrol();
         } else if (!board) {
