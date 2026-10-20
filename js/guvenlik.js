@@ -1,5 +1,5 @@
 /* =========================================================
-   YATSAN — guvenlik.js v1.2
+   YATSAN — guvenlik.js v1.2.1
    ---------------------------------------------------------
    TEK DOSYA (index.html'e 1 satır script etiketi dışında
    dokunulmaz, mevcut modüller değişmez). 4 KATMAN:
@@ -602,8 +602,12 @@
         else console.warn("❌ B) YAZMA TESTİ REDDEDİLDİ (HTTP " + wRes.status + ").");
       }
     } catch (e) {
-      sonuc.adimlar.yazma = "hata: " + e.message;
-      console.warn("❌ B) yazma testi başarısız:", e.message);
+      const m = (e && e.message) || "";
+      const kuralEngeli = /401|403|reddedildi|izin vermiyor/i.test(m);
+      sonuc.adimlar.yazma = kuralEngeli ? "reddedildi-kural" : "hata: " + m;
+      console.warn(kuralEngeli
+        ? "❌ B) YAZMA TESTİ REDDEDİLDİ — kurallar bu yazmaya izin vermiyor (" + m + ")"
+        : "❌ B) yazma testi başarısız: " + m);
     }
     /* KARAR */
     if (sonuc.adimlar.whitelist === "var" && sonuc.adimlar.yazma === "basarili") {
