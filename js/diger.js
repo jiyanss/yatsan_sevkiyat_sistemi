@@ -654,7 +654,10 @@ function depoToplamaSatiri(r) {
   return `<div class="d-sub" style="color:#fbbf24;font-weight:700">📦 Toplama sürüyor — ${fmtTime(r.toplamaBasTs)}'da başladı</div>`;
 }
 
-/* ═══════════════ 👷 EKİP PERFORMANS RAPORU (PART 2) ═══════════════ */
+/* ═══════════════ 👷 EKİP PERFORMANS RAPORU (PART 2) ═══════════════
+   Task 21 — kapsamlı rapor: 8 KPI kartı, 🥧 SVG pasta (m³ paylaşımı),
+   ⏱ ort dk/yükleme bar karşılaştırması (hedef işaretli), TOPLAM satırı,
+   Excel'e "Paylasim" sayfası. Grafikler kütüphanesiz — ek bağımlılık yok. */
 function ekipEvren(list) {
   /* Performans evreni: toplama süreci BİTMİŞ satırlar (statü fark etmez) */
   return list.filter(r => r.toplamaBasTs && r.toplamaBittiTs)
@@ -683,30 +686,111 @@ function ekipOzetMap(evren) {
 function ekipAd2(kod) { return kod === "__atanmamis__" ? "⚠ Atanmamış" : ekipAd(kod); }
 function ekipRenk2(kod) { return kod === "__atanmamis__" ? "#64748b" : ekipRenk(kod); }
 
+/* ---------- 🥧 Pasta grafiği (saf SVG — kütüphane yok) ----------
+   items: [{ ad, deger, renk }] — deger toplamı > 0 olmalı. Donut ortasında
+   toplam m³, ≥%8 dilimlerde yüzde etiketi gösterilir. */
+function ekipPastaSVG(items) {
+  const toplam = items.reduce((s, x) => s + x.deger, 0);
+  const cx = 95, cy = 95, r = 78, ir = 46;
+  let a0 = -Math.PI / 2, parcalar = "";
+  items.forEach(x => {
+    const frac = toplam > 0 ? x.deger / toplam : 0;
+    if (frac <= 0) return;
+    if (frac >= 0.9999) {
+      parcalar += `<circle cx="${cx}" cy="${cy}" r="${(r + ir) / 2}" fill="none" stroke="${x.renk}" stroke-width="${r - ir}"/>`;
+    } else {
+      const buyuk = frac > 0.5 ? 1 : 0;
+      const a1 = a0 + frac * 2 * Math.PI;
+      const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+      const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+      const x2 = cx + ir * Math.cos(a1), y2 = cy + ir * Math.sin(a1);
+      const x3 = cx + ir * Math.cos(a0), y3 = cy + ir * Math.sin(a0);
+      parcalar += `<path d="M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${buyuk} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} L ${x2.toFixed(2)} ${y2.toFixed(2)} A ${ir} ${ir} 0 ${buyuk} 0 ${x3.toFixed(2)} ${y3.toFixed(2)} Z" fill="${x.renk}" stroke="var(--surface)" stroke-width="2"/>`;
+      if (frac >= 0.08) {
+        const mid = a0 + frac * Math.PI, rm = (r + ir) / 2;
+        parcalar += `<text x="${(cx + rm * Math.cos(mid)).toFixed(1)}" y="${(cy + rm * Math.sin(mid) + 3.5).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#fff" style="pointer-events:none">%${Math.round(frac * 100)}</text>`;
+      }
+    }
+    a0 += frac * 2 * Math.PI;
+  });
+  return `<svg viewBox="0 0 190 190" style="width:190px;height:190px;flex:0 0 auto" role="img">${parcalar}` +
+    `<text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="15" font-weight="800" fill="var(--text)">${fmtN(toplam)}</text>` +
+    `<text x="${cx}" y="${cy + 14}" text-anchor="middle" font-size="9" fill="var(--muted)">m³ toplam</text></svg>`;
+}
+/* ---------- ⏱ Ort dk/yükleme bar listesi (genel hedef işaretli) ---------- */
+function ekipBarListe(dizi, hedefOrt) {
+  const maxOrt = Math.max(...dizi.map(g => g.etkin / g.n));
+  const hedefPct = hedefOrt > 0 && maxOrt > 0 ? Math.min(100, Math.max(0, hedefOrt / maxOrt * 100)) : null;
+  return [...dizi].sort((a, b) => (b.etkin / b.n) - (a.etkin / a.n)).map(g => {
+    const ort = g.etkin / g.n;
+    const pct = Math.max(3, Math.round(ort / maxOrt * 100));
+    const sapma = g.st > 0 ? Math.round((g.etkin - g.st) / g.st * 100) : null;
+    return `<div class="ekip-bar-row">
+      <span class="ekip-bar-ad" title="${esc(ekipAd2(g.ekip))}">${esc(ekipAd2(g.ekip))}</span>
+      <div class="ekip-bar-track">
+        <div class="ekip-bar-fill" style="width:${pct}%;background:${ekipRenk2(g.ekip)}"></div>
+        ${hedefPct != null ? `<div class="ekip-bar-hedef" style="left:${hedefPct.toFixed(1)}%" title="Genel hedef ort: ${fmtN(hedefOrt)} dk"></div>` : ""}
+      </div>
+      <span class="ekip-bar-val"><b>${fmtN(ort)}</b> dk${sapma != null ? ` · <span style="font-weight:700;color:${sapma > 10 ? "var(--red)" : sapma < -5 ? "var(--green)" : "var(--amber)"}">${fmtSapma(sapma)}%</span>` : ""}</span>
+    </div>`;
+  }).join("");
+}
+
 function buildEkip(list = null) {
   const c = document.getElementById("reportPaneEkip");
   if (!ekipSira.length) {
     c.innerHTML = `<p class="hint">Süre = 📦 <b>Toplama başlangıç → bitiş</b> (Operasyon/QR ekranındaki toplama butonlarıyla). Statü kronometresinden bağımsızdır — üretim beklemesi etkilemez. Sapma: standart hedefe (⏱️ Süreler × AD) göre fark.</p>`;
     return;
   }
-  const evren = ekipEvren(list || filtered());
+  const kaynak = list || filtered();
+  const evren = ekipEvren(kaynak);
   if (!evren.length) {
     c.innerHTML = `<p class="hint">⏱️ Performans verisi yok — kronometresi başlamış ve (📦 toplama bitti işaretli veya ✔ tamamlanmış) kayıt bulunamadı.</p>`;
     return;
   }
   const ozet = ekipOzetMap(evren);
-  const enCok = [...ozet.values()].sort((a, b) => b.n - a.n)[0];
-  const hizlis = [...ozet.values()].filter(g => g.n >= 3 && g.etkin > 0);
-  const enHizli = hizlis.length ? hizlis.sort((a, b) => (a.etkin / a.n) - (b.etkin / b.n))[0] : null;
-  const atanmamisN = (list || filtered()).filter(r => !r.ekip && !r._arsiv).length;
+  const dizi = [...ozet.values()].sort((a, b) => b.n - a.n);
+  const enCok = dizi[0];
+  const hizlis = dizi.filter(g => g.n >= 3 && g.etkin > 0);
+  const enHizli = hizlis.length ? [...hizlis].sort((a, b) => (a.etkin / a.n) - (b.etkin / b.n))[0] : null;
+  const atanmamisN = kaynak.filter(r => !r.ekip && !r._arsiv).length;
   const toplamDk = evren.reduce((s, x) => s + x.etkinDk, 0);
+  const toplamM3 = evren.reduce((s, x) => s + x.m3, 0);
+  const toplamSt = dizi.reduce((s, g) => s + g.st, 0);
+  const genelSapma = toplamSt > 0 ? Math.round((toplamDk - toplamSt) / toplamSt * 100) : null;
+  const genelHedefOrt = toplamSt > 0 ? toplamSt / evren.length : 0;
+  /* 📈 Haftalık trend: verideki en yeni iki haftanın yükleme sayıları */
+  const haftaN = new Map();
+  evren.forEach(x => haftaN.set(x.hafta, (haftaN.get(x.hafta) || 0) + 1));
+  const wArr = [...haftaN.keys()].sort((a, b) => b - a);
+  let trendVal = "—", trendSub = "tek hafta verisi", trendCls = "c-primary";
+  if (wArr.length >= 2) {
+    const n1 = haftaN.get(wArr[0]), n0 = haftaN.get(wArr[1]);
+    const degis = n0 > 0 ? Math.round((n1 - n0) / n0 * 100) : null;
+    trendVal = degis == null ? "—" : (degis > 0 ? "+" : "") + degis + "%";
+    trendSub = `H${wArr[0]}: ${n1} · H${wArr[1]}: ${n0} yükleme`;
+    trendCls = degis == null ? "c-primary" : (degis >= 0 ? "c-green" : "c-red");
+  }
   const kpi = `<div class="kpi-grid">
     <div class="kpi c-primary"><div class="kpi-head">🥇 En çok yükleyen</div><div class="kpi-val" style="font-size:18px">${esc(ekipAd2(enCok.ekip))}</div><div class="kpi-sub">${enCok.n} yükleme · ${fmtN(enCok.m3)} m³</div></div>
     <div class="kpi c-green"><div class="kpi-head">⚡ En hızlı (≥3 yükleme)</div><div class="kpi-val" style="font-size:18px">${enHizli ? esc(ekipAd2(enHizli.ekip)) : "—"}</div><div class="kpi-sub">${enHizli ? fmtN(enHizli.etkin / enHizli.n) + " dk/yükleme" : "yeterli veri yok"}</div></div>
     <div class="kpi c-amber"><div class="kpi-head">🧮 Toplam etkin iş</div><div class="kpi-val">${fmtN(toplamDk)}</div><div class="kpi-sub">dk · ${evren.length} yükleme</div></div>
     <div class="kpi ${atanmamisN ? "c-red" : "c-green"}"><div class="kpi-head">⚠️ Atanmamış kayıt</div><div class="kpi-val">${atanmamisN}</div><div class="kpi-sub">aktif kayıtlarda ekip boş</div></div>
+    <div class="kpi c-primary"><div class="kpi-head">📦 Toplam hacim</div><div class="kpi-val">${fmtN(toplamM3)}</div><div class="kpi-sub">m³ · ${dizi.length} ekip çalıştı</div></div>
+    <div class="kpi c-amber"><div class="kpi-head">📊 Ort hacim</div><div class="kpi-val">${fmtN(evren.length ? toplamM3 / evren.length : 0)}</div><div class="kpi-sub">m³/yükleme</div></div>
+    <div class="kpi ${genelSapma == null ? "c-primary" : genelSapma > 10 ? "c-red" : genelSapma < -5 ? "c-green" : "c-amber"}"><div class="kpi-head">🎯 Genel hedef sapması</div><div class="kpi-val">${genelSapma == null ? "—" : fmtSapma(genelSapma) + "%"}</div><div class="kpi-sub">tüm ekipler: etkin iş vs hedef</div></div>
+    <div class="kpi ${trendCls}"><div class="kpi-head">📈 Haftalık trend</div><div class="kpi-val" style="font-size:22px">${trendVal}</div><div class="kpi-sub">${trendSub}</div></div>
   </div>`;
-  const aRows = [...ozet.values()].sort((a, b) => b.n - a.n).map(g => {
+  /* 🥧 Pasta + ⏱ bar grafikleri bölümü (kütüphanesiz) */
+  const pastaLeg = dizi.map(g => {
+    const pct = toplamM3 > 0 ? Math.round(g.m3 / toplamM3 * 100) : 0;
+    return `<div class="pl-row"><span class="pl-dot" style="background:${ekipRenk2(g.ekip)}"></span><span class="pl-ad">${esc(ekipAd2(g.ekip))}</span><span class="pl-val">${fmtN(g.m3)} m³ · %${pct}</span></div>`;
+  }).join("");
+  const pasta = toplamM3 > 0 ? `<div class="chart-grid">
+    <div class="chart-box"><h3>🥧 Hacim (m³) paylaşımı — ekip bazlı</h3><div class="ekip-pasta-wrap">${ekipPastaSVG(dizi.map(g => ({ ad: ekipAd2(g.ekip), deger: g.m3, renk: ekipRenk2(g.ekip) })))}<div class="ekip-pasta-legend">${pastaLeg}</div></div></div>
+    <div class="chart-box"><h3>⏱ Ort dk/yükleme karşılaştırması <span class="muted" style="font-weight:400">(kesikli çizgi = genel hedef ort: ${genelHedefOrt > 0 ? fmtN(genelHedefOrt) + " dk" : "—"})</span></h3>${ekipBarListe(dizi, genelHedefOrt)}</div>
+  </div>` : "";
+  const aRows = dizi.map(g => {
     const sapma = g.st > 0 ? Math.round((g.etkin - g.st) / g.st * 100) : null;
     const sapmaHtml = sapma == null ? `<span class="muted">-</span>`
       : `<span style="font-weight:700;color:${sapma > 10 ? "var(--red)" : sapma < -5 ? "var(--green)" : "var(--amber)"}">${fmtSapma(sapma)}%</span>`;
@@ -719,11 +803,19 @@ function buildEkip(list = null) {
       <td class="center">${sapmaHtml}</td>
     </tr>`;
   }).join("");
+  const aToplam = `<tfoot><tr>
+    <td>TOPLAM · ${dizi.length} ekip</td>
+    <td class="center oh-strong">${evren.length}</td>
+    <td class="center">${fmtN(toplamM3)}</td>
+    <td class="center">${fmtN(toplamDk)}</td>
+    <td class="center oh-strong">${fmtN(evren.length ? toplamDk / evren.length : 0)} dk</td>
+    <td class="center">${genelSapma == null ? `<span class="muted">-</span>` : `<span style="font-weight:700;color:${genelSapma > 10 ? "var(--red)" : genelSapma < -5 ? "var(--green)" : "var(--amber)"}">${fmtSapma(genelSapma)}%</span>`}</td>
+  </tr></tfoot>`;
   const tabA = `<div class="rpt"><h3>👷 Ekip performansı — etkin süre (📦 toplama bitti, yoksa kronometre bitişi)</h3>
     <p class="hint">Sapma: etkin toplam dk'nın standart hedefe (⏱️ Süreler paneli × AD) göre farkı. <b>+</b> hedefi aştı (kırmızı), <b>−</b> hedefin altında (yeşil). "Toplama bitti" işaretli ama statüsü bekleyenler rapora DAHİL — üretim eksiği performansı bozmaz.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>Ekip</th><th class="center">Yükleme</th><th class="center">m³</th><th class="center">Etkin dk</th><th class="center">Ort dk/yükleme</th><th class="center">Hedef sapması</th></tr></thead>
-      <tbody>${aRows}</tbody></table></div></div>`;
+      <tbody>${aRows}</tbody>${aToplam}</table></div></div>`;
   function pivot(keyName, keyOf, sortNum, limit) {
     const cols = [...new Set(evren.map(x => x.ekip))].sort((a, b) => {
       if (a === "__atanmamis__") return 1;
@@ -754,7 +846,7 @@ function buildEkip(list = null) {
   }
   const tabB = `<div class="rpt"><h3>📅 Gün × Ekip (son 14 gün — hangi gün hangi ekip kaç yükleme/kaç m³/kaç dk)</h3>${pivot("Gün", x => x.gun, false, 14)}</div>`;
   const tabC = `<div class="rpt"><h3>📆 Hafta × Ekip (son 8 hafta trendi)</h3>${pivot("Hafta", x => x.hafta, true, 8)}</div>`;
-  c.innerHTML = kpi + tabA + tabB + tabC +
+  c.innerHTML = kpi + pasta + tabA + tabB + tabC +
     `<div class="modal-actions" style="justify-content:flex-start"><button class="btn primary" id="btnEkipExcel">📤 Excel</button></div>`;
   c.querySelector("#btnEkipExcel").addEventListener("click", ekipExcelRapor);
 }
@@ -763,9 +855,17 @@ function ekipExcelRapor() {
   const evren = ekipEvren(filtered());
   if (!evren.length) { alert("Performans verisi yok."); return; }
   const ozet = ekipOzetMap(evren);
-  const ozetRows = [...ozet.values()].sort((a, b) => b.n - a.n).map(g => [
+  const diziX = [...ozet.values()].sort((a, b) => b.n - a.n);
+  const toplamM3X = diziX.reduce((s, g) => s + g.m3, 0);
+  const toplamNX = diziX.reduce((s, g) => s + g.n, 0);
+  const ozetRows = diziX.map(g => [
     ekipAd2(g.ekip), g.n, +g.m3.toFixed(2), g.etkin, +(g.etkin / g.n).toFixed(1),
     g.st > 0 ? Math.round((g.etkin - g.st) / g.st * 100) + "%" : ""
+  ]);
+  /* 🆕 Task 21: Paylaşım sayfası — pasta grafiğinin Excel karşılığı */
+  const payRows = diziX.map(g => [
+    ekipAd2(g.ekip), +g.m3.toFixed(2), toplamM3X > 0 ? +(g.m3 / toplamM3X * 100).toFixed(1) + "%" : "",
+    g.n, toplamNX > 0 ? +(g.n / toplamNX * 100).toFixed(1) + "%" : "", +(g.etkin / g.n).toFixed(1)
   ]);
   const gunRows = evren.slice().sort((a, b) => String(b.gun).localeCompare(String(a.gun)))
     .map(x => [x.gun, ekipAd2(x.ekip), x.r.musteri, x.r.maddeKodu || "", adet(x.r), x.m3, x.etkinDk,
@@ -795,6 +895,7 @@ function ekipExcelRapor() {
   XLSX.utils.book_append_sheet(wb, mk(["Ekip", "Yükleme", "m³", "Etkin dk", "Ort dk/yükleme", "Hedef sapması"], ozetRows), "Ekip Ozeti");
   XLSX.utils.book_append_sheet(wb, mk(["Gün", "Ekip", "Müşteri", "Madde", "AD", "m³", "Etkin dk", "Durum"], gunRows), "Gun Dökum");
   XLSX.utils.book_append_sheet(wb, mk(["Hafta", "Ekip", "Yükleme", "m³", "Etkin dk"], haftaRows), "Haftalik");
+  XLSX.utils.book_append_sheet(wb, mk(["Ekip", "m³", "m³ Payı", "Yükleme", "Yükleme Payı", "Ort dk/yükleme"], payRows), "Paylasim");
   XLSX.writeFile(wb, `ekip_performans_${todayISO()}.xlsx`);
   showToast("📤 Ekip raporu indirildi.");
 }
