@@ -849,12 +849,12 @@ function buildEkip(list = null) {
         const v = tM3 > 0 ? cell.m3 : cell.n;
         if (v <= 0) return "";
         const pct = Math.round(v / baz * 100);
-        return `<span class="pv-seg" style="flex:${v} 1 0%;background:${ekipRenk2(kk)}" title="${esc(ekipAd2(kk))}: ${cell.n} yük · ${fmtN(cell.m3)} m³ · ${fmtN(cell.dk)} dk (%${pct})"></span>`;
+        return `<span class="pv-seg" data-team="${kk}" style="flex:${v} 1 0%;background:${ekipRenk2(kk)}" title="${esc(ekipAd2(kk))}: ${cell.n} yük · ${fmtN(cell.m3)} m³ · ${fmtN(cell.dk)} dk (%${pct})"></span>`;
       }).join("") : "";
       const pay = segs ? `<div class="pv-bar">${segs}</div><div class="pv-total">toplam ${tN} yük · ${fmtN(tM3)} m³</div>` : `<span class="muted">-</span>`;
       return `<tr><td class="strong">${esc(k)}</td>${cols.map(kk => {
         const cell = row[kk];
-        return `<td class="center">${cell ? `${cell.n} yük<br><span class="muted" style="font-size:9.5px">${fmtN(cell.m3)} m³ · ${fmtN(cell.dk)} dk</span>` : '<span class="muted">-</span>'}</td>`;
+      return `<td class="center" data-team="${kk}">${cell ? `${cell.n} yük<br><span class="muted" style="font-size:9.5px">${fmtN(cell.m3)} m³ · ${fmtN(cell.dk)} dk</span>` : '<span class="muted">-</span>'}</td>`;
       }).join("")}<td class="center pv-cell">${pay}</td></tr>`;
     }).join("");
     return `<div class="table-wrap"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
@@ -864,6 +864,25 @@ function buildEkip(list = null) {
   c.innerHTML = kpi + pasta + tabA + tabB + tabC +
     `<div class="modal-actions" style="justify-content:flex-start"><button class="btn primary" id="btnEkipExcel">📤 Excel</button></div>`;
   c.querySelector("#btnEkipExcel").addEventListener("click", ekipExcelRapor);
+  /* 🖱️ Hover senkronu: bar segmenti ↔ ekip hücresi karşılıklı vurgulanır.
+     Delegasyon — pane'e bir kez bağlanır, tablo kaç kez çizilirse çizilsin çalışır. */
+  if (!c._pvHoverSync) {
+    c._pvHoverSync = true;
+    const temizle = () => c.querySelectorAll(".pv-hover, .pv-focus").forEach(el => el.classList.remove("pv-hover", "pv-focus"));
+    c.addEventListener("mouseover", e => {
+      temizle();
+      const tr = e.target.closest("tbody tr");
+      if (!tr) return;
+      const takim = e.target.closest(".pv-seg, td[data-team]");
+      if (!takim || !tr.contains(takim)) return;
+      const kod = takim.dataset.team;
+      if (!kod) return;
+      tr.querySelectorAll(`td[data-team="${kod}"], .pv-seg[data-team="${kod}"]`).forEach(el => el.classList.add("pv-hover"));
+      const bar = tr.querySelector(".pv-bar");
+      if (bar) bar.classList.add("pv-focus");
+    });
+    c.addEventListener("mouseleave", temizle);
+  }
 }
 function ekipExcelRapor() {
   if (typeof XLSX === "undefined") { alert("Excel kütüphanesi yüklenemedi."); return; }
