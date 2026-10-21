@@ -580,6 +580,35 @@
   </div>
 </div>
 
+<div id="canliModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>👥 Canlı Kullanıcılar</h2>
+    <p class="hint">Son 50 saniyede kalp atışı atan herkes listede — giriş yapmışlar <b>Girişli</b>, giriş yapmadan bakanlar <b>Misafir</b> olarak görünür. Her sekme 15 sn'de bir kendini bildirir; sekme kapanınca listeden düşer. Satır başına 🎁 konfeti ve 💬 özel mesaj; aşağıdaki kutudan <b>herkese tek seferde</b> duyuru + konfeti gönderebilirsin.</p>
+    <div id="canliKpi" class="canli-kpi"></div>
+    <div class="canli-compose">
+      <textarea id="canliMsg" maxlength="300" rows="2" placeholder="📣 Duyuru mesajı yaz… (boş bırakırsan yalnızca konfeti patlar)"></textarea>
+      <div class="canli-compose-row">
+        <span id="canliHedef" class="canli-hedef">📣 Herkese</span>
+        <select id="canliSure" title="Mesaj ekranda kalma süresi">
+          <option value="8">8 sn</option>
+          <option value="12" selected>12 sn</option>
+          <option value="20">20 sn</option>
+          <option value="30">30 sn</option>
+        </select>
+        <label class="canli-chk"><input type="checkbox" id="canliKonfeti" checked /> 🎁 Konfeti de patlat</label>
+        <button class="btn primary" id="btnCanliHerkese">📣 Herkese Gönder</button>
+      </div>
+    </div>
+    <div class="table-wrap" style="margin-top:10px;max-height:40vh;overflow-y:auto">
+      <table>
+        <thead><tr><th>Kullanıcı</th><th>Tür</th><th class="center">Cihaz</th><th class="center">Oturum süresi</th><th class="center">Son sinyal</th><th class="center">İşlem</th></tr></thead>
+        <tbody id="canliTable"><tr><td colspan="6" class="hint" style="text-align:center">Yükleniyor…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCanliClose">Kapat</button></div>
+  </div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
   <script>
   /* Kısayol: dosya.html#depo → doğrudan depo ekranı (yalnızca görüntüleme) */
