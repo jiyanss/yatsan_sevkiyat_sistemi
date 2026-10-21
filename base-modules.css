@@ -24,6 +24,9 @@
   --red-soft: #fef2f2;           /* Kırmızı arka plan yumuşatma */
   
   --radius: 12px;
+
+  /* 🆕 Task 21: rapor tablosu ızgara çizgisi (belirgin) — temalar aşağıda override eder */
+  --rpt-line: #94a3b8;
 }
 body.dark {
   --bg: #0b1220; --surface: #151f31; --border: #2b3a52;
@@ -32,6 +35,7 @@ body.dark {
   --green: #34d399; --green-soft: #0d2b22;
   --amber: #fbbf24; --amber-soft: #2d2410;
   --red: #f87171; --red-soft: #31151a;
+  --rpt-line: #43546f;
 }
 body[data-theme="ocean"] {
   --bg: #eef5f8; --surface: #ffffff; --surface2: #f2f8fb; --border: #d3e2ea;
@@ -40,6 +44,7 @@ body[data-theme="ocean"] {
   --green: #0f766e; --green-soft: #ecfdf5;
   --amber: #b45309; --amber-soft: #fffbeb;
   --red: #be123c; --red-soft: #fff1f2;
+  --rpt-line: #9dbcc9;
 }
 body[data-theme="ocean"] thead tr { background: #134e4a; }
 body[data-theme="forest"] {
@@ -49,6 +54,7 @@ body[data-theme="forest"] {
   --green: #6ee7b7; --green-soft: #122b1d;
   --amber: #fbbf24; --amber-soft: #2d2410;
   --red: #f87171; --red-soft: #31151a;
+  --rpt-line: #3d5a47;
 }
 body[data-theme="forest"] thead tr { background: #22331f; }
 body[data-theme="grape"] {
@@ -58,6 +64,7 @@ body[data-theme="grape"] {
   --green: #4ade80; --green-soft: #112a18;
   --amber: #fcd34d; --amber-soft: #2d2410;
   --red: #fb7185; --red-soft: #31151a;
+  --rpt-line: #4a3f78;
 }
 body[data-theme="grape"] thead tr { background: #241a40; }
 
@@ -354,9 +361,28 @@ body.dark .badge.waiting, body[data-theme="forest"] .badge.waiting, body[data-th
 
 .rpt { margin-bottom: 18px; }
 .rpt h3 { font-size: 13px; margin: 0 0 6px; }
-.rpt thead tr { background: var(--bg); color: var(--text); }
+/* 🆕 Task 21 — Rapor tablolarında net çizgiler: tüm rapor sekmelerine (.rpane) tam ızgara.
+   Başlık artık global koyu stili alır (eski açık zemin override'ı kaldırıldı). */
 .rpt th { padding: 7px 9px; }
+.rpane th, .rpane td { border: 1px solid var(--rpt-line); }
+.rpane tfoot td { border-top: 2px solid var(--rpt-line); }
+.rpane tbody tr:hover td { background: var(--primary-soft); }
 .rpt tfoot tr { background: var(--bg); font-weight: 600; }
+
+/* 🆕 Task 21 — Ekip pasta + bar grafikleri */
+.ekip-pasta-wrap { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.ekip-pasta-legend { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 170px; }
+.ekip-pasta-legend .pl-row { display: flex; align-items: center; gap: 7px; font-size: 11.5px; }
+.pl-dot { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+.pl-ad { font-weight: 700; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-val { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ekip-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.ekip-bar-row:last-child { margin-bottom: 0; }
+.ekip-bar-ad { width: 96px; font-size: 11px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ekip-bar-track { flex: 1; height: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; position: relative; overflow: hidden; }
+.ekip-bar-fill { height: 100%; border-radius: 5px 0 0 5px; }
+.ekip-bar-hedef { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--muted); }
+.ekip-bar-val { width: 118px; font-size: 10.5px; color: var(--muted); text-align: right; white-space: nowrap; }
 
 .prev-head { background: var(--bg) !important; color: var(--text) !important; }
 .success { background: var(--green-soft); border: 1px solid var(--green); color: var(--green); font-size: 12px; padding: 9px 12px; border-radius: 8px; margin-top: 12px; }
@@ -602,6 +628,9 @@ body.op-open #loginModal { z-index: 95; }
   .col-2 { grid-column: span 1; }
   .chart-grid { grid-template-columns: 1fr; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .ekip-bar-ad { width: 72px; }
+  .ekip-bar-val { width: 92px; font-size: 9.5px; }
+  .ekip-pasta-wrap { justify-content: center; }
   .btn { padding: 8px 10px; }
   .kal-grid { grid-template-columns: repeat(7, minmax(120px, 1fr)); }
   .kal-cell { min-height: 120px; }
