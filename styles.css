@@ -1,23 +1,14 @@
 /* =========================================================
-   YATSAN — styles.css (düzen katmanı)
-   Bu dosya base-modules.css'ten SONRA yüklenir:
-   <link rel="stylesheet" href="base-modules.css" />
-   <link rel="stylesheet" href="styles.css" />
-   Not: Kritik kurallar "main .table-wrap" / ".colmenu-wrap .colmenu"
-   gibi yüksek spesifikiteyle yazıldı — base'deki eski
-   "overflow-x: hidden" ve "width: 100% !important" kuralları
-   hangi sırada yüklenirse yüklensin bu kurallar kazanır.
-   ========================================================= */
-
-/* =========================================================
    1. TEK EKRAN (SINGLE SCREEN) DÜZENİ
    ========================================================= */
 html, body {
   height: 100vh;
-  height: 100dvh; /* mobil adres çubuğu için doğru yükseklik */
   margin: 0;
   padding: 0;
-  overflow: hidden !important; /* dış sayfa kayması kapalı — kaydırma tablonun içinde */
+  overflow: hidden !important; /* Dış sayfa kaymasını engeller */
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
 
 body {
@@ -27,6 +18,8 @@ body {
 
 header {
   flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   padding: 8px 16px;
   display: flex;
   flex-wrap: wrap;
@@ -42,12 +35,6 @@ main {
   padding: 10px 14px;
   min-height: 0;
   overflow: hidden;
-  /* base'deki "margin: 0 auto; max-width: 1600px" kuralı flex'te
-     stretch'i bozar ve main'i tablo kadar büyütür (yatay kaydırma ölür).
-     Tek-ekran düzeninde main her zaman tam genişlikte olmalı: */
-  margin: 0 !important;
-  max-width: none !important;
-  width: 100%;
 }
 
 .statbar {
@@ -56,31 +43,31 @@ main {
 }
 
 /* =========================================================
-   2. AÇILIR MENÜLER — BUTONUN ALTINDA, TABLONUN ÜSTÜNDE
+   2. AÇILIR MENÜLERİ (DROPDOWN) BUTON ALTINA SABİTLEME
    ========================================================= */
-/* Sarmalayıcı hizalama noktasıdır; menü ona göre açılır */
-.colmenu-wrap,
-.game-wrap {
+/* Ekran görüntüsündeki Oyunlar ve Araçlar menülerinin çakışmasını engeller */
+.game-wrap, 
+.colmenu-wrap {
   position: relative !important;
 }
 
-.colmenu-wrap .colmenu,
-.game-wrap .game-menu {
+.game-menu, 
+.colmenu {
   position: absolute !important;
   top: calc(100% + 6px) !important;
   left: 0 !important;
-  right: auto !important;
-  bottom: auto !important;
-  z-index: 80 !important;      /* header katmanı içinde tablonun ÜSTÜNDE */
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, .25) !important;
-  max-height: 65vh !important;
-  overflow-y: auto !important;
+  z-index: 100 !important;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  min-width: 180px;
+  max-height: 65vh;
+  overflow-y: auto;
 }
 
-/* Araçlar menüsü ekranın sağından taşmasın (kullanılıyorsa) */
+/* Araçlar menüsü ekranın sağından dışarı taşmasın */
 #toolsMenu {
   left: auto !important;
   right: 0 !important;
@@ -92,11 +79,11 @@ main {
   text-align: left;
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text);
-  padding: 9px 12px;
-  border-radius: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
   width: 100%;
   display: block;
 }
@@ -106,57 +93,71 @@ main {
 }
 
 /* =========================================================
-   3. TABLO — İÇİNE KAYDIRMA + YAPIŞKAN BAŞLIK
+   GÜNCEL TABLE-WRAP & SCROLL DÜZENLEMESİ
    ========================================================= */
-/* base'deki ".table-wrap { overflow-x: hidden !important }" kuralını
-   spesifikiteyle yener (0,1,1 > 0,1,0): yatay kaydırma artık GARANTİ */
-main .table-wrap {
+
+/* Tablo kapsayıcısı: Sadece kendi içinde dikey ve yatay kaydırma yapar */
+.table-wrap {
   flex: 1;
   min-height: 0;
-  position: relative;
-  overflow-y: auto !important;
-  overflow-x: auto !important;   /* satırları sağa çekme GERİ GELDİ */
-  -webkit-overflow-scrolling: touch;
+  overflow-y: auto !important;  /* Dikey kaydırma aktif */
+  overflow-x: auto !important;  /* Yatay kaydırma çubuğu GERİ GELDİ (Görünmeyen kolon kalmaz) */
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
 }
 
-/* base'deki "table { width: 100% !important }" kuralını yener (0,1,2) */
-main .table-wrap table {
+/* Tablonun doğal genişliğini koruması */
+.table-wrap table {
   width: 100%;
-  table-layout: auto !important;
+  table-layout: auto !important; /* Esnek kolon genişlikleri */
   border-collapse: collapse;
 }
 
-/* Yapışkan başlık — dikey kaydırmada donar */
-main .table-wrap thead tr th {
-  position: sticky;
-  top: 0;
-  z-index: 25;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .15);
+/* Şık ve ince kaydırma çubuğu (Scrollbar) tasarımı */
+.table-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px; /* Yatay scrollbar yüksekliği */
 }
 
-/* İnce şık kaydırma çubuğu */
-main .table-wrap::-webkit-scrollbar { width: 6px; height: 8px; }
-main .table-wrap::-webkit-scrollbar-track { background: var(--bg); }
-main .table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
-main .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+.table-wrap::-webkit-scrollbar-track {
+  background: var(--bg);
+}
 
-/* Hücreler: sığmayan metin "…" ile kısalır */
-main .table-wrap td {
+.table-wrap::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Temalara Göre Başlık Zemin Rengi */
+body.dark .table-wrap thead tr th { background-color: #151f31 !important; }
+body[data-theme="ocean"] .table-wrap thead tr th { background-color: #134e4a !important; }
+body[data-theme="forest"] .table-wrap thead tr th { background-color: #22331f !important; }
+body[data-theme="grape"] .table-wrap thead tr th { background-color: #241a40 !important; }
+
+/* Hücre Alanları & Taşma Engelleme */
+.table-wrap td {
   padding: 4px 4px !important;
   border-top: 1px solid var(--border);
   font-size: 10.5px !important;
   white-space: nowrap;
   vertical-align: middle;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: ellipsis; /* Sığmayan metin sonuna ... koyar */
 }
 
-/* Kolon genişlik oranları (masaüstü denge) */
-th[data-col="select"], td:first-child { width: 3%; text-align: center; }
+/* Kolon Genişlik Oranları (%) — Toplam %100 Ekran Genişliği
+   ⚠️ td:first-child / td:last-child kuralları KALDIRILDI (23 Eki): yapısal seçiciler
+   ANA TABLO dışındaki TÜM tablolara (Raporlar Gün×Ekip / Hafta×Ekip pivotları,
+   modal tabloları) sızıyordu → ilk kolon %3'e sıkışıyor, ortadaki kolon devleşiyordu.
+   Ana tabloda aynı görünüm korunur: seçim kolonu artık th.selbox-th üzerinden,
+   işlem kolonu içerik genişliğinden (4% ipucu zaten etkinsizdi) gelir. */
+th.selbox-th { width: 3%; text-align: center; }
 th[data-col="musteri"], td[data-col="musteri"] { width: 11%; }
 th[data-col="blm"], td[data-col="blm"] { width: 7%; }
 th[data-col="sevkiyatTipi"], td[data-col="sevkiyatTipi"] { width: 6%; }
@@ -173,183 +174,100 @@ th[data-col="aciklama"], td[data-col="aciklama"] { width: 9%; }
 th[data-col="araciGeldi"], td[data-col="araciGeldi"] { width: 4%; text-align: center; }
 th[data-col="prsM3"], td[data-col="prsM3"] { width: 3%; text-align: center; }
 th[data-col="m3"], td[data-col="m3"] { width: 3%; text-align: center; }
-td:last-child { width: 4%; text-align: right; }
+/* td:last-child { width: 4%; text-align: right; } ← KALDIRILDI: tüm tablolara sızıyordu
+   (rapor pivotlarının son kolonunu %4'e sıkıştırıp sağa yaslıyordu). Buton kolonunun
+   genişliği zaten butonların doğal içeriğinden geliyordu; görünüm değişmez. */
 
 /* =========================================================
-   📱 MOBİL (≤ 768px)
+   📱 MOBİL EKRAN KESİN DÜZENLEME (≤ 768px)
    ========================================================= */
 @media (max-width: 768px) {
-
+  /* 1. Dış Ekran Kilitleri */
   html, body {
     height: 100vh;
-    height: 100dvh;
     overflow: hidden !important;
   }
 
-  /* main DİKEY KAYABİLİR — header her zaman görünür kalır; özet açıkken
-     bile tablo asla tamamen kaybolmaz (satır ölümünün kalıcı çözümü) */
   main {
     padding: 6px 8px !important;
-    overflow-y: auto !important;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
   }
 
-  header { padding: 8px !important; gap: 6px !important; }
+  header {
+    padding: 8px !important;
+    gap: 6px !important;
+  }
+
   .brand h1 { font-size: 13px !important; }
   .subtitle { display: none !important; }
-
-  /* ---------- FİLTRELER: DÜZENLİ SIRALAMA ----------
-     ÖNEMLİ: Toolbar artık .tool-group kutularıyla gruplanmış olabiliyor;
-     o yüzden burada TÜM kurallar torun seçicisiyle yazıldı (">" yok) —
-     gruplu yapıda da eskisinde de aynı şekilde çalışır. */
 
   .toolbar {
     width: 100% !important;
     display: flex !important;
     flex-wrap: wrap !important;
-    gap: 5px !important;
-    align-items: stretch !important;
+    gap: 4px !important;
   }
 
-  /* Grup kutuları: her grup tam satır ve İÇİ DE sarabilir →
-     filtre satırının sağdan taşması imkânsız hale gelir */
-  .toolbar .tool-group {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    flex: 1 1 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    gap: 5px !important;
+  .btn, select, input {
+    font-size: 11px !important;
     padding: 4px 6px !important;
   }
 
-  /* Arama kutusu: kapsam seçimiyle paylaştığı esnek satır */
-  .toolbar #search {
-    flex: 1 1 150px !important;
-    min-width: 0 !important;
-    width: auto !important;
+  /* 2. AÇILIR MENÜLERİ TAM BUTONUN ALTINA BİLİSAYARDAKİ GİBİ KİLİTLEME */
+  /* Parent elemanları hizalama noktası yapıyoruz */
+  .colmenu-wrap, 
+  .game-wrap, 
+  .tool-group, 
+  #btnToolsMenu, 
+  #btnGameMenu {
+    position: relative !important;
   }
 
-  /* Seçim kutuları: 2'şerli sıra */
-  .toolbar select {
-    flex: 1 1 calc(50% - 3px) !important;
-    min-width: 0 !important;
-    width: auto !important;
-    padding: 6px 6px !important;
-    font-size: 11px !important;
+  /* Açılır menü kutuları */
+  .colmenu, 
+  .game-menu, 
+  #toolsMenu {
+    position: absolute !important;
+    top: calc(100% + 2px) !important; /* Tam ilgili butonun alt sınırı */
+    left: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    z-index: 9999 !important; /* Tablonun ve diğer butonların üstünde kalır */
+    min-width: 170px !important;
+    max-width: 240px !important;
+    max-height: 60vh !important;
+    overflow-y: auto !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
   }
 
-  /* Durum filtresi: en önemli filtre, tam satır */
-  .toolbar #statusFilter { flex: 1 1 100% !important; }
-
-  /* Özel tarih aralığı: tam satır */
-  .toolbar #customRange {
-    flex: 1 1 100% !important;
-  }
-  .toolbar #customRange input[type="date"] {
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
+  /* Sağ taraftaki Araçlar menüsünün ekran dışına taşmasını önler */
+  #toolsMenu {
+    left: auto !important;
+    right: 0 !important;
   }
 
-  /* Arşiv onay kutusu küçük kalsın */
-  .toolbar .arsiv-chk {
-    flex: 0 0 auto !important;
-    display: flex;
-    align-items: center;
-  }
-
-  /* Butonlar: bulunduğu satırda eşit dağılım, metin kırılmaz */
-  .toolbar .btn {
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    white-space: nowrap !important;
-    padding: 6px 8px !important;
-    font-size: 11px !important;
-    text-align: center !important;
-  }
-
-  /* admin/Çıkış kutusu doğal boyunda kalsın */
-  .toolbar .user-box { flex: 0 0 auto !important; }
-  .toolbar .user-box .btn { flex: 0 0 auto !important; }
-
-  /* Menü sarmalayıcıları hizalamayı bozmasın */
-  .toolbar .game-wrap,
-  .toolbar .colmenu-wrap {
-    flex: 1 1 auto !important;
-    display: flex !important;
-    min-width: 0 !important;
-    position: static !important; /* menü header'a bağlanır (aşağıda) */
-  }
-  .toolbar .game-wrap > .btn,
-  .toolbar .colmenu-wrap > .btn {
-    flex: 1 1 auto !important;
-    width: 100% !important;
-  }
-
-  /* ---------- MENÜLER: HEADER'IN ALTINDA TAM GENİŞLİK PANEL ----------
-     Butona göre konumlandırmada ekran kenarından taşma riski var;
-     mobilde menü header'ın hemen altında açılan panele dönüşür:
-     asla taşmaz, her zaman tablonun ÜSTÜNDE durur. */
-  .colmenu-wrap .colmenu,
-  .game-wrap .game-menu {
-    left: 8px !important;
-    right: 8px !important;
-    top: 100% !important;
-    margin-top: 4px !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    width: auto !important;
-    z-index: 80 !important;
-    box-shadow: 0 14px 34px rgba(0, 0, 0, .35) !important;
-  }
-
-  /* ---------- ÖZET (STATBAR): KOMPAKT + TAŞMASIZ ----------
-     Mobilde özet ekranın yarısını yiyordu + gün çipleri sağdan kesiliyordu */
-  .statbar {
-    gap: 8px 12px !important;
-    padding: 10px 12px !important;
-    margin-bottom: 8px !important;
-  }
-  .statbar .stat { min-width: 64px !important; }
-  .statbar .s-val { font-size: 17px !important; }
-  .statbar .s-div { display: none !important; } /* dikey çizgiler mobilde yer yiyor */
-  .statbar .days {
-    flex-wrap: wrap !important;   /* gün çipleri ikinci satıra sarılır — kesilmez */
-    margin-left: 0 !important;
-    width: 100% !important;
-    gap: 6px 12px !important;
-  }
-  .statbar .day { min-width: 30px !important; }
-
-  /* ---------- TABLO: HER KOŞULDA GÖRÜNÜR + İÇİ KAYDIRILABİLİR ----------
-     Garanti: özet açık/kapalı fark etmez, tablo en az 42vh yüksekliktedir.
-    main artık dikey kaydığı için içeriğin taşması satır ölümüne dönüşemez. */
-  main .table-wrap {
-    flex: 1 1 auto !important;
-    min-height: 42vh !important;
-    min-height: 42dvh !important;
-    overflow: auto !important;
+  /* 3. TABLO İÇİ YATAY VE DİKEY KAYDIRMA */
+  .table-wrap {
+    flex: 1 !important;
+    overflow: auto !important; /* Hem yatay hem dikey kaydırmaya izin verir */
     -webkit-overflow-scrolling: touch !important;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
   }
 
-  main .table-wrap table {
-    width: max-content !important; /* doğal genişlik → sağa kaydırma */
-    min-width: 860px !important;   /* dar ekranda taşma garantisi */
+  .table-wrap table {
+    width: max-content !important; /* Sağa yatay kaydırma için doğal genişlik */
+    min-width: 800px !important;
     table-layout: auto !important;
   }
 
-  main .table-wrap th,
-  main .table-wrap td {
+  .table-wrap th, 
+  .table-wrap td {
     padding: 5px 6px !important;
     font-size: 10.5px !important;
     white-space: nowrap !important;
-  }
-
-  /* Uzun ipucu metni mobilde kompakt (alan hırsızı olmasın) */
-  main p.hint {
-    font-size: 10px !important;
-    padding: 6px 8px !important;
-    margin-top: 6px !important;
   }
 }
