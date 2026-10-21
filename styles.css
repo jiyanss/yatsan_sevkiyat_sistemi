@@ -156,7 +156,7 @@ main .table-wrap td {
 }
 
 /* Kolon genişlik oranları (masaüstü denge) */
-th[data-col="select"], td:first-child { width: 3%; text-align: center; }
+th.selbox-th { width: 3%; text-align: center; }
 th[data-col="musteri"], td[data-col="musteri"] { width: 11%; }
 th[data-col="blm"], td[data-col="blm"] { width: 7%; }
 th[data-col="sevkiyatTipi"], td[data-col="sevkiyatTipi"] { width: 6%; }
@@ -173,7 +173,6 @@ th[data-col="aciklama"], td[data-col="aciklama"] { width: 9%; }
 th[data-col="araciGeldi"], td[data-col="araciGeldi"] { width: 4%; text-align: center; }
 th[data-col="prsM3"], td[data-col="prsM3"] { width: 3%; text-align: center; }
 th[data-col="m3"], td[data-col="m3"] { width: 3%; text-align: center; }
-td:last-child { width: 4%; text-align: right; }
 
 /* =========================================================
    📱 MOBİL (≤ 768px)
