@@ -918,8 +918,9 @@ function enriched(list) {
 }
 function searchHay(r) {
   const cmt = (Array.isArray(r.comments) ? r.comments : []).map(c => c.text).join(" ");
+  const ek = r.ekip ? (ekipAd(r.ekip) + " " + r.ekip) : "";
   return [r.musteri, r.blm, r.kategori, r.sevkiyatTipi, r.aciklama, r.araciGeldi,
-          r.durum, r.createdBy, r.ad, r.prsM3, r.m3, cmt,
+          r.durum, r.createdBy, r.ad, r.prsM3, r.m3, cmt, ek,
           formatDate(r.planlananTarih), formatDate(r.reelPlan), formatDate(r.gerceklesenTarih)]
     .map(x => String(x ?? "").toLowerCase()).join(" ");
 }
