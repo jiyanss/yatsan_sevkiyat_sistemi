@@ -667,15 +667,18 @@ function ekipEvren(list) {
       const basTs = Number(r.toplamaBasTs) || Number(r.loadingStartedAt) || 0;
       const bitTs = Number(r.toplamaBittiTs) || Number(r.loadingEndedAt) || 0;
       if (!basTs || !bitTs || bitTs < basTs) return null; /* hâlâ sürüyor veya bozuk damga → hariç */
-      const fd = new Date(bitTs);
+           const fd = new Date(bitTs);
+      /* Gün/hafta anahtarı = ana ekrandaki operasyonel tarih (reel plan → planlanan);
+         kronometre bitişi SADECE plan tarihi olmayan kayıtlarda yedek. */
+      const gunKey = gecikmeTarihi(r) || isoFromDate(fd);
       return {
         r,
         ekip: r.ekip || "__atanmamis__",
         etkinDk: Math.max(1, Math.round((bitTs - basTs) / 60000)),
         stDk: getSureDk(r) * (adet(r) || 1),
         m3: Number(r.m3) || 0,
-        gun: isoFromDate(fd),
-        hafta: getISOWeek(fd)
+        gun: gunKey,
+        hafta: getISOWeek(parseLocalDate(gunKey))
       };
     }).filter(Boolean);
 }
@@ -744,7 +747,7 @@ function ekipBarListe(dizi, hedefOrt) {
 function buildEkip(list = null) {
   const c = document.getElementById("reportPaneEkip");
   if (!ekipSira.length) {
-    c.innerHTML = `<p class="hint">Süre = 📦 <b>Toplama başlangıç → bitiş</b> (Operasyon/QR ekranındaki toplama butonlarıyla). toplama bitişi işaretlenmemişse ✔ <b>Yükleme Tamamlandı</b> kronometresi esas alınır — ana ekran sayaçlarıyla tutarlıdır. Sapma: standart hedefe (⏱️ Süreler × AD) göre fark.</p>`;
+    c.innerHTML = `<p class="hint">Süre = 📦 <b>Toplama başlangıç → bitiş</b> (Operasyon/QR ekranındaki toplama butonlarıyla). toplama bitişi işaretlenmemişse ✔ <b>Yükleme Tamamlandı</b> kronometresi esas alınır — ana ekran sayaçlarıyla tutarlıdır. Sapma: standart hedefe (⏱️ Süreler × AD) göre fark. Gün/hafta gruplaması ana ekrandaki operasyonel tarihle (reel plan → planlanan) yapılır — gecikip başka gün yüklenen kayıt plan gününe yazılır, böylece Gün×Ekip satırları ana tabloyla birebir uyuşar.</p>`;
     return;
   }
   const kaynak = list || filtered();
@@ -758,7 +761,7 @@ function buildEkip(list = null) {
   const enCok = dizi[0];
   const hizlis = dizi.filter(g => g.n >= 3 && g.etkin > 0);
   const enHizli = hizlis.length ? [...hizlis].sort((a, b) => (a.etkin / a.n) - (b.etkin / b.n))[0] : null;
-  const atanmamisN = kaynak.filter(r => !r.ekip && !r._arsiv).length;
+  const atanmamisN = evren.filter(x => x.ekip === "__atanmamis__").length; /* tablodaki Atanmamış satırıyla birebir aynı sayı */
   const toplamDk = evren.reduce((s, x) => s + x.etkinDk, 0);
   const toplamM3 = evren.reduce((s, x) => s + x.m3, 0);
   const toplamSt = dizi.reduce((s, g) => s + g.st, 0);
@@ -780,7 +783,7 @@ function buildEkip(list = null) {
     <div class="kpi c-primary"><div class="kpi-head">🥇 En çok yükleyen</div><div class="kpi-val" style="font-size:18px">${esc(ekipAd2(enCok.ekip))}</div><div class="kpi-sub">${enCok.n} yükleme · ${fmtN(enCok.m3)} m³</div></div>
     <div class="kpi c-green"><div class="kpi-head">⚡ En hızlı (≥3 yükleme)</div><div class="kpi-val" style="font-size:18px">${enHizli ? esc(ekipAd2(enHizli.ekip)) : "—"}</div><div class="kpi-sub">${enHizli ? fmtN(enHizli.etkin / enHizli.n) + " dk/yükleme" : "yeterli veri yok"}</div></div>
     <div class="kpi c-amber"><div class="kpi-head">🧮 Toplam etkin iş</div><div class="kpi-val">${fmtN(toplamDk)}</div><div class="kpi-sub">dk · ${evren.length} yükleme</div></div>
-    <div class="kpi ${atanmamisN ? "c-red" : "c-green"}"><div class="kpi-head">⚠️ Atanmamış kayıt</div><div class="kpi-val">${atanmamisN}</div><div class="kpi-sub">aktif kayıtlarda ekip boş</div></div>
+    <div class="kpi ${atanmamisN ? "c-red" : "c-green"}"><div class="kpi-head">⚠️ Atanmamış kayıt</div><div class="kpi-val">${atanmamisN}</div><div class="kpi-sub">rapor evreninde ekip boş</div></div>
     <div class="kpi c-primary"><div class="kpi-head">📦 Toplam hacim</div><div class="kpi-val">${fmtN(toplamM3)}</div><div class="kpi-sub">m³ · ${dizi.length} ekip çalıştı</div></div>
     <div class="kpi c-amber"><div class="kpi-head">📊 Ort hacim</div><div class="kpi-val">${fmtN(evren.length ? toplamM3 / evren.length : 0)}</div><div class="kpi-sub">m³/yükleme</div></div>
     <div class="kpi ${genelSapma == null ? "c-primary" : genelSapma > 10 ? "c-red" : genelSapma < -5 ? "c-green" : "c-amber"}"><div class="kpi-head">🎯 Genel hedef sapması</div><div class="kpi-val">${genelSapma == null ? "—" : fmtSapma(genelSapma) + "%"}</div><div class="kpi-sub">tüm ekipler: etkin iş vs hedef</div></div>
@@ -817,7 +820,7 @@ function buildEkip(list = null) {
     <td class="center">${genelSapma == null ? `<span class="muted">-</span>` : `<span style="font-weight:700;color:${genelSapma > 10 ? "var(--red)" : genelSapma < -5 ? "var(--green)" : "var(--amber)"}">${fmtSapma(genelSapma)}%</span>`}</td>
   </tr></tfoot>`;
   const tabA = `<div class="rpt"><h3>👷 Ekip performansı — etkin süre (📦 toplama bitti, yoksa kronometre bitişi)</h3>
-    <p class="hint">Sapma: etkin toplam dk'nın standart hedefe (⏱️ Süreler paneli × AD) göre farkı. <b>+</b> hedefi aştı (kırmızı), <b>−</b> hedefin altında (yeşil). "Toplama bitti" işaretli ama statüsü bekleyenler rapora DAHİL — üretim eksiği performansı bozmaz. ✔ Tamamlandı ama toplama bitişi işaretlenmemiş kayıtlar kronometre bitişiyle sayılır.</p>
+    <p class="hint">Sapma: etkin toplam dk'nın standart hedefe (⏱️ Süreler paneli × AD) göre farkı. <b>+</b> hedefi aştı (kırmızı), <b>−</b> hedefin altında (yeşil). "Toplama bitti" işaretli ama statüsü bekleyenler rapora DAHİL — üretim eksiği performansı bozmaz. ✔ Tamamlandı ama toplama bitişi işaretlenmemiş kayıtlar kronometre bitişiyle sayılır. Gün ataması operasyonel tarihe (reel plan → planlanan) göredir — ana ekranla aynı anahtar.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>Ekip</th><th class="center">Yükleme</th><th class="center">m³</th><th class="center">Etkin dk</th><th class="center">Ort dk/yükleme</th><th class="center">Hedef sapması</th></tr></thead>
       <tbody>${aRows}</tbody>${aToplam}</table></div></div>`;
@@ -864,8 +867,8 @@ function buildEkip(list = null) {
     }).join("");
     return `<div class="table-wrap"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
   }
-  const tabB = `<div class="rpt"><h3>📅 Gün × Ekip (son 14 gün — hangi gün hangi ekip kaç yükleme/kaç m³/kaç dk)</h3>${pivot("Gün", x => x.gun, false, 14)}</div>`;
-  const tabC = `<div class="rpt"><h3>📆 Hafta × Ekip (son 8 hafta trendi)</h3>${pivot("Hafta", x => x.hafta, true, 8)}</div>`;
+  const tabB = `<div class="rpt"><h3>📅 Gün × Ekip (son 14 gün · operasyonel tarih: reel plan → planlanan — ana ekranla aynı gün anahtarı)</h3>${pivot("Gün", x => x.gun, false, 14)}</div>`;
+  const tabC = `<div class="rpt"><h3>📆 Hafta × Ekip (son 8 hafta · hafta = reel plan/planlanan haftası — ana ekranla aynı)</h3>${pivot("Hafta", x => x.hafta, true, 8)}</div>`;
   c.innerHTML = kpi + pasta + tabA + tabB + tabC +
     `<div class="modal-actions" style="justify-content:flex-start"><button class="btn primary" id="btnEkipExcel">📤 Excel</button></div>`;
   c.querySelector("#btnEkipExcel").addEventListener("click", ekipExcelRapor);
