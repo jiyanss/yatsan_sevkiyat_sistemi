@@ -834,13 +834,28 @@ function buildEkip(list = null) {
     let keys = [...byKey.keys()];
     keys.sort((a, b) => sortNum ? b - a : String(b).localeCompare(String(a)));
     keys = keys.slice(0, limit);
-    const head = `<tr><th>${keyName}</th>${cols.map(k => `<th class="center">${esc(ekipAd2(k))}</th>`).join("")}</tr>`;
+        const head = `<tr><th>${keyName}</th>${cols.map(k => `<th class="center">${esc(ekipAd2(k))}</th>`).join("")}<th class="center">📊 Dağılım</th></tr>`;
     const rows = keys.map(k => {
       const row = byKey.get(k);
+      /* 📊 Satır mini grafiği: günün/haftanın m³ paylaşımı — esnek segmentli yığın bar.
+         m³ verisi yoksa yükleme sayısına göre oranlanır; segment başlığına kırılım girer. */
+      const hucreler = cols.map(kk => row[kk]).filter(Boolean);
+      const tN = hucreler.reduce((s, c) => s + c.n, 0);
+      const tM3 = hucreler.reduce((s, c) => s + c.m3, 0);
+      const baz = tM3 > 0 ? tM3 : tN;
+      const segs = baz > 0 ? cols.map(kk => {
+        const cell = row[kk];
+        if (!cell) return "";
+        const v = tM3 > 0 ? cell.m3 : cell.n;
+        if (v <= 0) return "";
+        const pct = Math.round(v / baz * 100);
+        return `<span class="pv-seg" style="flex:${v} 1 0%;background:${ekipRenk2(kk)}" title="${esc(ekipAd2(kk))}: ${cell.n} yük · ${fmtN(cell.m3)} m³ · ${fmtN(cell.dk)} dk (%${pct})"></span>`;
+      }).join("") : "";
+      const pay = segs ? `<div class="pv-bar">${segs}</div><div class="pv-total">toplam ${tN} yük · ${fmtN(tM3)} m³</div>` : `<span class="muted">-</span>`;
       return `<tr><td class="strong">${esc(k)}</td>${cols.map(kk => {
         const cell = row[kk];
         return `<td class="center">${cell ? `${cell.n} yük<br><span class="muted" style="font-size:9.5px">${fmtN(cell.m3)} m³ · ${fmtN(cell.dk)} dk</span>` : '<span class="muted">-</span>'}</td>`;
-      }).join("")}</tr>`;
+      }).join("")}<td class="center pv-cell">${pay}</td></tr>`;
     }).join("");
     return `<div class="table-wrap"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
   }
