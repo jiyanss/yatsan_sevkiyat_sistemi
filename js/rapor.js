@@ -244,7 +244,7 @@ document.querySelector("thead").addEventListener("change", e => {
 function updateSearchPlaceholder() {
   const wide = document.getElementById("searchScope").value === "wide";
   document.getElementById("search").placeholder = wide
-    ? "🔍 Her yerde ara (boşlukla ayır)"
+    ? "🔍 Her yerde ara — ekip adı dahil (boşlukla ayır)"
     : "🔍 Müşteri ara";
 }
 document.getElementById("search").addEventListener("input", () => { savePrefs(); render(); });
