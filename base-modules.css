@@ -375,6 +375,12 @@ body.dark .badge.waiting, body[data-theme="forest"] .badge.waiting, body[data-th
 .pv-seg { min-width: 4px; }
 .pv-seg + .pv-seg { border-left: 2px solid var(--surface); }
 .pv-total { font-size: 9.5px; color: var(--muted); margin-top: 3px; text-align: center; white-space: nowrap; }
+/* 🖱️ Hover senkronu — bar segmenti ↔ ekip hücresi karşılıklı vurgu */
+td[data-team] { transition: background-color .15s ease; }
+td[data-team].pv-hover { background: var(--primary-soft); }
+.pv-seg { transition: opacity .18s ease, filter .18s ease; }
+.pv-seg.pv-hover { filter: brightness(1.15) saturate(1.2); }
+.pv-bar.pv-focus .pv-seg:not(.pv-hover) { opacity: .38; }
 
 .rpt { margin-bottom: 18px; }
 .rpt h3 { font-size: 13px; margin: 0 0 6px; }
