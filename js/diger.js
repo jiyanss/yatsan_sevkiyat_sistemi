@@ -659,20 +659,25 @@ function depoToplamaSatiri(r) {
    ⏱ ort dk/yükleme bar karşılaştırması (hedef işaretli), TOPLAM satırı,
    Excel'e "Paylasim" sayfası. Grafikler kütüphanesiz — ek bağımlılık yok. */
 function ekipEvren(list) {
-  /* Performans evreni: toplama süreci BİTMİŞ satırlar (statü fark etmez) */
-  return list.filter(r => r.toplamaBasTs && r.toplamaBittiTs)
-    .map(r => {
-      const fd = new Date(r.toplamaBittiTs);
+  /* Performans evreni: başlangıç + bitiş damgası olan HER kayıt.
+     Öncelik 📦 toplama damgası; eksikse statü kronometresine düşülür —
+     "Yükleme Tamamlandı" işaretlenip toplama bitişi işaretlenmeyen kayıtlar
+     rapordan düşmez → ana ekran sayaçlarıyla (5 yükleme = 5 yükleme) tutarlı. */
+  return list.map(r => {
+      const basTs = Number(r.toplamaBasTs) || Number(r.loadingStartedAt) || 0;
+      const bitTs = Number(r.toplamaBittiTs) || Number(r.loadingEndedAt) || 0;
+      if (!basTs || !bitTs || bitTs < basTs) return null; /* hâlâ sürüyor veya bozuk damga → hariç */
+      const fd = new Date(bitTs);
       return {
         r,
         ekip: r.ekip || "__atanmamis__",
-        etkinDk: Math.max(1, Math.round((r.toplamaBittiTs - r.toplamaBasTs) / 60000)),
+        etkinDk: Math.max(1, Math.round((bitTs - basTs) / 60000)),
         stDk: getSureDk(r) * (adet(r) || 1),
         m3: Number(r.m3) || 0,
         gun: isoFromDate(fd),
         hafta: getISOWeek(fd)
       };
-    });
+    }).filter(Boolean);
 }
 function ekipOzetMap(evren) {
   const m = new Map();
@@ -739,7 +744,7 @@ function ekipBarListe(dizi, hedefOrt) {
 function buildEkip(list = null) {
   const c = document.getElementById("reportPaneEkip");
   if (!ekipSira.length) {
-    c.innerHTML = `<p class="hint">Süre = 📦 <b>Toplama başlangıç → bitiş</b> (Operasyon/QR ekranındaki toplama butonlarıyla). Statü kronometresinden bağımsızdır — üretim beklemesi etkilemez. Sapma: standart hedefe (⏱️ Süreler × AD) göre fark.</p>`;
+    c.innerHTML = `<p class="hint">Süre = 📦 <b>Toplama başlangıç → bitiş</b> (Operasyon/QR ekranındaki toplama butonlarıyla). toplama bitişi işaretlenmemişse ✔ <b>Yükleme Tamamlandı</b> kronometresi esas alınır — ana ekran sayaçlarıyla tutarlıdır. Sapma: standart hedefe (⏱️ Süreler × AD) göre fark.</p>`;
     return;
   }
   const kaynak = list || filtered();
@@ -812,7 +817,7 @@ function buildEkip(list = null) {
     <td class="center">${genelSapma == null ? `<span class="muted">-</span>` : `<span style="font-weight:700;color:${genelSapma > 10 ? "var(--red)" : genelSapma < -5 ? "var(--green)" : "var(--amber)"}">${fmtSapma(genelSapma)}%</span>`}</td>
   </tr></tfoot>`;
   const tabA = `<div class="rpt"><h3>👷 Ekip performansı — etkin süre (📦 toplama bitti, yoksa kronometre bitişi)</h3>
-    <p class="hint">Sapma: etkin toplam dk'nın standart hedefe (⏱️ Süreler paneli × AD) göre farkı. <b>+</b> hedefi aştı (kırmızı), <b>−</b> hedefin altında (yeşil). "Toplama bitti" işaretli ama statüsü bekleyenler rapora DAHİL — üretim eksiği performansı bozmaz.</p>
+    <p class="hint">Sapma: etkin toplam dk'nın standart hedefe (⏱️ Süreler paneli × AD) göre farkı. <b>+</b> hedefi aştı (kırmızı), <b>−</b> hedefin altında (yeşil). "Toplama bitti" işaretli ama statüsü bekleyenler rapora DAHİL — üretim eksiği performansı bozmaz. ✔ Tamamlandı ama toplama bitişi işaretlenmemiş kayıtlar kronometre bitişiyle sayılır.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>Ekip</th><th class="center">Yükleme</th><th class="center">m³</th><th class="center">Etkin dk</th><th class="center">Ort dk/yükleme</th><th class="center">Hedef sapması</th></tr></thead>
       <tbody>${aRows}</tbody>${aToplam}</table></div></div>`;
