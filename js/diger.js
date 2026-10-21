@@ -719,7 +719,7 @@ function ekipPastaSVG(items) {
 }
 /* ---------- ⏱ Ort dk/yükleme bar listesi (genel hedef işaretli) ---------- */
 function ekipBarListe(dizi, hedefOrt) {
-  const maxOrt = Math.max(...dizi.map(g => g.etkin / g.n));
+  const maxOrt = Math.max(...dizi.map(g => g.etkin / g.n), hedefOrt > 0 ? hedefOrt * 1.08 : 0);
   const hedefPct = hedefOrt > 0 && maxOrt > 0 ? Math.min(100, Math.max(0, hedefOrt / maxOrt * 100)) : null;
   return [...dizi].sort((a, b) => (b.etkin / b.n) - (a.etkin / a.n)).map(g => {
     const ort = g.etkin / g.n;
