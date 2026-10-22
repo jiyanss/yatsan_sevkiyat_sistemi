@@ -293,8 +293,6 @@
         '<div class="cd-ozet-bas">📅 ' + esc(String(o.tarih || "")) +
           " · 📋 <b>" + plan + "</b> planlanan · ✅ <b>" + yuk + "</b> gerçekleşen" +
           (o.m3Txt != null && o.m3Txt !== "" ? " · <b>" + esc(String(o.m3Txt)) + "</b> m³" : "") +
-          (Number(o.ekipN) ? " · " + Number(o.ekipN) + " ekip" : "") +
-          (o.enIyiTxt ? " · 🥇 " + esc(String(o.enIyiTxt)) : "") +
         "</div>" +
         '<div class="cd-ozet-liste">' + ozetKartListeHtml(o.liste) + "</div>" +
         '<div class="cd-not">kapatmak için dokun</div>' +
@@ -488,10 +486,6 @@
         tarih: tarih,
         plan: o.plan, yuk: o.yuk,
         m3Txt: m3Kisa,
-        ekipN: o.ekipN,
-        enIyiTxt: (o.enIyi && typeof ekipAd2 === "function")
-          ? ekipAd2(o.enIyi.k) + " " + ((typeof fmtN === "function") ? fmtN(o.enIyi.g.m3) : Math.round(o.enIyi.g.m3)) + " m³"
-          : "",
         liste: liste
       }
     });
@@ -610,14 +604,10 @@
     const tarih = (typeof formatDate === "function") ? formatDate(o.bugun) : o.bugun;
     const gunAdi = new Date().toLocaleDateString("tr-TR", { weekday: "long" });
     const m3Txt = (typeof fmtN === "function") ? fmtN(o.m3) : Math.round(o.m3);
-    const enIyiTxt = (o.enIyi && typeof ekipAd2 === "function")
-      ? " · 🥇 " + esc(ekipAd2(o.enIyi.k)) + " " + ((typeof fmtN === "function") ? fmtN(o.enIyi.g.m3) : Math.round(o.enIyi.g.m3)) + " m³"
-      : "";
     d.innerHTML =
       '<span class="ck c-d" title="Operasyonel gün: reel plan → planlanan">📅 ' + esc(tarih) + " " + esc(gunAdi) + "</span>" +
       '<span class="ck c-p" title="Operasyonel günü bugün olan tüm kayıtlar">📋 Planlanan: <b>' + o.plan + "</b></span>" +
       '<span class="ck c-total" title="Başlangıç+bitiş damgalı (tamamlanmış) yüklemeler — ana ekran ölçüsü">✅ Gerçekleşen: <b>' + o.yuk + "</b> · " + m3Txt + " m³</span>" +
-      '<span class="ck c-d">' + o.ekipN + " ekip" + enIyiTxt + "</span>" +
       '<button class="co-toggle" data-ozet-toggle title="Günün yükleme listesini aç/kapat">' + (ozetAcik ? "▴" : "▾") + " Günün yüklemeleri (" + o.plan + ")</button>" +
       '<button class="co-toggle co-duyur" data-ozet-duyur title="Bu özeti çevrimiçi herkese bildirim kartı olarak gönder">📣 Bildir</button>' +
       (ozetAcik ? '<div class="co-list">' + ozetListeHtml(o) + "</div>" : "");
