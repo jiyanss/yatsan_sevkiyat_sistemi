@@ -1,8 +1,8 @@
 /* =========================================================
-   YATSAN — canli.js v1.1
+   YATSAN — canli.js v1.2
    ---------------------------------------------------------
    TEK DOSYA (index.html'e 1 menü düğmesi + 1 modal + 1
-   script satırı dışında dokunulmaz). 4 GÖREV:
+   script satırı dışında dokunulmaz). 5 GÖREV:
 
    1) 👥 CANLI KULLANICI PANELİ (yalnız admin — 🛠️ Araçlar ▼
       altındaki "👥 Canlı Kullanıcılar" düğmesi)
@@ -30,6 +30,13 @@
       planlanan; kronometre yalnız plansız kayıtlarda yedek).
       index.html'e dokunmaz: özet bloğu canli.js tarafından canliKpi'nin
       üstüne otomatik enjekte edilir.
+
+   5) 📣 ÖZET BİLDİRİMİ — admin "📣 Bildir" düğmesiyle Günün
+      Yüklemeleri özeti (planlanan/gerçekleşen + saatli liste)
+      ÇEVRİMİÇİ HERKESE bildirim kartı yollanır: mesaj/all'a
+      tip:"ozet" mesajı yazılır (liste en çok 40 satır), açık
+      sekmeler ekran ortasında geniş kart olarak alır; kart
+      sure sn sonra ya da dokunulunca kapanır.
 
    ---------------------------------------------------------
    ⚠️ FIREBASE KURALLARI — Realtime Database → Rules'a KÖK
@@ -216,10 +223,13 @@
     if (duyEl) duyEl.classList.remove("acik");
   }
   function duyuruGoster(m, ozel) {
+    const ozetVar = m && m.tip === "ozet" && m.ozet;
     const metin = String(m.text || "");
-    if (!metin && !m.konfeti) return;
+    if (!metin && !m.konfeti && !ozetVar) return;
     try { if (typeof bildirimDing === "function") bildirimDing(); } catch (_) {}
-    if (metin) {
+    if (ozetVar) {
+      ozetKartGoster(m);
+    } else if (metin) {
       if (!duyEl) {
         duyEl = document.createElement("div");
         duyEl.id = "canliDuyuru";
@@ -244,6 +254,56 @@
       showToast(ozel ? "🎁 Sana özel bir kutlama!" : "🎁 Bir kutlama var!");
     }
     if (m.konfeti) konfeti();
+  }
+
+  /* --- Özet bildirim kartı (tip:"ozet" mesajlar) --- */
+  function ozetKartListeHtml(liste) {
+    const satir = (x) => {
+      x = x || {};
+      const tamam = !!x.tamam;
+      const saat = tamam ? String(x.saat || "") : "—";
+      const m3c = tamam ? String(x.m3 == null ? "" : x.m3) : "—";
+      const dur = tamam ? '<span class="co-tam">✓</span>' : esc(String(x.durum || "Planlı"));
+      return '<div class="co-row' + (tamam ? "" : " co-bekleyen") + '">' +
+        '<span class="co-saat' + (tamam ? " co-tam" : "") + '">' + esc(saat) + "</span>" +
+        '<span class="co-mus">' + esc(String(x.mus || "—")) + "</span>" +
+        '<span class="co-ekip">' + esc(String(x.ekip || "Atanmamış")) + "</span>" +
+        '<span class="co-m3">' + esc(m3c) + "</span>" +
+        '<span class="co-durum">' + dur + "</span></div>";
+    };
+    const baslik = '<div class="co-row co-head"><span>Saat</span><span>Müşteri</span><span>Ekip</span>' +
+      '<span class="co-m3">m³</span><span>Durum</span></div>';
+    const ks = Array.isArray(liste) ? liste.slice(0, 40) : [];
+    return baslik + (ks.length ? ks.map(satir).join("") :
+      '<div class="co-row" style="justify-content:center;padding:10px;color:var(--muted)">Liste boş</div>');
+  }
+  function ozetKartGoster(m) {
+    if (!duyEl) {
+      duyEl = document.createElement("div");
+      duyEl.id = "canliDuyuru";
+      document.body.appendChild(duyEl);
+      duyEl.addEventListener("click", duyuruKapat);
+    }
+    const o = m.ozet || {};
+    const kim = m.from ? (typeof shortUser === "function" ? shortUser(m.from) : m.from) : "Yönetici";
+    const plan = Number(o.plan) || 0, yuk = Number(o.yuk) || 0;
+    duyEl.innerHTML =
+      '<div class="cd-kart cd-ozet">' +
+        '<div class="cd-bas">📊 Günün Yüklemeleri <span class="cd-kim">— ' + esc(kim) + "</span></div>" +
+        '<div class="cd-ozet-bas">📅 ' + esc(String(o.tarih || "")) +
+          " · 📋 <b>" + plan + "</b> planlanan · ✅ <b>" + yuk + "</b> gerçekleşen" +
+          (o.m3Txt != null && o.m3Txt !== "" ? " · <b>" + esc(String(o.m3Txt)) + "</b> m³" : "") +
+          (Number(o.ekipN) ? " · " + Number(o.ekipN) + " ekip" : "") +
+          (o.enIyiTxt ? " · 🥇 " + esc(String(o.enIyiTxt)) : "") +
+        "</div>" +
+        '<div class="cd-ozet-liste">' + ozetKartListeHtml(o.liste) + "</div>" +
+        '<div class="cd-not">kapatmak için dokun</div>' +
+      "</div>";
+    duyEl.classList.remove("acik");
+    void duyEl.offsetWidth;
+    duyEl.classList.add("acik");
+    clearTimeout(duyTimer);
+    duyTimer = setTimeout(duyuruKapat, (Number(m.sure) || 25) * 1000);
   }
 
   /* ================= Mesaj akışları (SSE) ================= */
@@ -368,15 +428,15 @@
   }
   function hedefSifirla() { ozelHedef = null; renderHedef(); }
 
-  async function yolla(hedefId, text, konfetimi, sureSn) {
+  async function yolla(hedefId, text, konfetimi, sureSn, ekstra) {
     if (typeof isAdmin !== "function" || !isAdmin()) { alert("Sadece yöneticiler gönderebilir."); return false; }
     try {
       await authFetch(dbUrl(CANLI_MESAJ + "/" + hedefId), {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(Object.assign({
           ts: Date.now(), text: text || "", from: currentUser.email,
           konfeti: !!konfetimi, sure: Number(sureSn) || 12
-        })
+        }, ekstra || {}))
       });
       showToast("✅ Gönderildi — açık sekmeler birkaç saniye içinde alır.");
       return true;
@@ -395,6 +455,46 @@
       $("canliMsg").value = "";
       hedefSifirla();
     }
+  }
+
+  /* --- Günün Özeti'ni çevrimiçi herkese bildirim olarak yolla --- */
+  async function ozetDuyur() {
+    if (typeof isAdmin !== "function" || !isAdmin()) { alert("Sadece yöneticiler gönderebilir."); return; }
+    const o = gunOzeti();
+    if (!o) { showToast("📊 Özet verisi hazır değil — ana veri henüz yüklenmemiş olabilir."); return; }
+    if (!o.kitap.length) { showToast("Bugüne ait kayıt yok — gönderilecek özet yok."); return; }
+    const m3Kisa = (typeof fmtN === "function") ? fmtN(o.m3) : Math.round(o.m3);
+    if (!confirm("📊 Günün yüklemeleri özeti ÇEVRİMİÇİ HERKESE bildirim olarak gönderilsin mi?\n\n📋 Planlanan " + o.plan + " · ✅ Gerçekleşen " + o.yuk + " · " + m3Kisa + " m³")) return;
+    const liste = o.kitap.slice(0, 40).map(x => {
+      const r = x.r, tamam = !!x.rw;
+      let durum = "";
+      if (!tamam) {
+        durum = ((r.toplamaBasTs || r.loadingStartedAt) ? "⏳ " : "") + (r.durum || "Planlı");
+        if (r.durum === "Yükleme Tamamlandı") durum += " (saat damgası yok)";
+      }
+      return {
+        tamam,
+        saat: tamam ? new Date(Number(r.toplamaBittiTs) || Number(r.loadingEndedAt) || 0).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "",
+        mus: String(r.musteri || r.ad || "—"),
+        ekip: r.ekip ? ((typeof ekipAd2 === "function") ? ekipAd2(r.ekip) : r.ekip) : "Atanmamış",
+        m3: tamam ? ((typeof fmtN === "function") ? fmtN(x.rw.m3) : Math.round(x.rw.m3)) : "",
+        durum
+      };
+    });
+    const tarih = ((typeof formatDate === "function") ? formatDate(o.bugun) : o.bugun) + " " + new Date().toLocaleDateString("tr-TR", { weekday: "long" });
+    await yolla("all", "", false, 25, {
+      tip: "ozet",
+      ozet: {
+        tarih: tarih,
+        plan: o.plan, yuk: o.yuk,
+        m3Txt: m3Kisa,
+        ekipN: o.ekipN,
+        enIyiTxt: (o.enIyi && typeof ekipAd2 === "function")
+          ? ekipAd2(o.enIyi.k) + " " + ((typeof fmtN === "function") ? fmtN(o.enIyi.g.m3) : Math.round(o.enIyi.g.m3)) + " m³"
+          : "",
+        liste: liste
+      }
+    });
   }
 
   function acPanel() {
@@ -428,6 +528,7 @@
     d.className = "canli-kpi";
     d.addEventListener("click", (e) => {
       if (e.target.closest("[data-ozet-toggle]")) { ozetAcik = !ozetAcik; renderOzet(); }
+      else if (e.target.closest("[data-ozet-duyur]")) { ozetDuyur(); }
     });
     kpi.parentNode.insertBefore(d, kpi);
     return d;
@@ -518,6 +619,7 @@
       '<span class="ck c-total" title="Başlangıç+bitiş damgalı (tamamlanmış) yüklemeler — ana ekran ölçüsü">✅ Gerçekleşen: <b>' + o.yuk + "</b> · " + m3Txt + " m³</span>" +
       '<span class="ck c-d">' + o.ekipN + " ekip" + enIyiTxt + "</span>" +
       '<button class="co-toggle" data-ozet-toggle title="Günün yükleme listesini aç/kapat">' + (ozetAcik ? "▴" : "▾") + " Günün yüklemeleri (" + o.plan + ")</button>" +
+      '<button class="co-toggle co-duyur" data-ozet-duyur title="Bu özeti çevrimiçi herkese bildirim kartı olarak gönder">📣 Bildir</button>' +
       (ozetAcik ? '<div class="co-list">' + ozetListeHtml(o) + "</div>" : "");
     if (ozetAcik) { const nl = d.querySelector(".co-list"); if (nl) nl.scrollTop = sc; }
   }
@@ -568,6 +670,8 @@
       ".co-tam{color:var(--green)}" +
       ".co-bekleyen{opacity:.75}" +
       ".co-not{opacity:.7;font-size:10px}" +
+      ".co-duyur{border:1px solid var(--primary);border-radius:999px;padding:2px 10px;background:var(--primary-soft)}" +
+      ".co-duyur:hover{text-decoration:none;filter:brightness(1.06)}" +
       "@media (max-width:560px){.co-ekip{display:none}.co-durum{max-width:84px}}" +
       "body.dark .ck.c-total,body[data-theme='forest'] .ck.c-total,body[data-theme='grape'] .ck.c-total{background:#064e3b;color:#6ee7b7}" +
       "body.dark .ck.c-m,body[data-theme='forest'] .ck.c-m,body[data-theme='grape'] .ck.c-m{background:#78350f;color:#fcd34d}" +
@@ -591,6 +695,9 @@
       ".cd-kim{color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0}" +
       ".cd-metin{font-size:19px;line-height:1.45;font-weight:700;color:var(--text)}" +
       ".cd-not{margin-top:12px;font-size:10.5px;color:var(--muted);opacity:.8}" +
+      ".cd-kart.cd-ozet{max-width:min(660px,92vw);text-align:left;padding:18px 20px}" +
+      ".cd-ozet-bas{font-size:13px;line-height:1.5;font-weight:600;color:var(--text);margin-bottom:10px;text-align:center}" +
+      ".cd-ozet-liste{max-height:38vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px}" +
       "@keyframes canli-pop{from{transform:scale(.75);opacity:0}to{transform:scale(1);opacity:1}}";
     document.head.appendChild(st);
   }
@@ -658,8 +765,10 @@
         hedef: ozelHedef,
       };
     },
-    /* Manuel test: Canli.konfeti() / Canli.duyuru("merhaba") */
+    /* Manuel test: Canli.konfeti() / Canli.duyuru("merhaba") / Canli.ozetBildir() */
     konfeti: function () { konfeti(); },
     duyuru: function (metin) { duyuruGoster({ ts: Date.now(), text: metin || "Test duyurusu 🎉", from: (typeof currentUser !== "undefined" && currentUser) ? currentUser.email : "yönetici", sure: 12 }, false); },
+    /* Günün Özeti'ni herkese bildirim olarak yollar (paneldeki 📣 Bildir ile aynı) */
+    ozetBildir: function () { ozetDuyur(); },
   };
 })();
