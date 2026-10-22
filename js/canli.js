@@ -487,6 +487,7 @@
       ".ck.c-g{background:var(--primary-soft);color:var(--primary)}" +
       ".ck.c-m{background:var(--amber-soft);color:var(--amber)}" +
       ".ck.c-d{background:var(--surface);color:var(--text);border:1px solid var(--border);font-weight:600}" +
+      ".ck.c-d{background:var(--surface);color:var(--text);border:1px solid var(--border);font-weight:600}" +
       ".ck.c-p{background:var(--primary-soft);color:var(--primary)}" +
       ".co-toggle{background:none;border:none;color:var(--primary);cursor:pointer;font-size:12.5px;font-weight:800;padding:2px 0;text-align:left}" +
       ".co-toggle:hover{text-decoration:underline}" +
