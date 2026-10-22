@@ -315,7 +315,8 @@
       $("canliKpi").innerHTML =
         '<span class="ck c-total">🟢 Çevrimiçi: ' + sonListe.length + "</span>" +
         '<span class="ck c-g">👤 Girişli: ' + g + "</span>" +
-        '<span class="ck c-m">👁️ Misafir: ' + m + "</span>";
+         '<span class="ck c-m">👁️ Misafir: ' + m + "</span>";
+      renderOzet();
       tb.innerHTML = sonListe.map(u => {
         const sen = u.id === benimId();
         const girisli = u.tip === "girisli";
@@ -399,7 +400,63 @@
     if (canliIv) { clearInterval(canliIv); canliIv = null; }
   }
 
-  /* ================= 5) MENÜ GÖRÜNÜRLÜĞÜ (yalnız admin) ================= */
+     /* ================= 4.5) GÜNÜN ÖZETİ (bugünkü yükleme/m³) =================
+     Ana ekrandaki sayaçlarla BİREBİR: aynı kayıt evresi (ekipEvren —
+     başlangıç+bitiş damgalı kayıtlar) ve aynı operasyonel tarih anahtarı
+     (reel plan → planlanan; kronometre yalnız plansız kayıtta yedek).
+     Arşiv dahil seçiliyken arşiv havuzu da eklenir (core.js filtered ile aynı).
+     index.html'e dokunmaz: div, canliKpi'nin üstüne otomatik eklenir. */
+  function ozetHedefAlan() {
+    let d = $("canliOzet");
+    if (d) return d;
+    const kpi = $("canliKpi");
+    if (!kpi || !kpi.parentNode) return null;
+    d = document.createElement("div");
+    d.id = "canliOzet";
+    d.className = "canli-kpi";
+    kpi.parentNode.insertBefore(d, kpi);
+    return d;
+  }
+  function gunOzeti() {
+    try {
+      if (typeof ekipEvren !== "function" || typeof rows === "undefined" || !Array.isArray(rows)) return null;
+      let havuz = rows;
+      if (typeof arsivDahil !== "undefined" && arsivDahil && Array.isArray(arsivCache) && arsivCache.length) {
+        const ids = new Set(rows.map(r => r.id));
+        havuz = rows.concat(arsivCache.filter(r => !ids.has(r.id)));
+      }
+      const bugun = (typeof todayISO === "function") ? todayISO() : isoFromDate(new Date());
+      const gunluk = ekipEvren(havuz).filter(x => x.gun === bugun);
+      const m3 = gunluk.reduce((t, x) => t + x.m3, 0);
+      const ekipSet = new Set(gunluk.map(x => x.ekip).filter(k => k && k !== "__atanmamis__"));
+      const hm = new Map();
+      gunluk.forEach(x => {
+        if (!x.ekip || x.ekip === "__atanmamis__") return;
+        const g = hm.get(x.ekip) || { n: 0, m3: 0 };
+        g.n++; g.m3 += x.m3; hm.set(x.ekip, g);
+      });
+      let enIyi = null;
+      hm.forEach((v, k) => { if (!enIyi || v.m3 > enIyi.g.m3) enIyi = { k, g: v }; });
+      return { bugun, yuk: gunluk.length, m3, ekipN: ekipSet.size, enIyi };
+    } catch (_) { return null; }
+  }
+  function renderOzet() {
+    const d = ozetHedefAlan();
+    if (!d) return;
+    const o = gunOzeti();
+    if (!o) { d.innerHTML = ""; return; }
+    const tarih = (typeof formatDate === "function") ? formatDate(o.bugun) : o.bugun;
+    const gunAdi = new Date().toLocaleDateString("tr-TR", { weekday: "long" });
+    const m3Txt = (typeof fmtN === "function") ? fmtN(o.m3) : Math.round(o.m3);
+    const enIyiTxt = (o.enIyi && typeof ekipAd2 === "function")
+      ? " · 🥇 " + esc(ekipAd2(o.enIyi.k)) + " " + ((typeof fmtN === "function") ? fmtN(o.enIyi.g.m3) : Math.round(o.enIyi.g.m3)) + " m³"
+      : "";
+    d.innerHTML = o.yuk
+      ? '<span class="ck c-d" title="Ana ekranla aynı ölçü: tamamlanmış yüklemeler, operasyonel tarih (reel plan → planlanan)">📅 ' + esc(tarih) + " " + esc(gunAdi) + " · <b>" + o.yuk + "</b> yükleme · <b>" + m3Txt + "</b> m³ · " + o.ekipN + " ekip" + enIyiTxt + "</span>"
+      : '<span class="ck c-d" style="opacity:.75">📅 ' + esc(tarih) + " — bugün henüz tamamlanmış yükleme yok</span>";
+  }
+
+    /* ================= 5) MENÜ GÖRÜNÜRLÜĞÜ (yalnız admin) ================= */
   function menuGizle() {
     const b = $("btnLiveUsers");
     if (b) b.classList.toggle("hidden", !(typeof isAdmin === "function" && isAdmin()));
@@ -429,6 +486,7 @@
       ".ck.c-total{background:var(--green-soft);color:var(--green)}" +
       ".ck.c-g{background:var(--primary-soft);color:var(--primary)}" +
       ".ck.c-m{background:var(--amber-soft);color:var(--amber)}" +
+      ".ck.c-d{background:var(--surface);color:var(--text);border:1px solid var(--border);font-weight:600}" +
       "body.dark .ck.c-total,body[data-theme='forest'] .ck.c-total,body[data-theme='grape'] .ck.c-total{background:#064e3b;color:#6ee7b7}" +
       "body.dark .ck.c-m,body[data-theme='forest'] .ck.c-m,body[data-theme='grape'] .ck.c-m{background:#78350f;color:#fcd34d}" +
       ".canli-compose{margin-top:8px;display:flex;flex-direction:column;gap:8px}" +
