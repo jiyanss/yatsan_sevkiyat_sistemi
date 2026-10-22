@@ -1,5 +1,5 @@
 /* =========================================================
-   YATSAN — canli.js v1.2
+   YATSAN — canli.js v1.3
    ---------------------------------------------------------
    TEK DOSYA (index.html'e 1 menü düğmesi + 1 modal + 1
    script satırı dışında dokunulmaz). 5 GÖREV:
@@ -25,7 +25,8 @@
    4) 📅 GÜNÜN ÖZETİ — panelde bugünün sayacı: PLANLANAN yükleme adedi
       (operasyonel günü bugün olan tüm kayıtlar), GERÇEKLEŞEN adedi (başlangıç
       +bitiş damgalı), toplam m³, aktif ekip, en çok yükleyen ekip + açılır
-      GÜN LİSTESİ (saat · müşteri · ekip · m³ · durum). Ana ekranla BİREBİR
+      GÜN LİSTESİ (yükleme bitiş saati · müşteri · ekip · m³ · durum).
+      Ana ekranla BİREBİR
       aynı kayıt evresi + tarih anahtarı (diger.js ekipEvren: reel plan →
       planlanan; kronometre yalnız plansız kayıtlarda yedek).
       index.html'e dokunmaz: özet bloğu canli.js tarafından canliKpi'nin
@@ -472,7 +473,7 @@
       }
       return {
         tamam,
-        saat: tamam ? new Date(Number(r.toplamaBittiTs) || Number(r.loadingEndedAt) || 0).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "",
+        saat: tamam ? new Date(Number(r.loadingEndedAt) || Number(r.toplamaBittiTs) || 0).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "",
         mus: String(r.musteri || r.ad || "—"),
         ekip: r.ekip ? ((typeof ekipAd2 === "function") ? ekipAd2(r.ekip) : r.ekip) : "Atanmamış",
         m3: tamam ? ((typeof fmtN === "function") ? fmtN(x.rw.m3) : Math.round(x.rw.m3)) : "",
@@ -508,7 +509,8 @@
      tarih anahtarı. • PLANLANAN = operasyonel günü (reel plan → planlanan,
      damgasızda kronometre bitişi) bugün olan TÜM kayıtlar • GERÇEKLEŞEN =
      başlangıç+bitiş damgalı olanlar (ekipEvren evresi — bekleyen/süren
-     sayılmaz) • LİSTE = günün kayıtları tamamlanma saatine göre sıralı.
+     sayılmaz) • LİSTE = günün kayıtları YÜKLEME BİTİŞ saatine göre sıralı
+     (loadingEndedAt; damgasızsa toplama bitişi yedek).
      Arşiv dahil seçiliyken arşiv havuzu da eklenir. index.html'e dokunmaz:
      blok, canliKpi'nin üstüne otomatik eklenir; liste durumunu korur. */
   let ozetAcik = false;
@@ -544,10 +546,10 @@
         const rw = rowByRec.get(r);
         return (rw ? rw.gun : (gecikmeTarihi(r) || "")) === bugun;
       }).map(r => ({ r, rw: rowByRec.get(r) || null }));
-      /* tamamlanma saatine göre sıralı; damgasızlar (bekleyen) en sonda */
+      /* yükleme bitiş saatine göre sıralı (yoksa toplama bitişi); damgasızlar en sonda */
       kitap.sort((a, b) => {
-        const ta = a.rw ? (Number(a.r.toplamaBittiTs) || Number(a.r.loadingEndedAt) || 0) : 0;
-        const tb = b.rw ? (Number(b.r.toplamaBittiTs) || Number(b.r.loadingEndedAt) || 0) : 0;
+        const ta = a.rw ? (Number(a.r.loadingEndedAt) || Number(a.r.toplamaBittiTs) || 0) : 0;
+        const tb = b.rw ? (Number(b.r.loadingEndedAt) || Number(b.r.toplamaBittiTs) || 0) : 0;
         if (ta && tb) return ta - tb;
         if (ta) return -1;
         if (tb) return 1;
@@ -572,7 +574,7 @@
       const r = x.r;
       const tamam = !!x.rw;
       const saat = tamam
-        ? new Date(Number(r.toplamaBittiTs) || Number(r.loadingEndedAt)).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
+        ? new Date(Number(r.loadingEndedAt) || Number(r.toplamaBittiTs)).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
         : "—";
       const ad = esc(r.musteri || r.ad || "—");
       const ek = esc(r.ekip ? ((typeof ekipAd2 === "function") ? ekipAd2(r.ekip) : r.ekip) : "Atanmamış");
