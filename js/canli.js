@@ -487,6 +487,22 @@
       ".ck.c-g{background:var(--primary-soft);color:var(--primary)}" +
       ".ck.c-m{background:var(--amber-soft);color:var(--amber)}" +
       ".ck.c-d{background:var(--surface);color:var(--text);border:1px solid var(--border);font-weight:600}" +
+      ".ck.c-p{background:var(--primary-soft);color:var(--primary)}" +
+      ".co-toggle{background:none;border:none;color:var(--primary);cursor:pointer;font-size:12.5px;font-weight:800;padding:2px 0;text-align:left}" +
+      ".co-toggle:hover{text-decoration:underline}" +
+      ".co-list{border:1px solid var(--border);border-radius:10px;background:var(--surface);max-height:34vh;overflow-y:auto;margin-top:2px}" +
+      ".co-row{display:flex;gap:8px;align-items:baseline;font-size:12px;padding:4px 8px;border-bottom:1px solid var(--border);min-width:0}" +
+      ".co-row:last-child{border-bottom:none}" +
+      ".co-head{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);position:sticky;top:0;background:var(--surface);z-index:1}" +
+      ".co-saat{flex:0 0 38px;font-weight:800}" +
+      ".co-mus{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--text)}" +
+      ".co-ekip{flex:0 0 auto;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}" +
+      ".co-m3{flex:0 0 52px;text-align:right;color:var(--muted)}" +
+      ".co-durum{flex:0 0 auto;max-width:118px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11px}" +
+      ".co-tam{color:var(--green)}" +
+      ".co-bekleyen{opacity:.75}" +
+      ".co-not{opacity:.7;font-size:10px}" +
+      "@media (max-width:560px){.co-ekip{display:none}.co-durum{max-width:84px}}" +
       "body.dark .ck.c-total,body[data-theme='forest'] .ck.c-total,body[data-theme='grape'] .ck.c-total{background:#064e3b;color:#6ee7b7}" +
       "body.dark .ck.c-m,body[data-theme='forest'] .ck.c-m,body[data-theme='grape'] .ck.c-m{background:#78350f;color:#fcd34d}" +
       ".canli-compose{margin-top:8px;display:flex;flex-direction:column;gap:8px}" +
