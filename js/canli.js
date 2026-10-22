@@ -1,8 +1,8 @@
 /* =========================================================
-   YATSAN — canli.js v1
+   YATSAN — canli.js v1.1
    ---------------------------------------------------------
    TEK DOSYA (index.html'e 1 menü düğmesi + 1 modal + 1
-   script satırı dışında dokunulmaz). 3 GÖREV:
+   script satırı dışında dokunulmaz). 4 GÖREV:
 
    1) 👥 CANLI KULLANICI PANELİ (yalnız admin — 🛠️ Araçlar ▼
       altındaki "👥 Canlı Kullanıcılar" düğmesi)
@@ -21,6 +21,15 @@
       kart olarak çıkar. "Herkese" = mesaj/all, "özel" =
       mesaj/{oturumId}. SSE ile canlı iletilir; sayfa açıkken
       gelen mesajlar anında görünür.
+
+   4) 📅 GÜNÜN ÖZETİ — panelde bugünün sayacı: PLANLANAN yükleme adedi
+      (operasyonel günü bugün olan tüm kayıtlar), GERÇEKLEŞEN adedi (başlangıç
+      +bitiş damgalı), toplam m³, aktif ekip, en çok yükleyen ekip + açılır
+      GÜN LİSTESİ (saat · müşteri · ekip · m³ · durum). Ana ekranla BİREBİR
+      aynı kayıt evresi + tarih anahtarı (diger.js ekipEvren: reel plan →
+      planlanan; kronometre yalnız plansız kayıtlarda yedek).
+      index.html'e dokunmaz: özet bloğu canli.js tarafından canliKpi'nin
+      üstüne otomatik enjekte edilir.
 
    ---------------------------------------------------------
    ⚠️ FIREBASE KURALLARI — Realtime Database → Rules'a KÖK
@@ -315,7 +324,7 @@
       $("canliKpi").innerHTML =
         '<span class="ck c-total">🟢 Çevrimiçi: ' + sonListe.length + "</span>" +
         '<span class="ck c-g">👤 Girişli: ' + g + "</span>" +
-         '<span class="ck c-m">👁️ Misafir: ' + m + "</span>";
+        '<span class="ck c-m">👁️ Misafir: ' + m + "</span>";
       renderOzet();
       tb.innerHTML = sonListe.map(u => {
         const sen = u.id === benimId();
@@ -400,12 +409,15 @@
     if (canliIv) { clearInterval(canliIv); canliIv = null; }
   }
 
-     /* ================= 4.5) GÜNÜN ÖZETİ (bugünkü yükleme/m³) =================
-     Ana ekrandaki sayaçlarla BİREBİR: aynı kayıt evresi (ekipEvren —
-     başlangıç+bitiş damgalı kayıtlar) ve aynı operasyonel tarih anahtarı
-     (reel plan → planlanan; kronometre yalnız plansız kayıtta yedek).
-     Arşiv dahil seçiliyken arşiv havuzu da eklenir (core.js filtered ile aynı).
-     index.html'e dokunmaz: div, canliKpi'nin üstüne otomatik eklenir. */
+  /* ================= 4.5) GÜNÜN ÖZETİ (planlanan / gerçekleşen / saatli liste) =================
+     Ana ekrandaki sayaçlarla BİREBİR: aynı kayıt evresi ve aynı operasyonel
+     tarih anahtarı. • PLANLANAN = operasyonel günü (reel plan → planlanan,
+     damgasızda kronometre bitişi) bugün olan TÜM kayıtlar • GERÇEKLEŞEN =
+     başlangıç+bitiş damgalı olanlar (ekipEvren evresi — bekleyen/süren
+     sayılmaz) • LİSTE = günün kayıtları tamamlanma saatine göre sıralı.
+     Arşiv dahil seçiliyken arşiv havuzu da eklenir. index.html'e dokunmaz:
+     blok, canliKpi'nin üstüne otomatik eklenir; liste durumunu korur. */
+  let ozetAcik = false;
   function ozetHedefAlan() {
     let d = $("canliOzet");
     if (d) return d;
@@ -414,49 +426,103 @@
     d = document.createElement("div");
     d.id = "canliOzet";
     d.className = "canli-kpi";
+    d.addEventListener("click", (e) => {
+      if (e.target.closest("[data-ozet-toggle]")) { ozetAcik = !ozetAcik; renderOzet(); }
+    });
     kpi.parentNode.insertBefore(d, kpi);
     return d;
   }
   function gunOzeti() {
     try {
       if (typeof ekipEvren !== "function" || typeof rows === "undefined" || !Array.isArray(rows)) return null;
+      if (typeof gecikmeTarihi !== "function") return null;
       let havuz = rows;
       if (typeof arsivDahil !== "undefined" && arsivDahil && Array.isArray(arsivCache) && arsivCache.length) {
         const ids = new Set(rows.map(r => r.id));
         havuz = rows.concat(arsivCache.filter(r => !ids.has(r.id)));
       }
       const bugun = (typeof todayISO === "function") ? todayISO() : isoFromDate(new Date());
-      const gunluk = ekipEvren(havuz).filter(x => x.gun === bugun);
-      const m3 = gunluk.reduce((t, x) => t + x.m3, 0);
-      const ekipSet = new Set(gunluk.map(x => x.ekip).filter(k => k && k !== "__atanmamis__"));
+      const evren = ekipEvren(havuz);
+      const rowByRec = new Map();
+      evren.forEach(x => rowByRec.set(x.r, x));
+      const kitap = havuz.filter(r => {
+        const rw = rowByRec.get(r);
+        return (rw ? rw.gun : (gecikmeTarihi(r) || "")) === bugun;
+      }).map(r => ({ r, rw: rowByRec.get(r) || null }));
+      /* tamamlanma saatine göre sıralı; damgasızlar (bekleyen) en sonda */
+      kitap.sort((a, b) => {
+        const ta = a.rw ? (Number(a.r.toplamaBittiTs) || Number(a.r.loadingEndedAt) || 0) : 0;
+        const tb = b.rw ? (Number(b.r.toplamaBittiTs) || Number(b.r.loadingEndedAt) || 0) : 0;
+        if (ta && tb) return ta - tb;
+        if (ta) return -1;
+        if (tb) return 1;
+        return 0;
+      });
+      const damgalilar = kitap.filter(x => x.rw).map(x => x.rw);
+      const m3 = damgalilar.reduce((t, x) => t + x.m3, 0);
+      const ekipSet = new Set(damgalilar.map(x => x.ekip).filter(k => k && k !== "__atanmamis__"));
       const hm = new Map();
-      gunluk.forEach(x => {
+      damgalilar.forEach(x => {
         if (!x.ekip || x.ekip === "__atanmamis__") return;
         const g = hm.get(x.ekip) || { n: 0, m3: 0 };
         g.n++; g.m3 += x.m3; hm.set(x.ekip, g);
       });
       let enIyi = null;
       hm.forEach((v, k) => { if (!enIyi || v.m3 > enIyi.g.m3) enIyi = { k, g: v }; });
-      return { bugun, yuk: gunluk.length, m3, ekipN: ekipSet.size, enIyi };
+      return { bugun, plan: kitap.length, yuk: damgalilar.length, m3, ekipN: ekipSet.size, enIyi, kitap };
     } catch (_) { return null; }
+  }
+  function ozetListeHtml(o) {
+    const satir = (x) => {
+      const r = x.r;
+      const tamam = !!x.rw;
+      const saat = tamam
+        ? new Date(Number(r.toplamaBittiTs) || Number(r.loadingEndedAt)).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
+        : "—";
+      const ad = esc(r.musteri || r.ad || "—");
+      const ek = esc(r.ekip ? ((typeof ekipAd2 === "function") ? ekipAd2(r.ekip) : r.ekip) : "Atanmamış");
+      const m3c = tamam ? ((typeof fmtN === "function") ? fmtN(x.rw.m3) : Math.round(x.rw.m3)) : "—";
+      let dur;
+      if (tamam) dur = '<span class="co-tam">✓</span>';
+      else {
+        dur = esc(((r.toplamaBasTs || r.loadingStartedAt) ? "⏳ " : "") + (r.durum || "Planlı"));
+        if (r.durum === "Yükleme Tamamlandı") dur += ' <span class="co-not">(saat damgası yok)</span>';
+      }
+      return '<div class="co-row' + (tamam ? "" : " co-bekleyen") + '">' +
+        '<span class="co-saat' + (tamam ? " co-tam" : "") + '">' + saat + "</span>" +
+        '<span class="co-mus">' + ad + "</span>" +
+        '<span class="co-ekip">' + ek + "</span>" +
+        '<span class="co-m3">' + m3c + "</span>" +
+        '<span class="co-durum">' + dur + "</span></div>";
+    };
+    const baslik = '<div class="co-row co-head"><span>Saat</span><span>Müşteri</span><span>Ekip</span>' +
+      '<span class="co-m3">m³</span><span>Durum</span></div>';
+    return baslik + (o.kitap.length ? o.kitap.map(satir).join("") : '<div class="co-row" style="justify-content:center;padding:10px;color:var(--muted)">Bugüne ait kayıt yok</div>');
   }
   function renderOzet() {
     const d = ozetHedefAlan();
     if (!d) return;
     const o = gunOzeti();
     if (!o) { d.innerHTML = ""; return; }
+    const eski = d.querySelector(".co-list");
+    const sc = eski ? eski.scrollTop : 0;
     const tarih = (typeof formatDate === "function") ? formatDate(o.bugun) : o.bugun;
     const gunAdi = new Date().toLocaleDateString("tr-TR", { weekday: "long" });
     const m3Txt = (typeof fmtN === "function") ? fmtN(o.m3) : Math.round(o.m3);
     const enIyiTxt = (o.enIyi && typeof ekipAd2 === "function")
       ? " · 🥇 " + esc(ekipAd2(o.enIyi.k)) + " " + ((typeof fmtN === "function") ? fmtN(o.enIyi.g.m3) : Math.round(o.enIyi.g.m3)) + " m³"
       : "";
-    d.innerHTML = o.yuk
-      ? '<span class="ck c-d" title="Ana ekranla aynı ölçü: tamamlanmış yüklemeler, operasyonel tarih (reel plan → planlanan)">📅 ' + esc(tarih) + " " + esc(gunAdi) + " · <b>" + o.yuk + "</b> yükleme · <b>" + m3Txt + "</b> m³ · " + o.ekipN + " ekip" + enIyiTxt + "</span>"
-      : '<span class="ck c-d" style="opacity:.75">📅 ' + esc(tarih) + " — bugün henüz tamamlanmış yükleme yok</span>";
+    d.innerHTML =
+      '<span class="ck c-d" title="Operasyonel gün: reel plan → planlanan">📅 ' + esc(tarih) + " " + esc(gunAdi) + "</span>" +
+      '<span class="ck c-p" title="Operasyonel günü bugün olan tüm kayıtlar">📋 Planlanan: <b>' + o.plan + "</b></span>" +
+      '<span class="ck c-total" title="Başlangıç+bitiş damgalı (tamamlanmış) yüklemeler — ana ekran ölçüsü">✅ Gerçekleşen: <b>' + o.yuk + "</b> · " + m3Txt + " m³</span>" +
+      '<span class="ck c-d">' + o.ekipN + " ekip" + enIyiTxt + "</span>" +
+      '<button class="co-toggle" data-ozet-toggle title="Günün yükleme listesini aç/kapat">' + (ozetAcik ? "▴" : "▾") + " Günün yüklemeleri (" + o.plan + ")</button>" +
+      (ozetAcik ? '<div class="co-list">' + ozetListeHtml(o) + "</div>" : "");
+    if (ozetAcik) { const nl = d.querySelector(".co-list"); if (nl) nl.scrollTop = sc; }
   }
 
-    /* ================= 5) MENÜ GÖRÜNÜRLÜĞÜ (yalnız admin) ================= */
+  /* ================= 5) MENÜ GÖRÜNÜRLÜĞÜ (yalnız admin) ================= */
   function menuGizle() {
     const b = $("btnLiveUsers");
     if (b) b.classList.toggle("hidden", !(typeof isAdmin === "function" && isAdmin()));
@@ -486,7 +552,6 @@
       ".ck.c-total{background:var(--green-soft);color:var(--green)}" +
       ".ck.c-g{background:var(--primary-soft);color:var(--primary)}" +
       ".ck.c-m{background:var(--amber-soft);color:var(--amber)}" +
-      ".ck.c-d{background:var(--surface);color:var(--text);border:1px solid var(--border);font-weight:600}" +
       ".ck.c-d{background:var(--surface);color:var(--text);border:1px solid var(--border);font-weight:600}" +
       ".ck.c-p{background:var(--primary-soft);color:var(--primary)}" +
       ".co-toggle{background:none;border:none;color:var(--primary);cursor:pointer;font-size:12.5px;font-weight:800;padding:2px 0;text-align:left}" +
