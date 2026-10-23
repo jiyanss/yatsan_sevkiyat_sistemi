@@ -1,5 +1,5 @@
 /* =========================================================
-   YATSAN — canli.js v1.3
+   YATSAN — canli.js v1.4
    ---------------------------------------------------------
    TEK DOSYA (index.html'e 1 menü düğmesi + 1 modal + 1
    script satırı dışında dokunulmaz). 5 GÖREV:
@@ -25,8 +25,9 @@
    4) 📅 GÜNÜN ÖZETİ — panelde bugünün sayacı: PLANLANAN yükleme adedi
       (operasyonel günü bugün olan tüm kayıtlar), GERÇEKLEŞEN adedi (başlangıç
       +bitiş damgalı), toplam m³, aktif ekip, en çok yükleyen ekip + açılır
-      GÜN LİSTESİ (yükleme bitiş saati · müşteri · ekip · m³ · durum).
-      Ana ekranla BİREBİR
+      GÜN LİSTESİ (saat · müşteri · ekip · m³ · durum — saat YALNIZ
+      "Yükleme Tamamlandı" statüsünde yazılır; "Yükleniyor" satırı
+      saatsiz ⏳). Ana ekranla BİREBİR
       aynı kayıt evresi + tarih anahtarı (diger.js ekipEvren: reel plan →
       planlanan; kronometre yalnız plansız kayıtlarda yedek).
       index.html'e dokunmaz: özet bloğu canli.js tarafından canliKpi'nin
@@ -262,11 +263,14 @@
     const satir = (x) => {
       x = x || {};
       const tamam = !!x.tamam;
-      const saat = tamam ? String(x.saat || "") : "—";
-      const m3c = tamam ? String(x.m3 == null ? "" : x.m3) : "—";
-      const dur = tamam ? '<span class="co-tam">✓</span>' : esc(String(x.durum || "Planlı"));
-      return '<div class="co-row' + (tamam ? "" : " co-bekleyen") + '">' +
-        '<span class="co-saat' + (tamam ? " co-tam" : "") + '">' + esc(saat) + "</span>" +
+      const saat = x.saat ? String(x.saat) : "—"; /* "⏳" = yükleniyor */
+      const m3c = (x.m3 != null && x.m3 !== "") ? String(x.m3) : "—";
+      let dur;
+      if (tamam) dur = '<span class="co-tam">✓</span>' + (x.saat ? "" : ' <span class="co-not">(damga yok)</span>');
+      else if (x.durum === "Yükleniyor") dur = '<span class="co-yuk">Yükleniyor</span>';
+      else dur = esc(String(x.durum || "Planlı"));
+      return '<div class="co-row' + (tamam || x.durum === "Yükleniyor" ? "" : " co-bekleyen") + '">' +
+        '<span class="co-saat' + (tamam && x.saat ? " co-tam" : (saat === "⏳" ? " co-yuk" : "")) + '">' + esc(saat) + "</span>" +
         '<span class="co-mus">' + esc(String(x.mus || "—")) + "</span>" +
         '<span class="co-ekip">' + esc(String(x.ekip || "Atanmamış")) + "</span>" +
         '<span class="co-m3">' + esc(m3c) + "</span>" +
@@ -465,18 +469,23 @@
     const m3Kisa = (typeof fmtN === "function") ? fmtN(o.m3) : Math.round(o.m3);
     if (!confirm("📊 Günün yüklemeleri özeti ÇEVRİMİÇİ HERKESE bildirim olarak gönderilsin mi?\n\n📋 Planlanan " + o.plan + " · ✅ Gerçekleşen " + o.yuk + " · " + m3Kisa + " m³")) return;
     const liste = o.kitap.slice(0, 40).map(x => {
-      const r = x.r, tamam = !!x.rw;
+      const r = x.r, rw = x.rw;
+      const d = String(r.durum || "");
+      /* ⏱ saat YALNIZ "Yükleme Tamamlandı" statüsünde yazılır;
+         "Yükleniyor" statüsünde saat yerine ⏳ işareti gider */
+      const bitti = d ? d === "Yükleme Tamamlandı" : !!rw;
+      const yukleniyor = !bitti && d === "Yükleniyor";
+      const ts = Number(r.loadingEndedAt) || Number(r.toplamaBittiTs) || 0;
+      const m3v = (rw || bitti) ? (rw ? rw.m3 : (Number(r.m3) || 0)) : null;
       let durum = "";
-      if (!tamam) {
-        durum = ((r.toplamaBasTs || r.loadingStartedAt) ? "⏳ " : "") + (r.durum || "Planlı");
-        if (r.durum === "Yükleme Tamamlandı") durum += " (saat damgası yok)";
-      }
+      if (yukleniyor) durum = "Yükleniyor";
+      else if (!bitti) durum = ((r.toplamaBasTs || r.loadingStartedAt) ? "⏳ " : "") + (d || "Planlı");
       return {
-        tamam,
-        saat: tamam ? new Date(Number(r.loadingEndedAt) || Number(r.toplamaBittiTs) || 0).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "",
+        tamam: bitti,
+        saat: bitti ? (ts ? new Date(ts).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "") : (yukleniyor ? "⏳" : ""),
         mus: String(r.musteri || r.ad || "—"),
         ekip: r.ekip ? ((typeof ekipAd2 === "function") ? ekipAd2(r.ekip) : r.ekip) : "Atanmamış",
-        m3: tamam ? ((typeof fmtN === "function") ? fmtN(x.rw.m3) : Math.round(x.rw.m3)) : "",
+        m3: m3v == null ? "" : ((typeof fmtN === "function") ? fmtN(m3v) : Math.round(m3v)),
         durum
       };
     });
@@ -509,8 +518,9 @@
      tarih anahtarı. • PLANLANAN = operasyonel günü (reel plan → planlanan,
      damgasızda kronometre bitişi) bugün olan TÜM kayıtlar • GERÇEKLEŞEN =
      başlangıç+bitiş damgalı olanlar (ekipEvren evresi — bekleyen/süren
-     sayılmaz) • LİSTE = günün kayıtları YÜKLEME BİTİŞ saatine göre sıralı
-     (loadingEndedAt; damgasızsa toplama bitişi yedek).
+     sayılmaz) • LİSTE = statüye göre: saat yalnız "Yükleme Tamamlandı"
+     statüsünde (yükleme bitişi; damgasızsa toplama bitişi), "Yükleniyor"
+     satırı saatsiz ⏳; sıralama tamamlanan → yükleniyor → bekleyen.
      Arşiv dahil seçiliyken arşiv havuzu da eklenir. index.html'e dokunmaz:
      blok, canliKpi'nin üstüne otomatik eklenir; liste durumunu korur. */
   let ozetAcik = false;
@@ -546,14 +556,19 @@
         const rw = rowByRec.get(r);
         return (rw ? rw.gun : (gecikmeTarihi(r) || "")) === bugun;
       }).map(r => ({ r, rw: rowByRec.get(r) || null }));
-      /* yükleme bitiş saatine göre sıralı (yoksa toplama bitişi); damgasızlar en sonda */
+      /* Statü katmanı: tamamlananlar (bitiş saatiyle) üstte, altlarında
+         yükleniyorlar (başlangıç damgasıyla), en altta bekleyenler */
+      const ozetKat = (x) => {
+        const d = String(x.r.durum || "");
+        if (d ? d === "Yükleme Tamamlandı" : !!x.rw) return 0;
+        return d === "Yükleniyor" ? 1 : 2;
+      };
+      const ozetDamga = (x) =>
+        Number(x.r.loadingEndedAt) || Number(x.r.toplamaBittiTs) || Number(x.r.loadingStartedAt) || Number(x.r.toplamaBasTs) || 0;
       kitap.sort((a, b) => {
-        const ta = a.rw ? (Number(a.r.loadingEndedAt) || Number(a.r.toplamaBittiTs) || 0) : 0;
-        const tb = b.rw ? (Number(b.r.loadingEndedAt) || Number(b.r.toplamaBittiTs) || 0) : 0;
-        if (ta && tb) return ta - tb;
-        if (ta) return -1;
-        if (tb) return 1;
-        return 0;
+        const ka = ozetKat(a), kb = ozetKat(b);
+        if (ka !== kb) return ka - kb;
+        return ozetDamga(a) - ozetDamga(b);
       });
       const damgalilar = kitap.filter(x => x.rw).map(x => x.rw);
       const m3 = damgalilar.reduce((t, x) => t + x.m3, 0);
@@ -571,22 +586,24 @@
   }
   function ozetListeHtml(o) {
     const satir = (x) => {
-      const r = x.r;
-      const tamam = !!x.rw;
-      const saat = tamam
-        ? new Date(Number(r.loadingEndedAt) || Number(r.toplamaBittiTs)).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
-        : "—";
+      const r = x.r, rw = x.rw;
+      const d = String(r.durum || "");
+      /* ⏱ Saat kolonu statüye göre: "Yükleme Tamamlandı" → bitiş saati,
+         "Yükleniyor" → ⏳ (saat yok), diğerleri → "—" */
+      const bitti = d ? d === "Yükleme Tamamlandı" : !!rw;
+      const yukleniyor = !bitti && d === "Yükleniyor";
+      const ts = Number(r.loadingEndedAt) || Number(r.toplamaBittiTs) || 0;
       const ad = esc(r.musteri || r.ad || "—");
       const ek = esc(r.ekip ? ((typeof ekipAd2 === "function") ? ekipAd2(r.ekip) : r.ekip) : "Atanmamış");
-      const m3c = tamam ? ((typeof fmtN === "function") ? fmtN(x.rw.m3) : Math.round(x.rw.m3)) : "—";
+      const m3v = (rw || bitti) ? (rw ? rw.m3 : (Number(r.m3) || 0)) : null;
+      const m3c = m3v == null ? "—" : ((typeof fmtN === "function") ? fmtN(m3v) : Math.round(m3v));
       let dur;
-      if (tamam) dur = '<span class="co-tam">✓</span>';
-      else {
-        dur = esc(((r.toplamaBasTs || r.loadingStartedAt) ? "⏳ " : "") + (r.durum || "Planlı"));
-        if (r.durum === "Yükleme Tamamlandı") dur += ' <span class="co-not">(saat damgası yok)</span>';
-      }
-      return '<div class="co-row' + (tamam ? "" : " co-bekleyen") + '">' +
-        '<span class="co-saat' + (tamam ? " co-tam" : "") + '">' + saat + "</span>" +
+      if (bitti) dur = '<span class="co-tam">✓</span>' + (ts ? "" : ' <span class="co-not">(damga yok)</span>');
+      else if (yukleniyor) dur = '<span class="co-yuk">Yükleniyor</span>';
+      else dur = esc(((r.toplamaBasTs || r.loadingStartedAt) ? "⏳ " : "") + (d || "Planlı"));
+      return '<div class="co-row' + (bitti || yukleniyor ? "" : " co-bekleyen") + '">' +
+        '<span class="co-saat' + (bitti && ts ? " co-tam" : (yukleniyor ? " co-yuk" : "")) + '">' +
+        (bitti ? (ts ? new Date(ts).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "—") : (yukleniyor ? "⏳" : "—")) + "</span>" +
         '<span class="co-mus">' + ad + "</span>" +
         '<span class="co-ekip">' + ek + "</span>" +
         '<span class="co-m3">' + m3c + "</span>" +
@@ -660,6 +677,7 @@
       ".co-m3{flex:0 0 52px;text-align:right;color:var(--muted)}" +
       ".co-durum{flex:0 0 auto;max-width:118px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11px}" +
       ".co-tam{color:var(--green)}" +
+      ".co-yuk{color:var(--amber);font-weight:700}" +
       ".co-bekleyen{opacity:.75}" +
       ".co-not{opacity:.7;font-size:10px}" +
       ".co-duyur{border:1px solid var(--primary);border-radius:999px;padding:2px 10px;background:var(--primary-soft)}" +
