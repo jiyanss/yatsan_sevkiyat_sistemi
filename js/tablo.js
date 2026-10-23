@@ -767,53 +767,6 @@ function applyMenuLayout() {
   });
 }
 
-/* ================= 🐍 YILAN OYUNU ================= */
-let snakeTimer = null;
-let snakeState = null;
-let snakeBest = Number(localStorage.getItem("sevkiyat_yilan_best") || 0);
-let snakePaused = false;
-
-/* ═══════════════ 🐍 YILAN — ana sayfa modalı + depo mini dashboard ═══════════════ */
-function openSnakeGame() {
-  renderSnakeGameBody();
-  document.getElementById("snakeModal").classList.remove("hidden");
-}
-function closeSnakeGame() {
-  stopSnake();
-  snakePaused = false;
-  document.getElementById("snakeModal").classList.add("hidden");
-}
-function renderSnakeGameBody() {
-  const c = document.getElementById("snakeBody");
-  const devam = snakeState && snakePaused;
-  c.innerHTML = `
-    <div class="snake-top"><span>Skor: <b id="snakeScore">${devam ? snakeState.score : 0}</b></span><span>🏆 Rekor: <b id="snakeBest">${snakeBest}</b></span></div>
-    <div class="snake-cv-wrap">
-      <canvas id="snakeCanvas" width="400" height="400"></canvas>
-      <div class="snake-over" id="snakeOver">
-        <div class="so-title" id="snakeOverTitle">${devam ? "⏸ Duraklatıldı" : "🐍 Yılan Oyunu"}</div>
-        <div class="so-score" id="snakeOverScore">Rekor: ${snakeBest}</div>
-        <button class="depo-tab active" id="btnSnakeStart">${devam ? "▶️ Devam Et" : "▶️ Başla"}</button>
-      </div>
-    </div>
-    <div class="snake-pad">
-      <button class="snake-btn" data-sdir="up">▲</button>
-      <div>
-        <button class="snake-btn" data-sdir="left">◀</button>
-        <button class="snake-btn" data-sdir="down">▼</button>
-        <button class="snake-btn" data-sdir="right">▶</button>
-      </div>
-    </div>
-    <p class="hint" style="margin-top:10px">Klavye: ok tuşları / WASD</p>`;
-  document.getElementById("btnSnakeStart").addEventListener("click", snakeStart);
-  c.querySelectorAll(".snake-btn").forEach(b => b.addEventListener("click", () => {
-    const d = b.dataset.sdir;
-    if (d === "up") snakeDir(0, -1);
-    if (d === "down") snakeDir(0, 1);
-    if (d === "left") snakeDir(-1, 0);
-    if (d === "right") snakeDir(1, 0);
-  }));
-}
 function renderDepoMini() {
   const el = document.getElementById("depoMini");
   if (!el) return;
@@ -845,6 +798,56 @@ function renderDepoMini() {
     <div class="dm-tips">${tips || `<span class="dm-empty">Bu hafta kayıt yok</span>`}</div>`;
 }
 
+
+/* ================= 🐍 YILAN OYUNU ================= */
+let snakeTimer = null;
+let snakeState = null;
+let snakeBest = Number(localStorage.getItem("sevkiyat_yilan_best") || 0);
+let snakePaused = false;
+
+/* ═══════════════ 🐍 YILAN — ana sayfa modalı + depo mini dashboard ═══════════════ */
+function openSnakeGame() {
+  renderSnakeGameBody();
+  document.getElementById("snakeModal").classList.remove("hidden");
+}
+function closeSnakeGame() {
+  stopSnake();
+  snakePaused = false;
+  document.getElementById("snakeModal").classList.add("hidden");
+}
+function renderSnakeGameBody() {
+  const c = document.getElementById("snakeBody");
+  const devam = snakeState && snakePaused;
+  c.innerHTML = `
+    <div class="snake-top"><span>Skor: <b id="snakeScore">${devam ? snakeState.score : 0}</b></span><span>🏆 Rekor: <b id="snakeBest">${snakeBest}</b></span></div>
+    <div class="snake-cv-wrap">
+      <canvas id="snakeCanvas" width="600" height="600"></canvas>
+      <div class="snake-over" id="snakeOver">
+        <div class="so-title" id="snakeOverTitle">${devam ? "⏸ Duraklatıldı" : "🐍 Yılan Oyunu"}</div>
+        <div class="so-score" id="snakeOverScore">Rekor: ${snakeBest}</div>
+        <button class="depo-tab active" id="btnSnakeStart">${devam ? "▶️ Devam Et" : "▶️ Başla"}</button>
+      </div>
+    </div>
+    <div class="snake-pad">
+      <button class="snake-btn" data-sdir="up">▲</button>
+      <div>
+        <button class="snake-btn" data-sdir="left">◀</button>
+        <button class="snake-btn" data-sdir="down">▼</button>
+        <button class="snake-btn" data-sdir="right">▶</button>
+      </div>
+    </div>
+    <p class="hint" style="margin-top:10px">Klavye: ok tuşları / WASD</p>`;
+  document.getElementById("btnSnakeStart").addEventListener("click", snakeStart);
+  c.querySelectorAll(".snake-btn").forEach(b => b.addEventListener("click", () => {
+    const d = b.dataset.sdir;
+    if (d === "up") snakeDir(0, -1);
+    if (d === "down") snakeDir(0, 1);
+    if (d === "left") snakeDir(-1, 0);
+    if (d === "right") snakeDir(1, 0);
+  }));
+}
+
+
 function stopSnake() {
   if (snakeTimer) { clearInterval(snakeTimer); snakeTimer = null; }
 }
@@ -854,7 +857,7 @@ function snakeReset() {
   snakeState = {
     body: [{x:10,y:10},{x:9,y:10},{x:8,y:10}],
     dir: {x:1,y:0}, nextDir: {x:1,y:0},
-    food: null, score: 0, speed: 150
+    food: null, score: 0, speed: 75
   };
   snakePlaceFood();
   drawSnake();
