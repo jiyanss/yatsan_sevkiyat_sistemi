@@ -1,5 +1,5 @@
 /* =========================================================
-   YATSAN — canli.js v1.4
+   YATSAN — canli.js v1.5
    ---------------------------------------------------------
    TEK DOSYA (index.html'e 1 menü düğmesi + 1 modal + 1
    script satırı dışında dokunulmaz). 5 GÖREV:
@@ -27,7 +27,7 @@
       +bitiş damgalı), toplam m³, aktif ekip, en çok yükleyen ekip + açılır
       GÜN LİSTESİ (saat · müşteri · ekip · m³ · durum — saat YALNIZ
       "Yükleme Tamamlandı" statüsünde yazılır; "Yükleniyor" satırı
-      saatsiz ⏳). Ana ekranla BİREBİR
+      saatsiz ⏳ + canlı süre). Ana ekranla BİREBİR
       aynı kayıt evresi + tarih anahtarı (diger.js ekipEvren: reel plan →
       planlanan; kronometre yalnız plansız kayıtlarda yedek).
       index.html'e dokunmaz: özet bloğu canli.js tarafından canliKpi'nin
@@ -258,6 +258,14 @@
     if (m.konfeti) konfeti();
   }
 
+  /* ⏳ Yükleniyor satırları için geçen süre yazısı ("12 dk", "1 sa 05 dk") */
+  function gecenYazi(ms) {
+    if (!(ms > 0)) return "";
+    const dk = Math.max(1, Math.floor(ms / 60000));
+    if (dk < 60) return dk + " dk";
+    return Math.floor(dk / 60) + " sa " + String(dk % 60).padStart(2, "0") + " dk";
+  }
+
   /* --- Özet bildirim kartı (tip:"ozet" mesajlar) --- */
   function ozetKartListeHtml(liste) {
     const satir = (x) => {
@@ -267,7 +275,7 @@
       const m3c = (x.m3 != null && x.m3 !== "") ? String(x.m3) : "—";
       let dur;
       if (tamam) dur = '<span class="co-tam">✓</span>' + (x.saat ? "" : ' <span class="co-not">(damga yok)</span>');
-      else if (x.durum === "Yükleniyor") dur = '<span class="co-yuk">Yükleniyor</span>';
+      else if (x.durum === "Yükleniyor") dur = '<span class="co-yuk">Yükleniyor' + (Number(x.ybas) > 0 ? " · " + gecenYazi(Date.now() - Number(x.ybas)) : "") + "</span>";
       else dur = esc(String(x.durum || "Planlı"));
       return '<div class="co-row' + (tamam || x.durum === "Yükleniyor" ? "" : " co-bekleyen") + '">' +
         '<span class="co-saat' + (tamam && x.saat ? " co-tam" : (saat === "⏳" ? " co-yuk" : "")) + '">' + esc(saat) + "</span>" +
@@ -276,8 +284,8 @@
         '<span class="co-m3">' + esc(m3c) + "</span>" +
         '<span class="co-durum">' + dur + "</span></div>";
     };
-    const baslik = '<div class="co-row co-head"><span>Saat</span><span>Müşteri</span><span>Ekip</span>' +
-      '<span class="co-m3">m³</span><span>Durum</span></div>';
+    const baslik = '<div class="co-row co-head"><span class="co-saat">Saat</span><span class="co-mus">Müşteri</span><span class="co-ekip">Ekip</span>' +
+      '<span class="co-m3">m³</span><span class="co-durum">Durum</span></div>';
     const ks = Array.isArray(liste) ? liste.slice(0, 40) : [];
     return baslik + (ks.length ? ks.map(satir).join("") :
       '<div class="co-row" style="justify-content:center;padding:10px;color:var(--muted)">Liste boş</div>');
@@ -486,6 +494,7 @@
         mus: String(r.musteri || r.ad || "—"),
         ekip: r.ekip ? ((typeof ekipAd2 === "function") ? ekipAd2(r.ekip) : r.ekip) : "Atanmamış",
         m3: m3v == null ? "" : ((typeof fmtN === "function") ? fmtN(m3v) : Math.round(m3v)),
+        ybas: yukleniyor ? (Number(r.loadingStartedAt) || 0) : 0,
         durum
       };
     });
@@ -599,7 +608,7 @@
       const m3c = m3v == null ? "—" : ((typeof fmtN === "function") ? fmtN(m3v) : Math.round(m3v));
       let dur;
       if (bitti) dur = '<span class="co-tam">✓</span>' + (ts ? "" : ' <span class="co-not">(damga yok)</span>');
-      else if (yukleniyor) dur = '<span class="co-yuk">Yükleniyor</span>';
+      else if (yukleniyor) dur = '<span class="co-yuk">Yükleniyor' + (Number(r.loadingStartedAt) > 0 ? " · " + gecenYazi(Date.now() - Number(r.loadingStartedAt)) : "") + "</span>";
       else dur = esc(((r.toplamaBasTs || r.loadingStartedAt) ? "⏳ " : "") + (d || "Planlı"));
       return '<div class="co-row' + (bitti || yukleniyor ? "" : " co-bekleyen") + '">' +
         '<span class="co-saat' + (bitti && ts ? " co-tam" : (yukleniyor ? " co-yuk" : "")) + '">' +
@@ -609,8 +618,8 @@
         '<span class="co-m3">' + m3c + "</span>" +
         '<span class="co-durum">' + dur + "</span></div>";
     };
-    const baslik = '<div class="co-row co-head"><span>Saat</span><span>Müşteri</span><span>Ekip</span>' +
-      '<span class="co-m3">m³</span><span>Durum</span></div>';
+    const baslik = '<div class="co-row co-head"><span class="co-saat">Saat</span><span class="co-mus">Müşteri</span><span class="co-ekip">Ekip</span>' +
+      '<span class="co-m3">m³</span><span class="co-durum">Durum</span></div>';
     return baslik + (o.kitap.length ? o.kitap.map(satir).join("") : '<div class="co-row" style="justify-content:center;padding:10px;color:var(--muted)">Bugüne ait kayıt yok</div>');
   }
   function renderOzet() {
@@ -668,21 +677,25 @@
       ".co-toggle{background:none;border:none;color:var(--primary);cursor:pointer;font-size:12.5px;font-weight:800;padding:2px 0;text-align:left}" +
       ".co-toggle:hover{text-decoration:underline}" +
       ".co-list{border:1px solid var(--border);border-radius:10px;background:var(--surface);max-height:34vh;overflow-y:auto;margin-top:2px}" +
-      ".co-row{display:flex;gap:8px;align-items:baseline;font-size:12px;padding:4px 8px;border-bottom:1px solid var(--border);min-width:0}" +
+      /* Izgara yerleşimi: kolon genişlikleri her satırda AYNI — başlık ve
+         hücreler hizalı kalır, içerik kısaldıkça kolon kaymaz */
+      ".co-row{display:grid;grid-template-columns:52px minmax(0,1fr) 112px 56px 150px;gap:8px;align-items:center;font-size:12px;padding:5px 10px;border-bottom:1px solid var(--border)}" +
       ".co-row:last-child{border-bottom:none}" +
-      ".co-head{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);position:sticky;top:0;background:var(--surface);z-index:1}" +
-      ".co-saat{flex:0 0 38px;font-weight:800}" +
-      ".co-mus{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--text)}" +
-      ".co-ekip{flex:0 0 auto;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}" +
-      ".co-m3{flex:0 0 52px;text-align:right;color:var(--muted)}" +
-      ".co-durum{flex:0 0 auto;max-width:118px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11px}" +
+      ".co-saat{font-weight:800;white-space:nowrap}" +
+      ".co-mus{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--text)}" +
+      ".co-ekip{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}" +
+      ".co-m3{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}" +
+      ".co-durum{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11px}" +
+      /* .co-head HÜCRE KURALLARINDAN SONRA — başlık span'ları hücre sınıflarını
+         da taşıdığı için başlık stili (9.5px uppercase muted) en son kazanır */
+      ".co-head{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);position:sticky;top:0;background:var(--surface);z-index:1;white-space:nowrap}" +
       ".co-tam{color:var(--green)}" +
       ".co-yuk{color:var(--amber);font-weight:700}" +
       ".co-bekleyen{opacity:.75}" +
       ".co-not{opacity:.7;font-size:10px}" +
       ".co-duyur{border:1px solid var(--primary);border-radius:999px;padding:2px 10px;background:var(--primary-soft)}" +
       ".co-duyur:hover{text-decoration:none;filter:brightness(1.06)}" +
-      "@media (max-width:560px){.co-ekip{display:none}.co-durum{max-width:84px}}" +
+      "@media (max-width:560px){.co-row{grid-template-columns:46px minmax(0,1fr) 46px minmax(0,106px)}.co-ekip{display:none}}" +
       "body.dark .ck.c-total,body[data-theme='forest'] .ck.c-total,body[data-theme='grape'] .ck.c-total{background:#064e3b;color:#6ee7b7}" +
       "body.dark .ck.c-m,body[data-theme='forest'] .ck.c-m,body[data-theme='grape'] .ck.c-m{background:#78350f;color:#fcd34d}" +
       ".canli-compose{margin-top:8px;display:flex;flex-direction:column;gap:8px}" +
@@ -705,7 +718,7 @@
       ".cd-kim{color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0}" +
       ".cd-metin{font-size:19px;line-height:1.45;font-weight:700;color:var(--text)}" +
       ".cd-not{margin-top:12px;font-size:10.5px;color:var(--muted);opacity:.8}" +
-      ".cd-kart.cd-ozet{max-width:min(660px,92vw);text-align:left;padding:18px 20px}" +
+      ".cd-kart.cd-ozet{max-width:min(780px,94vw);text-align:left;padding:18px 22px}" +
       ".cd-ozet-bas{font-size:13px;line-height:1.5;font-weight:600;color:var(--text);margin-bottom:10px;text-align:center}" +
       ".cd-ozet-liste{max-height:38vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px}" +
       "@keyframes canli-pop{from{transform:scale(.75);opacity:0}to{transform:scale(1);opacity:1}}";
