@@ -68,7 +68,7 @@ main {
 .game-wrap .game-menu {
   position: absolute !important;
   top: calc(100% + 6px) !important;
-  left: auto !important;
+  left: 0 !important;
   right: auto !important;
   bottom: auto !important;
   z-index: 80 !important;      /* header katmanı içinde tablonun ÜSTÜNDE */
@@ -83,7 +83,7 @@ main {
 /* Araçlar menüsü ekranın sağından taşmasın (kullanılıyorsa) */
 #toolsMenu {
   left: auto !important;
-  right: auto !important;
+  right: 0 !important;
 }
 
 .gm-item {
@@ -453,3 +453,25 @@ tbody tr { transition: background-color .14s ease; }
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
+
+/* =========================================================
+   6. GENİŞ EKRAN MODU — ÜST MENÜYÜ GİZLE/GÖSTER
+   Özet kartının sağındaki #btnMenuToggle düğmesi body.menu-gizli
+   sınıfını açar/kapatır; üst bar (marka + filtreler + menüler)
+   kalkar, tablo tam yüksekliği kaplar. Tercih localStorage'da
+   ("sevkiyat_menuGizli") saklanır.
+   ========================================================= */
+body.menu-gizli header { display: none !important; }
+/* Menü gizliyken özet, 👁️ ile kapatılmış olsa bile görünür kalsın —
+   açma düğmesinin kaybolması (kilitlenme) imkânsız olsun */
+body.menu-gizli #summary { display: flex !important; }
+.btn-menu-toggle {
+  flex: 0 0 auto;
+  margin-left: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.btn-menu-toggle .mt-goster { display: none; }
+body.menu-gizli .btn-menu-toggle .mt-gizle { display: none; }
+body.menu-gizli .btn-menu-toggle .mt-goster { display: inline; }

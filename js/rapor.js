@@ -272,6 +272,30 @@ document.getElementById("btnToggleSummary")?.addEventListener("click", () => {
   savePrefs();
 });
 
+/* Üst menü gizle/göster — geniş tablo modu (yalnız sınıf değişimi,
+   sıfır performans maliyeti; tercih localStorage'da saklanır) */
+const menuToggleBtn = document.getElementById("btnMenuToggle");
+if (menuToggleBtn) {
+  if (localStorage.getItem("sevkiyat_menuGizli") === "1") {
+    document.body.classList.add("menu-gizli");
+  }
+  menuToggleBtn.addEventListener("click", () => {
+    const kapali = document.body.classList.toggle("menu-gizli");
+    localStorage.setItem("sevkiyat_menuGizli", kapali ? "1" : "0");
+    if (kapali) {
+      /* Menü gizlenirken özet kapalıysa açığa çek —
+         açma düğmesi her zaman erişilebilir kalsın */
+      const sum = document.getElementById("summary");
+      if (sum && sum.classList.contains("hidden")) {
+        sum.classList.remove("hidden");
+        const ob = document.getElementById("btnToggleSummary");
+        if (ob) ob.textContent = "Özeti gizle";
+        savePrefs();
+      }
+    }
+  });
+}
+
 // Sığdır (btnFit) butonu tıklama dinleyicisi (Eğer HTML'de buton varsa çalışır, yoksa patlamaz)
 document.getElementById("btnFit")?.addEventListener("click", () => {
   fitMode = !fitMode;
