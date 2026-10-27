@@ -83,7 +83,7 @@ main {
 /* Araçlar menüsü ekranın sağından taşmasın (kullanılıyorsa) */
 #toolsMenu {
   left: auto !important;
-  right: 0 !important;
+  right: auto !important;
 }
 
 .gm-item {
