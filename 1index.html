@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#4f46e5" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Sevkiyat" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Sevkiyat Planlama — İhracat</title>
+<link rel="stylesheet" href="base-modules.css" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚢</text></svg>" />
+</head>
+<body class="fit-table">
+<header>
+  <div class="brand">
+    <div class="logo">🚢</div>
+    <div>
+      <h1>Sevkiyat Planlama — İhracat</h1>
+      <p class="subtitle">Canlı senkron · süre takibi · kapasite · takvim · depo modu</p>
+    </div>
+  </div>
+  <div class="toolbar">
+  <!-- 🔍 Arama ve Filtreleme Grubu -->
+  <div class="tool-group">
+    <select id="searchScope" title="Arama kapsamı">
+      <option value="musteri">Müşteri</option>
+      <option value="wide">Her yerde</option>
+    </select>
+    <input id="search" placeholder="🔍 Ara..." style="min-width:110px" />
+    <select id="dateFilter"></select>
+    <label class="arsiv-chk" title="Arşivdeki kayıtları listeye ve raporlara dahil et">
+      <input type="checkbox" id="arsivDahil" /> 🗄️
+    </label>
+    <span id="customRange" class="hidden" style="display:flex;gap:4px;align-items:center">
+      <input type="date" id="dateFrom" style="padding:5px 6px" />
+      <span style="color:var(--muted)">–</span>
+      <input type="date" id="dateTo" style="padding:5px 6px" />
+    </span>
+    <select id="statusFilter">
+      <option value="kalan">Kalan (tamamlanmamış)</option>
+      <option value="all">Tüm durumlar</option>
+      <option value="bekliyor">Yükleme Bekliyor</option>
+      <option value="yukleniyor">Yükleniyor</option>
+      <option value="tamamlandi">Tamamlandı</option>
+    </select>
+  </div>
+
+  <!-- 📱 Saha / Operasyon Butonları (Öncelikli Mavi Aksiyonlar) -->
+  <div class="tool-group">
+    <button class="btn primary" id="btnDepo">🖥️ Depo</button>
+    <button class="btn primary" id="btnOpOpen">📱 Operasyon</button>
+    <button class="btn primary" id="btnScanMain">📡 Okut</button>
+    <a class="btn primary" id="btnOrderHazir" href="order-hazir.html" title="Order Hazır — yükleme hazırlık analizi">📦 Order Hazır</a>
+  </div>
+
+  <!-- ⚡ Hızlı Veri Ekleme & Aksiyonlar -->
+  <div class="tool-group">
+    <button class="btn primary" id="btnInlineAdd">+ Yeni Kayıt</button>
+    <button class="btn" id="btnShowForm">+ Form</button>
+    <button class="btn" id="btnExport">📤 Excel</button>
+  </div>
+
+    <!-- 🛠️ Araçlar ve Görünüm Menüsü (Dropdown) -->
+  <div class="game-wrap">
+    <button class="btn" id="btnToolsMenu">🛠️ Araçlar ▼</button>
+    <div id="toolsMenu" class="game-menu hidden">
+      <button class="gm-item" id="btnReports">📊 Raporlar</button>
+      <button class="gm-item" id="btnCalendar">📅 Takvim</button>
+      <button class="gm-item" id="btnHistory">🕘 Geçmiş</button>
+      <button class="gm-item" id="btnQrPrint">📱 QR Yazdır</button>
+      <button class="gm-item" id="btnImportOpen">📥 Excel Yükle</button>
+      <button class="gm-item" id="btnPrint">🖨️ Yazdır</button>
+      <button class="gm-item hidden" id="btnBackup">💾 Yedek</button>
+      <button class="gm-item hidden" id="btnSurePanel">⏱️ Süreler</button>
+      <button class="gm-item hidden" id="btnArsiv">🗄️ Arşiv</button>
+      <button class="gm-item hidden" id="btnEkip">👷 Ekipler</button>
+      <button class="gm-item hidden" id="btnAdminPanel">🛡️ Admin Panel</button>
+      <button class="gm-item hidden" id="btnLiveUsers">👥 Canlı Kullanıcılar</button>
+    </div>
+  </div>
+   
+  <!-- 🎮 Oyunlar Menüsü -->
+  <div class="game-wrap">
+    <button class="btn" id="btnGameMenu">🎮 Game ▼</button>
+    <div id="gameMenu" class="game-menu hidden">
+      <button class="gm-item" data-game="quiz">🧠 Bilgi Yarışması</button>
+      <button class="gm-item" data-game="snake">🐍 Yılan</button>
+      <button class="gm-item" data-game="sudoku">🔢 Sudoku (ortak masa)</button>
+      <button class="gm-item" data-game="tetris">🧱 Tetris</button>
+    </div>
+  </div>
+
+  <!-- 🎨 Tema, Kolonlar ve Ayarlar -->
+  <div class="colmenu-wrap">
+    <button class="btn" id="btnCols" title="Kolonları gizle/göster">▦ Kolonlar</button>
+    <div id="colMenu" class="colmenu hidden"></div>
+  </div>
+
+  <select id="themeSelect" title="Tema seç" style="width:auto">
+    <option value="light">☀️ Aydınlık</option>
+    <option value="dark">🌙 Karanlık</option>
+    <option value="ocean">🌊 Okyanus</option>
+    <option value="forest">🌲 Orman</option>
+    <option value="grape">🍇 Mor Neon</option>
+  </select>
+
+  <button class="btn" id="btnToggleSummary" title="Özeti Gizle/Göster">👁️</button>
+  <button class="btn" id="btnReload" title="Yenile">↻</button>
+  <button class="btn hidden" id="btnPwaInstall">📲 Yükle</button>
+
+  <div class="user-box" id="userBox"></div>
+</div>
+  
+  </header>
+<main>
+  <div id="saveError" class="error hidden"></div>
+  <div id="guestInfo" class="info hidden"></div>
+  <div id="offlineBadge" class="error hidden">📴 İnternet bağlantısı yok — veriler çevrimiçi olunca yenilenecek.</div>
+
+  <section class="statbar" id="summary">
+  <div class="stat"><span class="s-label">Toplam Yükleme</span><span class="s-val" id="sum-toplam">0</span></div>
+  <div class="s-div"></div>
+  <div class="stat"><span class="s-label">Tamamlanan</span><span class="s-val green" id="sum-tamamlanan">0</span></div>
+  <div class="s-div"></div>
+  <div class="stat"><span class="s-label">Kalan</span><span class="s-val amber" id="sum-kalan">0</span></div>
+  <div class="s-div"></div>
+  <div class="stat"><span class="s-label">Bugün</span><span class="s-val blue" id="sum-bugun">0</span></div>
+  <div class="s-div"></div>
+  <div class="stat"><span class="s-label">Geciken</span><span class="s-val red" id="sum-geciken">0</span></div>
+  <div class="s-div"></div>
+  <div class="stat"><span class="s-label">Toplam M3</span><span class="s-val" id="sum-m3">0</span></div>
+  <div class="s-div"></div>
+  <div class="stat">
+    <span class="s-label">Tamamlanma</span>
+    <span class="s-val" id="sum-verimlilik">0%</span>
+    <div class="stat-progress-bar" title="Tamamlanma Oranı">
+      <div class="stat-progress-fill" id="sum-progress-fill"></div>
+    </div>
+  </div>
+  <div class="days" id="dist"></div>
+</section>
+  
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr id="theadRow"></tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <p class="hint" style="margin-top:8px">💡 <b>Varsayılan sıralama:</b> 1) Durum (Yükleniyor her zaman en üstte → Bekliyor → Tamamlandı) → her grupta ⭐ öncelik no → Reel Plan (eski → yeni) → eşitse Planlanan (eski → yeni) → Müşteri.<b>Hafta/Ay</b> reel plan tarihinden hesaplanır; <b>Planlanan tarih</b> girilince Reel Plan otomatik eşitlenir. Başlığa tıklayarak değiştir (3. tık: varsayılana dön). Hücreye tıkla → değiştir → <b>Enter</b>. <b>Gerçekleşen tarih</b> otomatik yazılır. <b>🔄 rozeti</b> kaydın son güncellenme zamanını gösterir. <b>⏱️ Süre</b> hücresine tıkla → başlangıç/bitiş saatini elle düzelt. <b>💬</b> yorum butonu satırın sağında. <b>📅 Takvim</b>'de çipleri sürükle. Müşteri adına tıkla → <b>kart</b>. İlk kolonun kutuları ile <b>toplu düzenleme</b>.</p>
+</main>
+
+<div id="cellEditor" class="hidden"></div>
+
+<datalist id="musteri-list"></datalist>
+
+<div id="bulkBar" class="bulkbar hidden">
+  <span id="bulkCount">0 seçili</span>
+  <input type="date" id="bulkDate" title="Seçili kayıtları bu tarihe taşı" />
+  <select id="bulkDurum" title="Durumu değiştir">
+    <option value="">Durum (değiştir)</option>
+    <option value="Yükleme Bekliyor">Yükleme Bekliyor</option>
+    <option value="Yükleniyor">Yükleniyor</option>
+    <option value="Yükleme Tamamlandı">Yükleme Tamamlandı</option>
+  </select>
+  <button class="btn primary" id="btnBulkApply">Uygula</button>
+  <button class="btn" id="btnBulkCancel">Vazgeç</button>
+</div>
+
+<div id="modal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>Yeni sevkiyat kaydı</h2>
+    <p class="hint">M3 otomatik: KOMPLE TIR = AD×90 · 40 HC = AD×70 · 20 DC = AD×35 · PARSIYEL TIR = PRS M3</p>
+    <div class="form-grid">
+      <label class="col-2"><span>Müşteri</span><input id="f-musteri" list="musteri-list" /></label>
+      <label><span>BLM</span><select id="f-blm"></select></label>
+      <label><span>Kategori</span><input id="f-kategori" /></label>
+      <label><span>Sevkiyat tipi</span><select id="f-sevkiyatTipi"></select></label>
+      <label><span>AD</span><input id="f-ad" type="number" /></label>
+      <label><span>Planlanan tarih</span><input id="f-planlananTarih" type="date" /></label>
+      <label><span>Reel plan tarihi</span><input id="f-reelPlan" type="date" /></label>
+      <label><span>Durum</span><select id="f-durum"></select></label>
+      <label><span>Aracı geldi mi</span><select id="f-araciGeldi"></select></label>
+      <label><span>PRS M3</span><input id="f-prsM3" type="number" /></label>
+      <label><span>M3 (otomatik)</span><input id="f-m3" type="number" readonly style="background:var(--bg)" /></label>
+      <label class="col-2"><span>Açıklama</span><input id="f-aciklama" /></label>
+      </div>
+    <div class="modal-actions">
+      <button class="btn" id="btnCancelForm">Vazgeç</button>
+      <button class="btn primary" id="btnSaveForm">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div id="reportModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>📊 Yönetim Raporu</h2>
+
+    <div class="rpt-filter" id="rptFilter">
+      <label>📅
+        <select id="rptTarih">
+          <option value="week">Bu hafta</option>
+          <option value="month">Bu ay</option>
+          <option value="lastmonth">Geçen ay</option>
+          <option value="d30">Son 30 gün</option>
+          <option value="d90">Son 90 gün</option>
+          <option value="year">Bu yıl</option>
+          <option value="all">Tüm zamanlar</option>
+        </select>
+      </label>
+      <label>👤
+        <select id="rptMusteri"><option value="">Tüm müşteriler</option></select>
+      </label>
+      <label class="rpt-arsiv-chk"><input type="checkbox" id="rptArsiv" /> 🗄️ Arşiv dahil</label>
+    </div>
+
+    <div class="rtabs">
+      <button class="rtab active" data-rtab="genel">📊 Genel Bakış</button>
+      <button class="rtab" data-rtab="analiz">📈 Trend & Analiz</button>
+      <button class="rtab" data-rtab="kapasite">👷 Kapasite</button>
+      <button class="rtab" data-rtab="sure">⏱️ Süre Performansı</button>
+      <button class="rtab" data-rtab="detay">📋 Detay Tablolar</button>
+      <button class="rtab" data-rtab="arsiv">🗄️ Arşiv</button>
+      <button class="rtab" data-rtab="ekip">👷 Ekip</button>
+    </div>
+
+    <div id="reportPaneGenel" class="rpane"></div>
+    <div id="reportPaneAnaliz" class="rpane hidden"></div>
+    <div id="reportPaneKapasite" class="rpane hidden"></div>
+    <div id="reportPaneSure" class="rpane hidden"></div>
+    <div id="reportPaneDetay" class="rpane hidden"></div>
+    <div id="reportPaneArsiv" class="rpane hidden"></div>
+    <div id="reportPaneEkip" class="rpane hidden"></div>
+
+    <div class="modal-actions"><button class="btn" id="btnCloseReport">Kapat</button></div>
+  </div>
+</div>
+
+<div id="takvimModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>📅 Takvim Görünümü</h2>
+    <p class="hint">Kayıtları bir günden diğerine <b>sürükleyip bırak</b> — planlanan tarih güncellenir. Renkler: kırmızı bekliyor · turuncu yükleniyor · yeşil tamamlandı. Sağdaki sayı gün toplamı.</p>
+    <div class="kal-head">
+      <h3 id="takvimLabel">—</h3>
+      <div class="kal-nav">
+        <button class="btn" id="kalPrev">‹</button>
+        <button class="btn" id="kalToday">Bugün</button>
+        <button class="btn" id="kalNext">›</button>
+      </div>
+    </div>
+    <div class="kal-scroll">
+      <div class="kal-grid" id="takvimDow"></div>
+      <div class="kal-grid" id="takvimGrid"></div>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCloseTakvim">Kapat</button></div>
+  </div>
+</div>
+
+<div id="historyModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>🕘 Değişiklik Geçmişi</h2>
+    <p class="hint">Son 150 hareket — ekleme, düzenleme, silme, çoğaltma, yorum, Excel yükleme ve yetki değişiklikleri dahil.</p>
+    <div id="historyContent" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-actions"><button class="btn" id="btnCloseHistory">Kapat</button></div>
+  </div>
+</div>
+
+<div id="commentModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>💬 Kayıt Yorumları</h2>
+    <p class="hint" id="cmtWho">—</p>
+    <div id="cmtList" class="cmt-list"></div>
+    <div class="cmt-input">
+      <textarea id="cmtText" placeholder="Yorum yaz… (örn. araç 2 saat gecikmeli, evrak eksik)"></textarea>
+      <div class="modal-actions" style="margin-top:0">
+        <button class="btn" id="btnCmtClose">Kapat</button>
+        <button class="btn primary" id="btnCmtAdd">+ Yorum Ekle</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="sureEditModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>⏱️ Süre Düzenle</h2>
+    <p class="hint" id="sureEditWho">—</p>
+    <div id="sureEditBody"></div>
+    <div class="modal-actions">
+      <button class="btn" id="btnSureEditCancel">Vazgeç</button>
+      <button class="btn primary" id="btnSureEditSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div id="backupModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>💾 Yedekle / Geri Yükle</h2>
+    <p class="hint">Tüm veri (kayıtlar + geçmiş + kullanıcı yetkileri + süre ayarları) tek JSON dosyasına indirilir. Geri yükleme <b>mevcut verilerin tamamını değiştirir</b> — dikkatli kullan. 🤖 <b>Otomatik günlük yedek:</b> uygulama, günün ilk girişli açılışında tüm veriyi Firebase'te <b>sevkiyat_yedek</b> düğümüne yazar; son 14 gün saklanır.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+      <button class="btn primary" id="btnBackupDownload" style="padding:12px">📥 Yedeği İndir (JSON)</button>
+      <label class="btn" style="text-align:center;padding:12px;cursor:pointer">
+        📤 Yedekten Geri Yükle…
+        <input type="file" id="backupFile" accept=".json" style="display:none" />
+      </label>
+      <div id="backupResult" class="success hidden"></div>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCloseBackup">Kapat</button></div>
+  </div>
+</div>
+
+<div id="adminModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>🛡️ Admin Paneli — Kullanıcı Yetkileri</h2>
+    <p class="hint">Panelden eklediğin kullanıcılara giriş yaptıklarında bu yetkiler uygulanır. Listede olmayan girişli kullanıcılar <b>varsayılan yetkileri</b> alır (ekleme/düzenleme/çoğaltma açık · silme/Excel kapalı). Kod içindeki <b>ADMIN_EMAILS</b> listesi her zaman tam yetkilidir.</p>
+    <div class="form-grid" style="grid-template-columns:2fr auto;align-items:end">
+      <label><span>Yeni kullanıcı e-postası</span><input id="adminNewEmail" list="adminKnownEmails" placeholder="ornek@yatsan.com" /></label>
+      <button class="btn primary" id="btnAdminAddUser" style="padding:8px 14px">+ Kullanıcı Ekle</button>
+    </div>
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>Kullanıcı</th><th>Rol</th><th>Yetkiler</th><th></th></tr></thead>
+        <tbody id="adminUserTable"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-start"><button class="btn" id="btnQuizAdminOpen">🧠 Quiz Soru Yönetimi</button></div>
+    <div class="modal-actions"><button class="btn" id="btnCloseAdmin">Kapat</button></div>
+  </div>
+</div>
+
+<datalist id="adminKnownEmails"></datalist>
+
+<div id="sureModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>⏱️ Yükleme Süre Ayarları</h2>
+    <p class="hint">Müşteri + sevkiyat tipi kombinasyonu için standart yükleme süresi (dakika). Durum <b>Yükleniyor</b> olunca süre işlemeye başlar, <b>Tamamlandı</b>da durur ve kayıtta saklanır. Bu süreler <b>👷 Kapasite</b> raporunda ekip ihtiyacı hesabında da kullanılır. Listede olmayan kombinasyonlar <b>varsayılan</b> süreyi kullanır.</p>
+    <div class="form-grid" style="grid-template-columns:1fr auto;align-items:end">
+      <label><span>Varsayılan süre (dakika)</span><input id="sureDefault" type="number" min="1" /></label>
+      <button class="btn primary" id="btnSureDefaultSave" style="padding:8px 14px">Varsayılanı Kaydet</button>
+    </div>
+    <h3 style="font-size:13px;margin:14px 0 6px;">Kombinasyon süreleri</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Müşteri</th><th>Tip</th><th>Süre (dk)</th><th></th></tr></thead>
+        <tbody id="sureTable"></tbody>
+      </table>
+    </div>
+    <h3 style="font-size:13px;margin:14px 0 6px;">Yeni kombinasyon ekle</h3>
+    <div class="form-grid" style="grid-template-columns:2fr 1fr;align-items:end">
+      <label><span>Müşteri</span><input id="sureNewMusteri" list="musteri-list" /></label>
+      <label><span>Tip</span><select id="sureNewTip"></select></label>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr auto;align-items:end;margin-top:8px">
+      <label><span>Süre (dakika)</span><input id="sureNewDk" type="number" min="1" /></label>
+      <button class="btn primary" id="btnSureAdd" style="padding:8px 14px">+ Ekle</button>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCloseSure">Kapat</button></div>
+  </div>
+</div>
+
+<div id="importModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>📥 Excel'den Veri Yükle</h2>
+    <p class="hint">.xlsx / .xls / .csv · İlk satır başlık olmalı · Müşteri kolonu zorunlu · M3 boşsa tipe göre hesaplanır.</p>
+    <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
+    <div id="importMapping" class="hidden">
+      <h3 style="font-size:13px;margin:14px 0 6px;">Kolon eşleştirme</h3>
+      <div class="form-grid" id="mapGrid"></div>
+      <h3 style="font-size:13px;margin:14px 0 6px;">Önizleme (ilk 5 satır)</h3>
+      <div class="table-wrap"><table id="previewTable"></table></div>
+      <div class="modal-actions">
+        <button class="btn" id="btnCancelImport">Vazgeç</button>
+        <button class="btn primary" id="btnDoImport">Seçili satırları yükle</button>
+      </div>
+    </div>
+    <div id="importResult" class="success hidden"></div>
+  </div>
+</div>
+
+<div id="loginModal" class="modal-bg login-bg hidden">
+  <div class="modal login-card">
+    <div class="logo">🚢</div>
+    <h2>Sevkiyat Planlama</h2>
+    <p class="sub" id="loginSub">Ekleme ve düzenleme için giriş yap. Görüntüleme giriş gerektirmez.</p>
+    <div class="login-form">
+      <label><span>E-posta</span><input id="l-user" type="email" autocomplete="username" /></label>
+      <label><span>Şifre</span><input id="l-pass" type="password" autocomplete="current-password" /></label>
+    </div>
+    <div id="loginError" class="error hidden" style="margin-top:10px;margin-bottom:0"></div>
+    <div class="modal-actions" style="gap:8px">
+      <button class="btn" id="btnLoginCancel">Vazgeç</button>
+      <button class="btn primary" id="btnLogin">Giriş yap</button>
+    </div>
+  </div>
+</div>
+
+<div id="depoOverlay" class="depo-overlay hidden">
+    <div class="depo-head">
+    <div class="depo-clock" id="depoClock">--:--</div>
+    <div class="depo-date" id="depoDate">—</div>
+    <div class="depo-tabs">
+      <button class="depo-tab active" data-dtab="anlik">⚡ Anlık Durum</button>
+      <button class="depo-tab" data-dtab="kalan">📅 Kalan Yüklemeler</button>
+      <button class="depo-tab" data-dtab="bitmis">✅ Bitmiş Yüklemeler</button>
+      <button class="depo-tab" id="btnScanOpen" style="background:#0ea5e9;border-color:#0ea5e9;color:#fff">📡 QR Okut</button>
+      <button class="btn" id="btnDepoClose" style="margin-left:4px">✖ Kapat(ESC)</button>
+    </div>
+    <div class="depo-right">
+      <div class="depo-mini" id="depoMini"></div>
+    </div>
+  </div>
+  <div id="depoContent"></div>
+</div>
+<div id="arsivModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>🗄️ Arşiv</h2>
+    <p class="hint" id="arsivInfo">—</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:12px">Bu tarihten eskisini arşivle:</label>
+      <input type="date" id="arsivTarih" />
+      <button class="btn primary" id="btnArsivCalistir">📦 Arşivle</button>
+      <button class="btn" id="btnArsivExcel">📤 Arşivi Excel'e aktar</button>
+    </div>
+    <div class="table-wrap" style="margin-top:12px;max-height:46vh;overflow-y:auto">
+      <table>
+        <thead><tr><th>Müşteri</th><th>Planlanan</th><th>Reel Plan</th><th>Gerçekleşen</th><th>Durum</th><th>AD</th></tr></thead>
+        <tbody id="arsivTable"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCloseArsiv">Kapat</button></div>
+  </div>
+</div>
+<div id="qrModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>📱 QR Etiket Yazdır</h2>
+    <p class="hint">Etiketleri kesip yüklenen araçların önüne koy. QR okutulunca işlem ekranı açılır: Araç Geldi · Başlat · Bitir. Not: Etiket basarken uygulamayı <b>üretim (Vercel) adresinden</b> açık tut — QR'a basılan adres işlenir.</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:12px">Gün (reel plan):</label>
+      <input type="date" id="qrTarih" />
+      <button class="btn primary" id="btnQrPrintGo">🖨️ Yazdır</button>
+    </div>
+    <div id="qrPreview" class="qr-grid" style="margin-top:12px;max-height:52vh;overflow-y:auto"></div>
+    <div class="modal-actions"><button class="btn" id="btnQrClose">Kapat</button></div>
+  </div>
+</div>
+<div id="qrPrintArea"></div>
+<div id="islemOverlay" class="depo-overlay hidden">
+  <div class="depo-head">
+    <div>
+      <div class="depo-clock" id="islemClock" style="font-size:32px">--:--</div>
+      <div class="depo-date">Yükleme İşlem Ekranı</div>
+    </div>
+    <button class="btn" id="btnIslemClose" style="font-size:15px;padding:10px 18px">✖ Kapat (ESC)</button>
+  </div>
+  <div id="islemContent"></div>
+</div>
+<div id="quizModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>🧠 Bilgi Yarışması</h2>
+    <div id="quizBody"></div>
+    <div class="modal-actions"><button class="btn" id="btnQuizClose">Kapat</button></div>
+  </div>
+</div>
+
+<div id="quizAdminModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>🧠 Quiz Soru Yönetimi</h2>
+    <p class="hint" id="quizAdminInfo">—</p>
+    <div class="table-wrap" style="max-height:34vh;overflow-y:auto">
+      <table>
+        <thead><tr><th>Soru</th><th>Doğru</th><th></th></tr></thead>
+        <tbody id="quizAdminTable"></tbody>
+      </table>
+    </div>
+    <h3 style="font-size:13px;margin:14px 0 6px">Yeni soru ekle</h3>
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <label><span>Soru</span><input id="qzNewQ" /></label>
+    </div>
+    <div class="form-grid">
+      <label><span>Şık A</span><input id="qzNewO0" /></label>
+      <label><span>Şık B</span><input id="qzNewO1" /></label>
+      <label><span>Şık C</span><input id="qzNewO2" /></label>
+      <label><span>Şık D</span><input id="qzNewO3" /></label>
+    </div>
+    <div class="form-grid">
+      <label><span>Doğru şık</span>
+        <select id="qzNewC"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
+      </label>
+      <label><span>Bilgi notu (opsiyonel)</span><input id="qzNewInfo" /></label>
+    </div>
+       <div class="modal-actions" style="justify-content:flex-start">
+      <button class="btn primary" id="btnQuizAdd">+ Soru Ekle</button>
+      <button class="btn" id="btnQuizSeed">📦 50 hazır soru yükle</button>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnQuizAdminClose">Kapat</button></div>
+  </div>
+</div>
+
+<div id="snakeModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>🐍 Yılan Oyunu</h2>
+    <div id="snakeBody"></div>
+    <div class="modal-actions"><button class="btn" id="btnSnakeClose">Kapat</button></div>
+  </div>
+</div>
+  
+<div id="ekipModal" class="modal-bg hidden">
+  <div class="modal">
+    <h2>👷 Ekip Yönetimi</h2>
+    <p class="hint">Ekip kodları sabittir (ekip-1, ekip-2…), <b>Görünen ad</b> alanına gerçek ismi yazabilirsiniz (örn. "Ekip-1 · Sabah Ekibi"). Pasif ekipler atama listesinde görünmez ama geçmiş raporları korunur. <b>Kayıt atamak için:</b> tabloda kutucukları seç → alt çubuktan Ekip seç → Uygula.</p>
+    <div class="form-grid" style="grid-template-columns:1fr auto;align-items:end">
+      <label><span>Yeni ekip</span><input id="ekipNewAd" placeholder="boş bırak → otomatik Ekip-N" /></label>
+      <button class="btn primary" id="btnEkipAdd" style="padding:8px 14px">+ Ekip Ekle</button>
+    </div>
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+      <thead><tr><th>Kod</th><th>Görünen ad</th><th class="center">Durum</th><th class="center">Kayıt</th><th></th></tr></thead>
+        <tbody id="ekipTable"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCloseEkip">Kapat</button></div>
+  </div>
+</div>
+  
+<div id="sudokuModal" class="modal-bg hidden">
+  <div class="modal" style="max-width:520px">
+    <h2>🔢 Sudoku — Ortak Masa</h2>
+    <p class="hint">Aynı tahtada herkes birlikte çözer. Sizin yazdığınız hücreler <b>mavi</b>, başkalarınınki gri renkli ve isimli. Aynı hücreye aynı anda yazılırsa son yazan kazanır.</p>
+    <div id="sudokuBody"></div>
+    <div class="modal-actions"><button class="btn" id="btnSudokuClose">Kapat</button></div>
+  </div>
+</div>
+
+<div id="tetrisModal" class="modal-bg hidden">
+  <div class="modal" style="max-width:440px">
+    <h2>🧱 Tetris</h2>
+    <div id="tetrisBody"></div>
+    <div class="modal-actions"><button class="btn" id="btnTetrisClose">Kapat</button></div>
+  </div>
+</div>
+
+
+  
+<div id="canliModal" class="modal-bg hidden">
+  <div class="modal wide">
+    <h2>👥 Canlı Kullanıcılar</h2>
+    <p class="hint">Son 50 saniyede kalp atışı atan herkes listede — giriş yapmışlar <b>Girişli</b>, giriş yapmadan bakanlar <b>Misafir</b> olarak görünür. Her sekme 15 sn'de bir kendini bildirir; sekme kapanınca listeden düşer. Satır başına 🎁 konfeti ve 💬 özel mesaj; aşağıdaki kutudan <b>herkese tek seferde</b> duyuru + konfeti gönderebilirsin.</p>
+    <div id="canliKpi" class="canli-kpi"></div>
+    <div class="canli-compose">
+      <textarea id="canliMsg" maxlength="300" rows="2" placeholder="📣 Duyuru mesajı yaz… (boş bırakırsan yalnızca konfeti patlar)"></textarea>
+      <div class="canli-compose-row">
+        <span id="canliHedef" class="canli-hedef">📣 Herkese</span>
+        <select id="canliSure" title="Mesaj ekranda kalma süresi">
+          <option value="8">8 sn</option>
+          <option value="12" selected>12 sn</option>
+          <option value="20">20 sn</option>
+          <option value="30">30 sn</option>
+        </select>
+        <label class="canli-chk"><input type="checkbox" id="canliKonfeti" checked /> 🎁 Konfeti de patlat</label>
+        <button class="btn primary" id="btnCanliHerkese">📣 Herkese Gönder</button>
+      </div>
+    </div>
+    <div class="table-wrap" style="margin-top:10px;max-height:40vh;overflow-y:auto">
+      <table>
+        <thead><tr><th>Kullanıcı</th><th>Tür</th><th class="center">Cihaz</th><th class="center">Oturum süresi</th><th class="center">Son sinyal</th><th class="center">İşlem</th></tr></thead>
+        <tbody id="canliTable"><tr><td colspan="6" class="hint" style="text-align:center">Yükleniyor…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="modal-actions"><button class="btn" id="btnCanliClose">Kapat</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+  <script>
+  /* Kısayol: dosya.html#depo → doğrudan depo ekranı (yalnızca görüntüleme) */
+  if (location.hash === "#depo") {
+    document.addEventListener("DOMContentLoaded", () => {
+      document.body.classList.add("depo-link");
+    });
+  }
+</script>
+<script src="js/core.js"></script>
+<script src="js/depo.js"></script>
+<script src="js/sureler.js"></script>
+<script src="js/rapor.js"></script>
+<script src="js/tablo.js"></script>
+<script src="js/diger.js"></script>
+<script src="js/sudoku.js"></script>
+<script src="js/tetris.js"></script>
+<script src="js/init.js"></script>
+<script src="js/kutlama.js"></script>
+<script src="js/guvenlik.js"></script>
+<script src="js/canli.js"></script>
+</body>
+</html>

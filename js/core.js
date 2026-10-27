@@ -918,6 +918,7 @@ function enriched(list) {
 }
 function searchHay(r) {
   const cmt = (Array.isArray(r.comments) ? r.comments : []).map(c => c.text).join(" ");
+  /* 👷 Ekip adı da aranır ("Her yerde" kapsamı) — ekipAd diger.js'te global, çalışma anında hazır */
   const ek = r.ekip ? (ekipAd(r.ekip) + " " + r.ekip) : "";
   return [r.musteri, r.blm, r.kategori, r.sevkiyatTipi, r.aciklama, r.araciGeldi,
           r.durum, r.createdBy, r.ad, r.prsM3, r.m3, cmt, ek,
@@ -959,6 +960,15 @@ function filtered() {
       if (scope === "wide") {
         const hay = searchHay(r);
         if (!words.every(w => hay.includes(w))) return false;
+      } else if (scope === "reelplan" || scope === "planlanan" || scope === "gerceklesen") {
+        /* 📅 Tarih kapsamları: ISO (2026-10-27) ve TR (27.10.2026) biçimlerinde ara —
+           ayraç (nokta/tire/boşluk) fark etmez, kısmi giriş de yakalanır (örn. "27.10") */
+        const alan = scope === "reelplan" ? r.reelPlan
+                   : scope === "planlanan" ? r.planlananTarih
+                   : r.gerceklesenTarih;
+        const iq = q.replace(/[\s.\-/]/g, "");
+        const hay = (String(alan || "") + (alan ? formatDate(alan) : "")).replace(/[\s.\-/]/g, "");
+        if (!hay.includes(iq)) return false;
       } else if (!(r.musteri || "").toLowerCase().includes(q)) return false;
     }
     return true;

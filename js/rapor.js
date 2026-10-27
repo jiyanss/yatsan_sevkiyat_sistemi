@@ -242,10 +242,14 @@ document.querySelector("thead").addEventListener("change", e => {
 });
 
 function updateSearchPlaceholder() {
-  const wide = document.getElementById("searchScope").value === "wide";
-  document.getElementById("search").placeholder = wide
-    ? "🔍 Her yerde ara — ekip adı dahil (boşlukla ayır)"
-    : "🔍 Müşteri ara";
+  const ph = {
+    wide: "🔍 Her yerde ara — ekip adı dahil (boşlukla ayır)",
+    musteri: "🔍 Müşteri ara",
+    reelplan: "🔍 Reel plan tarihi ara (örn. 27.10.2026)",
+    planlanan: "🔍 Planlanan tarih ara (örn. 27.10.2026)",
+    gerceklesen: "🔍 Gerçekleşen tarih ara (örn. 27.10.2026)"
+  }[document.getElementById("searchScope").value] || "🔍 Müşteri ara";
+  document.getElementById("search").placeholder = ph;
 }
 document.getElementById("search").addEventListener("input", () => { savePrefs(); render(); });
 document.getElementById("searchScope").addEventListener("change", () => { updateSearchPlaceholder(); savePrefs(); render(); });
