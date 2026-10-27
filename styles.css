@@ -352,3 +352,104 @@ th[data-col="m3"], td[data-col="m3"] { width: 3%; text-align: center; }
     margin-top: 6px !important;
   }
 }
+
+/* =========================================================
+   5. MODERN GÖRÜNÜM KATMANI ("yumuşak derinlik" dokunuşları)
+   Bu bölüm base-modules.css'in ÜZERİNE biner; tüm renkler
+   tema değişkenlerinden türetilir (color-mix) — dark/ocean/
+   forest/grape temaları bozulmaz. color-mix desteklemeyen
+   eski tarayıcılar ilgili satırı yok sayar (zarif düşüş).
+   ========================================================= */
+
+/* 5.1 Sayfa zemini — köşelerden yumuşak renk yıkaması */
+body {
+  background:
+    radial-gradient(1100px 520px at 8% -10%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 60%),
+    radial-gradient(900px 460px at 100% -12%, color-mix(in srgb, #7c3aed 7%, transparent), transparent 55%),
+    var(--bg);
+}
+::selection { background: color-mix(in srgb, var(--primary) 24%, transparent); }
+
+/* 5.2 Üst bar — hafif cam efekti (glassmorphism) */
+header {
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+}
+.logo {
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 42%, transparent),
+              inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+
+/* 5.3 Butonlar ve giriş alanları — derinlik + dokunma geri bildirimi */
+.btn {
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .06);
+  transition: transform .16s ease, box-shadow .16s ease,
+              background-color .16s ease, border-color .16s ease;
+}
+.btn.primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 38%, transparent);
+}
+@media (hover: hover) {
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(15, 23, 42, .12); }
+  .btn.primary:hover { box-shadow: 0 5px 14px color-mix(in srgb, var(--primary) 48%, transparent); }
+  input:hover, select:hover, textarea:hover {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  }
+}
+.btn:active { transform: translateY(0) scale(.97); transition-duration: .07s; }
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 32%, transparent);
+}
+input, select, textarea { border-radius: 10px; }
+input:focus, select:focus, textarea:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* 5.4 Araç grubu kutuları — tema uyumlu yumuşak zemin */
+.tool-group {
+  background: color-mix(in srgb, var(--muted) 7%, transparent);
+  border-radius: 12px;
+}
+
+/* 5.5 Tablo kartı + başlık — katmanlı gölge, derin başlık bandı */
+main .table-wrap {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .05),
+              0 10px 28px -14px rgba(15, 23, 42, .20);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+body:not(.dark):not([data-theme="ocean"]):not([data-theme="forest"]):not([data-theme="grape"])
+  main .table-wrap thead tr {
+  background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+}
+tbody tr { transition: background-color .14s ease; }
+
+/* 5.6 Durum rozetleri — ince iç kenarlık + canlı "Yükleniyor" nabzı */
+.badge { box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 16%, transparent); }
+.badge.loading::before { animation: badge-pulse 1.6s ease-in-out infinite; }
+@keyframes badge-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+/* 5.7 Süre çubukları — parlak dolgu + çukur ray */
+.surebar { box-shadow: inset 0 1px 2px rgba(15, 23, 42, .12); }
+.surebar-fill, .surebar-fill.warn, .surebar-fill.over {
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .28));
+}
+
+/* 5.8 Özet kartı — tabloyla aynı katmanlı gölge dili */
+.statbar {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .05),
+              0 10px 28px -16px rgba(15, 23, 42, .22);
+}
+.statbar .s-val { font-variant-numeric: tabular-nums; }
+
+/* 5.9 Açılır menüler — yumuşak derin gölge + ince kaydırma */
+.colmenu-wrap .colmenu, .game-wrap .game-menu {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .10),
+              0 24px 48px -20px rgba(15, 23, 42, .35) !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
