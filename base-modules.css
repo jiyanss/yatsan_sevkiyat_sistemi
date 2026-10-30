@@ -1245,7 +1245,9 @@ body.fit-table td:last-child {
   text-align: center;
   animation: geGiris .6s cubic-bezier(.22,1,.36,1) both;
 }
-.ge-kart > * { animation: geGiris .55s cubic-bezier(.22,1,.36,1) both; }
+/* v1.2: alanlar .ge-form içinde — form ve içeriği de sıralı giriş animasyonuna dahil */
+.ge-kart > *, .ge-form > * { animation: geGiris .55s cubic-bezier(.22,1,.36,1) both; }
+.ge-form { margin: 0; }                               /* UA varsayılan marjı sıfırla */
 .ge-logo { animation-delay: .05s; } .ge-baslik { animation-delay: .11s; }
 .ge-alt { animation-delay: .17s; }  .ge-hata  { animation-delay: .2s; }
 .ge-alan:nth-of-type(1) { animation-delay: .22s; }

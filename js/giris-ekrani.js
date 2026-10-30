@@ -20,6 +20,12 @@
    kutuları composited overlay'in ÜSTÜNE çizilebiliyor (dashboard
    kalıntıları sızıyordu); visibility+display ile kökten çözülür.
 
+   v1.2: Alanlar gerçek <form id="ge-form"> içine alındı (#ge-user →
+   autocomplete="username") — Chrome şifre yöneticisi kayıtlı kullanıcı
+   adını da otomatik dolduruyor (önceden yalnızca şifre geliyordu).
+   Giriş artık submit olayıyla tetiklenir (Enter + buton tek yol),
+   çift gönderim koruması eklendi.
+
    Yükleme sırası: TÜM scriptlerden SONRA (canli.js'ten sonra)
    — core.js globallerine (getAuthState, currentUser, render…)
    ihtiyaç duyar.
@@ -77,6 +83,7 @@
     const email = document.getElementById("ge-user").value.trim();
     const pass = document.getElementById("ge-pass").value;
     const btn = document.getElementById("ge-btn");
+    if (btn.disabled) return;                         /* çift gönderim koruması (submit + Enter) */
     if (!email || !pass) { hataGoster("E-posta ve şifre girin."); return; }
     hata.classList.add("hidden");
     btn.disabled = true;
@@ -116,9 +123,12 @@
     showToast("👁️ <b>Görüntüleme modu</b> — değişiklik yapmak için sağ üstten 🔐 Giriş yap.", 4500);
   }
 
-  document.getElementById("ge-btn").addEventListener("click", girisYap);
-  document.getElementById("ge-misafir").addEventListener("click", misafirGir);
-  ["ge-user", "ge-pass"].forEach(id => {
-    document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") girisYap(); });
+  /* v1.2: Tüm gönderimler form submit üzerinden (buton type=submit, Enter,
+     mobil klavyede "Git") → tek çağrı noktası. Chrome otomatik doldurması
+     form olunca kullanıcı adı + şifreyi birlikte doldurur. */
+  document.getElementById("ge-form").addEventListener("submit", e => {
+    e.preventDefault();
+    girisYap();
   });
+  document.getElementById("ge-misafir").addEventListener("click", misafirGir);
 })();
