@@ -1,11 +1,61 @@
 /* ============================================================
    ⏱️ SÜRE PERFORMANS SEKMESİ
    ============================================================ */
+/* 🚛 Araç bekleme analizi: geliş damgalı kayıtlar — tamamlananlar
+   (geliş → tamamlanma arası) ve hâlâ bekleyen araçlar */
+function aracBeklemeAnaliz(list) {
+  const tamamlanan = [], bekleyen = [];
+  list.forEach(r => {
+    if (r.araciGeldi !== "GELDİ" || !r.aracGelisTs) return;
+    const bek = aracBeklemeMs(r);
+    if (bek == null) return;
+    if (r.durum === "Yükleme Tamamlandı") tamamlanan.push({ r, bek });
+    else bekleyen.push({ r, bek });
+  });
+  const n = tamamlanan.length;
+  const ort = n ? tamamlanan.reduce((s, x) => s + x.bek, 0) / n : 0;
+  const enUzun = n ? tamamlanan.reduce((m, x) => Math.max(m, x.bek), 0) : 0;
+  return { tamamlanan, bekleyen, n, ort, enUzun };
+}
+function aracBeklemeTablo(ab) {
+  if (!ab.n && !ab.bekleyen.length) {
+    return `<div class="rpt"><h3>🚛 Araç bekleme süresi</h3>
+      <p class="hint">Henüz araç geliş damgası olan kayıt yok — "🚛 Araç Geldi" işaretlenen kayıtlarda geliş saati otomatik damgalanır ve bu analiz başlar. Eski kayıtlar için damga sonraki "Geldi" işaretlemesinden itibaren oluşur.</p></div>`;
+  }
+  const satirlar = ab.tamamlanan.slice().sort((a, b) => b.bek - a.bek).slice(0, 15).map(x =>
+    `<tr><td class="strong">${esc(x.r.musteri)}</td><td class="center">${esc(x.r.blm)}</td>
+     <td class="center">${fmtDateTime(x.r.aracGelisTs)}</td>
+     <td class="center">${x.r.loadingEndedAt ? fmtDateTime(x.r.loadingEndedAt) : "-"}</td>
+     <td class="center" style="${x.bek >= 2 * 3600000 ? "color:var(--red);font-weight:700" : "color:var(--green)"}">${fmtSure(x.bek)}</td></tr>`).join("");
+  const bekleyenSatirlar = ab.bekleyen.slice().sort((a, b) => b.bek - a.bek).slice(0, 10).map(x =>
+    `<tr><td class="strong">${esc(x.r.musteri)}</td><td class="center">${esc(x.r.blm)}</td>
+     <td class="center">${fmtDateTime(x.r.aracGelisTs)}</td>
+     <td class="center">—</td>
+     <td class="center" style="color:var(--amber);font-weight:700">${fmtSure(x.bek)}</td></tr>`).join("");
+  return `<div class="rpt"><h3>🚛 Araç bekleme süresi (geliş → tamamlanma)</h3>
+    <p class="hint">Araç geldiği an damgalanır; yükleme tamamlanınca aradaki süre kayda yazılır. ${ab.n ? "Kırmızılar 2 saati aşan beklemeler. " : ""}Şu an bekleyen araçlar ayrı tabloda canlı takip edilir.</p>
+    ${ab.n ? `<div class="kpi-grid" style="margin:10px 0">
+      <div class="kpi c-primary"><div class="kpi-head">🚛 Analiz edilen araç</div><div class="kpi-val">${ab.n}</div><div class="kpi-sub">geliş + tamamlanma verisi olan kayıt</div></div>
+      <div class="kpi c-green"><div class="kpi-head">⏳ Ortalama bekleme</div><div class="kpi-val">${fmtSure(ab.ort)}</div><div class="kpi-sub">tüm tamamlanan yüklemeler</div></div>
+      <div class="kpi c-red"><div class="kpi-head">🔻 En uzun bekleme</div><div class="kpi-val">${fmtSure(ab.enUzun)}</div><div class="kpi-sub">detay aşağıdaki tabloda</div></div>
+      <div class="kpi c-amber"><div class="kpi-head">👀 Şu an bekleyen</div><div class="kpi-val">${ab.bekleyen.length}</div><div class="kpi-sub">gelmiş ama yüklenmemiş araç</div></div>
+    </div>` : ""}
+    ${ab.n ? `<div class="table-wrap"><table>
+      <thead><tr><th>Müşteri</th><th>BLM</th><th>Araç gelişi</th><th>Yükleme tamamlandı</th><th>Bekleme</th></tr></thead>
+      <tbody>${satirlar}</tbody>
+    </table></div>` : ""}
+    ${ab.bekleyen.length ? `<div class="table-wrap" style="margin-top:10px"><table>
+      <thead><tr><th>Müşteri</th><th>BLM</th><th>Araç gelişi</th><th>Yükleme</th><th>Şu ana kadar</th></tr></thead>
+      <tbody>${bekleyenSatirlar}</tbody>
+    </table></div>` : ""}
+  </div>`;
+}
 function buildSure(list) {
   const az = sureAnalizi(list);
   const c = document.getElementById("reportPaneSure");
   if (!az) {
-    c.innerHTML = `<p class="hint">⏱️ Süre performansı için henüz kronometre verisi yok — bir kaydı "Yükleniyor" yapıp sonra "Tamamlandı" yapınca burada analiz başlar.</p>`;
+    c.innerHTML = `<p class="hint">⏱️ Süre performansı için henüz kronometre verisi yok — bir kaydı "Yükleniyor" yapıp sonra "Tamamlandı" yapınca burada analiz başlar.</p>`
+      + aracBeklemeTablo(aracBeklemeAnaliz(list));
     return;
   }
   const asimOran = az.asimli / az.n * 100;
@@ -18,7 +68,7 @@ function buildSure(list) {
   const chartBlock = (typeof Chart === "undefined")
     ? ``
     : `<div class="chart-box wide" style="margin-bottom:16px"><h3>⏱️ Ortalama yüklenme süresi vs standart (en yavaş 15 kombinasyon)</h3><div class="chart-holder tall"><canvas id="chSure"></canvas></div></div>`;
-  c.innerHTML = kpiBlock + chartBlock + sureTable(az);
+  c.innerHTML = kpiBlock + chartBlock + sureTable(az) + aracBeklemeTablo(aracBeklemeAnaliz(list));
   if (typeof Chart === "undefined") return;
   const { textColor, gridColor } = chartBase();
   const arr = [...az.musteri.entries()]
@@ -767,6 +817,53 @@ function applyMenuLayout() {
   });
 }
 
+/* ================= 🐍 YILAN OYUNU ================= */
+let snakeTimer = null;
+let snakeState = null;
+let snakeBest = Number(localStorage.getItem("sevkiyat_yilan_best") || 0);
+let snakePaused = false;
+
+/* ═══════════════ 🐍 YILAN — ana sayfa modalı + depo mini dashboard ═══════════════ */
+function openSnakeGame() {
+  renderSnakeGameBody();
+  document.getElementById("snakeModal").classList.remove("hidden");
+}
+function closeSnakeGame() {
+  stopSnake();
+  snakePaused = false;
+  document.getElementById("snakeModal").classList.add("hidden");
+}
+function renderSnakeGameBody() {
+  const c = document.getElementById("snakeBody");
+  const devam = snakeState && snakePaused;
+  c.innerHTML = `
+    <div class="snake-top"><span>Skor: <b id="snakeScore">${devam ? snakeState.score : 0}</b></span><span>🏆 Rekor: <b id="snakeBest">${snakeBest}</b></span></div>
+    <div class="snake-cv-wrap">
+      <canvas id="snakeCanvas" width="400" height="400"></canvas>
+      <div class="snake-over" id="snakeOver">
+        <div class="so-title" id="snakeOverTitle">${devam ? "⏸ Duraklatıldı" : "🐍 Yılan Oyunu"}</div>
+        <div class="so-score" id="snakeOverScore">Rekor: ${snakeBest}</div>
+        <button class="depo-tab active" id="btnSnakeStart">${devam ? "▶️ Devam Et" : "▶️ Başla"}</button>
+      </div>
+    </div>
+    <div class="snake-pad">
+      <button class="snake-btn" data-sdir="up">▲</button>
+      <div>
+        <button class="snake-btn" data-sdir="left">◀</button>
+        <button class="snake-btn" data-sdir="down">▼</button>
+        <button class="snake-btn" data-sdir="right">▶</button>
+      </div>
+    </div>
+    <p class="hint" style="margin-top:10px">Klavye: ok tuşları / WASD</p>`;
+  document.getElementById("btnSnakeStart").addEventListener("click", snakeStart);
+  c.querySelectorAll(".snake-btn").forEach(b => b.addEventListener("click", () => {
+    const d = b.dataset.sdir;
+    if (d === "up") snakeDir(0, -1);
+    if (d === "down") snakeDir(0, 1);
+    if (d === "left") snakeDir(-1, 0);
+    if (d === "right") snakeDir(1, 0);
+  }));
+}
 function renderDepoMini() {
   const el = document.getElementById("depoMini");
   if (!el) return;
@@ -798,56 +895,6 @@ function renderDepoMini() {
     <div class="dm-tips">${tips || `<span class="dm-empty">Bu hafta kayıt yok</span>`}</div>`;
 }
 
-
-/* ================= 🐍 YILAN OYUNU ================= */
-let snakeTimer = null;
-let snakeState = null;
-let snakeBest = Number(localStorage.getItem("sevkiyat_yilan_best") || 0);
-let snakePaused = false;
-
-/* ═══════════════ 🐍 YILAN — ana sayfa modalı + depo mini dashboard ═══════════════ */
-function openSnakeGame() {
-  renderSnakeGameBody();
-  document.getElementById("snakeModal").classList.remove("hidden");
-}
-function closeSnakeGame() {
-  stopSnake();
-  snakePaused = false;
-  document.getElementById("snakeModal").classList.add("hidden");
-}
-function renderSnakeGameBody() {
-  const c = document.getElementById("snakeBody");
-  const devam = snakeState && snakePaused;
-  c.innerHTML = `
-    <div class="snake-top"><span>Skor: <b id="snakeScore">${devam ? snakeState.score : 0}</b></span><span>🏆 Rekor: <b id="snakeBest">${snakeBest}</b></span></div>
-    <div class="snake-cv-wrap">
-      <canvas id="snakeCanvas" width="600" height="600"></canvas>
-      <div class="snake-over" id="snakeOver">
-        <div class="so-title" id="snakeOverTitle">${devam ? "⏸ Duraklatıldı" : "🐍 Yılan Oyunu"}</div>
-        <div class="so-score" id="snakeOverScore">Rekor: ${snakeBest}</div>
-        <button class="depo-tab active" id="btnSnakeStart">${devam ? "▶️ Devam Et" : "▶️ Başla"}</button>
-      </div>
-    </div>
-    <div class="snake-pad">
-      <button class="snake-btn" data-sdir="up">▲</button>
-      <div>
-        <button class="snake-btn" data-sdir="left">◀</button>
-        <button class="snake-btn" data-sdir="down">▼</button>
-        <button class="snake-btn" data-sdir="right">▶</button>
-      </div>
-    </div>
-    <p class="hint" style="margin-top:10px">Klavye: ok tuşları / WASD</p>`;
-  document.getElementById("btnSnakeStart").addEventListener("click", snakeStart);
-  c.querySelectorAll(".snake-btn").forEach(b => b.addEventListener("click", () => {
-    const d = b.dataset.sdir;
-    if (d === "up") snakeDir(0, -1);
-    if (d === "down") snakeDir(0, 1);
-    if (d === "left") snakeDir(-1, 0);
-    if (d === "right") snakeDir(1, 0);
-  }));
-}
-
-
 function stopSnake() {
   if (snakeTimer) { clearInterval(snakeTimer); snakeTimer = null; }
 }
@@ -857,7 +904,7 @@ function snakeReset() {
   snakeState = {
     body: [{x:10,y:10},{x:9,y:10},{x:8,y:10}],
     dir: {x:1,y:0}, nextDir: {x:1,y:0},
-    food: null, score: 0, speed: 250
+    food: null, score: 0, speed: 150
   };
   snakePlaceFood();
   drawSnake();

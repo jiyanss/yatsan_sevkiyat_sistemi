@@ -297,7 +297,7 @@ function rowHtml(r) {
         </span></div>`;
     })}
     ${tdHtml(r, "aciklama", "truncate", x => `<span title="${esc(x.aciklama)}">${esc(x.aciklama) || "-"}</span>`)}
-    ${tdHtml(r, "araciGeldi", r.araciGeldi === "GELDİ" ? "arac-gel-yes" : (r.araciGeldi === "HAYIR" ? "arac-gel-no" : ""), x => esc(x.araciGeldi) || "-")}
+    ${tdHtml(r, "araciGeldi", r.araciGeldi === "GELDİ" ? "arac-gel-yes" : (r.araciGeldi === "HAYIR" ? "arac-gel-no" : ""), x => (esc(x.araciGeldi) || "-") + aracBeklemeHtml(x))}
     <td data-col="status" class="center">${durumIcon(r.durum)}</td>
     ${tdHtml(r, "prsM3", "center", x => numOrDash(x.prsM3))}
     <td data-col="m3" class="center">${numOrDash(r.m3)}</td>
@@ -398,6 +398,8 @@ async function commitCell() {
     if (m3 !== null) updated.m3 = m3;
   }
   if (field === "durum") applyDurumSideEffects(updated);
+  /* 🚛 Araç geliş damgası — GELDİ'ye geçişte basılır, geri alınırsa silinir */
+  if (field === "araciGeldi") aracGelisUygula(updated, row.araciGeldi);
   closeCellEditor();
   try {
     const saved = await apiUpdate(id, updated);
@@ -412,6 +414,12 @@ async function commitCell() {
     }
     if (field === "durum" && val === "Yükleme Tamamlandı" && updated.loadingStartedAt && updated.loadingEndedAt) {
       parts.push(`yüklenme süresi: ${fmtSure(updated.loadingEndedAt - updated.loadingStartedAt)}`);
+    }
+    if (field === "araciGeldi" && val === "GELDİ" && updated.aracGelisTs) {
+      parts.push(`araç gelişi damgalandı: ${fmtDateTime(updated.aracGelisTs)}`);
+    }
+    if (field === "durum" && val === "Yükleme Tamamlandı" && updated.aracBeklemeMs != null) {
+      parts.push(`araç bekleme: ${fmtSure(updated.aracBeklemeMs)}`);
     }
     if (field === "durum" && val === "Yükleme Tamamlandı" && updated.gerceklesenTarih !== row.gerceklesenTarih) {
       parts.push(`gerçekleşen: ${formatDate(row.gerceklesenTarih)} → ${formatDate(updated.gerceklesenTarih)} (otomatik)`);
@@ -536,6 +544,7 @@ async function saveInline() {
   if (isDuplicate(inlineData) && !confirm(dupMsg(inlineData))) return;
   try {
     applyDurumSideEffects(inlineData);
+    aracGelisUygula(inlineData);   /* 🚛 yeni kayıtta GELDİ seçiliyse geliş damgası */
     const rec = await apiInsert(inlineData);
     addingInline = false; inlineData = null;
     rows = [rec, ...rows];

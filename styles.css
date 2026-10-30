@@ -475,3 +475,15 @@ body.menu-gizli #summary { display: flex !important; }
 .btn-menu-toggle .mt-goster { display: none; }
 body.menu-gizli .btn-menu-toggle .mt-gizle { display: none; }
 body.menu-gizli .btn-menu-toggle .mt-goster { display: inline; }
+
+/* =========================================================
+   7. 🚛 ARAÇ GELİŞ DAMGASI — bekleme satırı (araciGeldi hücresi)
+   Hücrenin altında küçük ikinci satır: "🚛 14:32 → 2s 10dk bekliyor"
+   ========================================================= */
+main .table-wrap td .arac-bekleme {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 1px;
+  white-space: nowrap;
+}

@@ -410,6 +410,7 @@ document.getElementById("btnSaveForm").addEventListener("click", async () => {
   rec.aciklama = getVal("f-aciklama");
   if (isDuplicate(rec) && !confirm(dupMsg(rec))) return;
   applyDurumSideEffects(rec);
+  aracGelisUygula(rec);   /* 🚛 formda GELDİ seçiliyse geliş damgası */
   try {
     const saved = await apiInsert(rec);
     rows = [saved, ...rows];

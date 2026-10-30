@@ -459,6 +459,8 @@ function toDb(r) {
     comments: Array.isArray(r.comments) ? r.comments : [],
     loadingStartedAt: (r.loadingStartedAt == null) ? null : Number(r.loadingStartedAt),
     loadingEndedAt: (r.loadingEndedAt == null) ? null : Number(r.loadingEndedAt),
+    aracGelisTs: (r.aracGelisTs == null) ? null : Number(r.aracGelisTs),
+    aracBeklemeMs: (r.aracBeklemeMs == null) ? null : Number(r.aracBeklemeMs),
     createdBy: r.createdBy || (currentUser ? currentUser.email : ""),
     updatedBy: currentUser ? currentUser.email : "",
     updatedAt: r.updatedAt ?? null
@@ -625,8 +627,55 @@ function applyDurumSideEffects(rec) {
     /* Gecikme snapshot: o an gecikmeliyse gün sayısı kayda yazılır (kronometreye dokunmaz) */
     const raw = gecikmeGunRaw(rec);
     if (raw > 0) rec.gecikmeSon = raw; else rec.gecikmeSon = null;
+    /* 🚛 Araç bekleme snapshot: geliş damgası varsa geliş → tamamlanma arası */
+    rec.aracBeklemeMs = (rec.aracGelisTs && rec.loadingEndedAt && rec.loadingEndedAt > rec.aracGelisTs)
+      ? rec.loadingEndedAt - rec.aracGelisTs : null;
   }
   return rec;
+}
+
+/* ================= 🚛 Araç geliş damgası & bekleme ================= */
+/* Damga yalnızca araciGeldi GEÇİŞ çağrılarında basılır (depo.js commitCell,
+   işlem kartı "Araç Geldi", form/inline ekleme). applyDurumSideEffects içine
+   konmadı — eski GELDİ kayıtlarında durum düzenlemesi yanlışlıkla "şimdi"
+   damgası basmasın diye bilinçli tercih. */
+function aracGelisUygula(rec, eskiDeger) {
+  if (rec.araciGeldi === "GELDİ") {
+    if (!rec.aracGelisTs) rec.aracGelisTs = Date.now();
+  } else if (eskiDeger === "GELDİ" && rec.araciGeldi !== "GELDİ") {
+    rec.aracGelisTs = null;
+    rec.aracBeklemeMs = null;
+  }
+  return rec;
+}
+/* Bekleme süresi (ms): tamamlanmışsa kayıtlı snapshot (yoksa hesap),
+   sürüyorsa geliş saatinden bu yana canlı hesap */
+function aracBeklemeMs(r) {
+  const gelis = Number(r.aracGelisTs) || null;
+  if (r.durum === "Yükleme Tamamlandı") {
+    if (r.aracBeklemeMs != null) return Number(r.aracBeklemeMs);
+    const bitis = Number(r.loadingEndedAt) || null;
+    return (gelis && bitis && bitis > gelis) ? bitis - gelis : null;
+  }
+  return gelis ? Math.max(0, Date.now() - gelis) : null;
+}
+/* Kısa geliş gösterimi: bugünse sadece saat, önceki günse gün+saat */
+function aracGelisKisa(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  return (isoFromDate(d) === todayISO()) ? fmtTime(ts)
+    : `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)} ${fmtTime(ts)}`;
+}
+/* araciGeldi hücresinin ikinci satırı: geliş saati + bekleme süresi */
+function aracBeklemeHtml(r) {
+  if (r.araciGeldi !== "GELDİ") return "";
+  const bek = aracBeklemeMs(r);
+  if (bek == null) return "";
+  const bitti = r.durum === "Yükleme Tamamlandı";
+  return `<div class="arac-bekleme" title="${bitti
+    ? "Araç geliş → yükleme tamamlandı arası bekleme süresi"
+    : "Araç geliş saatinden bu yana geçen süre (canlı)"}">` +
+    `${bitti ? "⏳" : "🚛"} ${aracGelisKisa(r.aracGelisTs)} → ${fmtSure(bek)}${bitti ? " bekleme" : " bekliyor"}</div>`;
 }
 
 /* ================= 👷 Kapasite ayarları ================= */
@@ -814,6 +863,10 @@ function diffRows(prev, next) {
     else if (!eski.toplamaBittiTs && r.toplamaBittiTs)
       events.push({ ts: Date.now(), musteri: r.musteri, olay: "tp-bitti", kim: shortUser(yapan),
         detay: fmtTime(r.toplamaBittiTs) + " · " + fmtSure(r.toplamaBittiTs - (r.toplamaBasTs || eski.toplamaBasTs || r.toplamaBittiTs)) });
+    /* 🚛 Başka kullanıcı araç geldi işaretlediyse bildir */
+    if (!eski.aracGelisTs && r.aracGelisTs)
+      events.push({ ts: Date.now(), musteri: r.musteri, olay: "arac-geldi", kim: shortUser(yapan),
+        detay: fmtTime(r.aracGelisTs) + "'da geldi" });
     if (eski.durum !== r.durum) {
       if (r.durum === "Yükleniyor")
         events.push({ ts: Date.now(), musteri: r.musteri, olay: "basladi", kim: shortUser(yapan),
@@ -848,7 +901,8 @@ async function load(withSpinner = true, live = false) {
       /* 🔔 Diğer kullanıcıların işlemleri — toast + ding */
       (d.events || []).forEach(ev => {
         const ikon = { "tp-basla": "📦 başlattı", "tp-bitti": "📦 bitirdi",
-                       "basladi": "▶️ yüklemeye başladı", "bitti": "✅ tamamladı", "yorum": "💬 yorum ekledi" }[ev.olay] || "";
+                       "basladi": "▶️ yüklemeye başladı", "bitti": "✅ tamamladı", "yorum": "💬 yorum ekledi",
+                       "arac-geldi": "🚛 araç geldi" }[ev.olay] || "";
                 /* 🔔 Bildirim — ekran ortası, 5 sn */
         centerNotify(`🔔 <b>${esc(ev.kim)}</b> · ${esc(ev.musteri)}:<br>${ikon}${ev.detay ? " — " + esc(ev.detay) : ""}`, 10000);
         bildirimDing();

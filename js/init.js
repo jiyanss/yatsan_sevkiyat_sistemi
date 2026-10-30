@@ -613,7 +613,7 @@ function renderIslem() {
     <div class="islem-info">
       <div><span>Reel Plan:</span> <b>${formatDate(gecikmeTarihi(r))}</b></div>
       <div><span>Durum:</span> <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></div>
-      <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b></div>
+      <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b>${r.araciGeldi === "GELDİ" && r.aracGelisTs ? `<span style="opacity:.8"> · 🚛 ${aracGelisKisa(r.aracGelisTs)}${aracBeklemeMs(r) != null ? ` · ${r.durum === "Yükleme Tamamlandı" ? "⏳ " + fmtSure(aracBeklemeMs(r)) + " bekleme" : fmtSure(aracBeklemeMs(r)) + " bekliyor"}` : ""}</span>` : ""}</div>
       <div><span>Açıklama:</span> ${r.aciklama ? esc(r.aciklama) : "-"}</div>
     </div>
     ${r.ekip && ekipler[r.ekip] ? `<div style="margin:6px 0">${ekipChipHtml(r.ekip)}</div>` : ""}
@@ -645,6 +645,7 @@ async function islemAction(action, idOverride = null) {
   if (action === "geldi") {
     if (row.araciGeldi === "GELDİ") { showToast("ℹ️ Araç zaten 'Geldi' işaretli."); return; }
     updated.araciGeldi = "GELDİ";
+    updated.aracGelisTs = Date.now();   /* 🚛 geliş damgası */
     etiket = "araç geldi";
   } else if (action === "baslat") {
     if (row.durum === "Yükleniyor") { showToast("ℹ️ Kronometre zaten çalışıyor."); return; }
@@ -896,7 +897,7 @@ async function renderOpCard(scrollToIt = false) {
       <div class="op-info">
         <div><span>Reel Plan:</span> <b>${formatDate(gecikmeTarihi(r))}</b></div>
         <div><span>Durum:</span> <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></div>
-        <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b></div>
+        <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b>${r.araciGeldi === "GELDİ" && r.aracGelisTs ? `<span style="opacity:.8"> · 🚛 ${aracGelisKisa(r.aracGelisTs)}${aracBeklemeMs(r) != null ? ` · ${r.durum === "Yükleme Tamamlandı" ? "⏳ " + fmtSure(aracBeklemeMs(r)) + " bekleme" : fmtSure(aracBeklemeMs(r)) + " bekliyor"}` : ""}</span>` : ""}</div>
         <div><span>Açıklama:</span> ${r.aciklama ? esc(r.aciklama) : "-"}</div>
       </div>
       ${r.ekip && ekipler[r.ekip] ? `<div style="margin:6px 0">${ekipChipHtml(r.ekip)}</div>` : ""}
