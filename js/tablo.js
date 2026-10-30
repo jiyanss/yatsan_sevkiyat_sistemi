@@ -1,8 +1,20 @@
 /* ============================================================
    ⏱️ SÜRE PERFORMANS SEKMESİ
    ============================================================ */
+/* 🚛 GELİŞ KAYIT GENİŞLETME: bekleme analizi artık yalnız geliş→tamamlanma
+   değil, 📦 toplama (başlangıç→bitiş) ve ▶️ yükleme başlangıcı damgalarını da
+   rapora taşır. "Toplama bitti ama yükleme hâlâ sürüyor" araçlar bekleyen
+   tablosunda tüm bu zincirle görünür. */
+function toplamaHucresi(r) {
+  if (!r.toplamaBasTs) return `<span class="muted">—</span>`;
+  if (r.toplamaBittiTs) {
+    const dk = Math.max(0, Math.round((r.toplamaBittiTs - r.toplamaBasTs) / 60000));
+    return `<span style="color:var(--green);font-weight:600">📦 ${fmtTime(r.toplamaBasTs)} → ${fmtTime(r.toplamaBittiTs)}</span><div class="muted" style="font-size:9.5px">süre ${fmtSure(r.toplamaBittiTs - r.toplamaBasTs)} · ${dk} dk</div>`;
+  }
+  return `<span style="color:var(--amber);font-weight:700">📦 sürüyor</span><div class="muted" style="font-size:9.5px">${fmtTime(r.toplamaBasTs)}'dan beri</div>`;
+}
 /* 🚛 Araç bekleme analizi: geliş damgalı kayıtlar — tamamlananlar
-   (geliş → tamamlanma arası) ve hâlâ bekleyen araçlar */
+   (geliş → tamamlanma arası) ve hâlâ bekleyen/süren araçlar */
 function aracBeklemeAnaliz(list) {
   const tamamlanan = [], bekleyen = [];
   list.forEach(r => {
@@ -25,15 +37,21 @@ function aracBeklemeTablo(ab) {
   const satirlar = ab.tamamlanan.slice().sort((a, b) => b.bek - a.bek).slice(0, 15).map(x =>
     `<tr><td class="strong">${esc(x.r.musteri)}</td><td class="center">${esc(x.r.blm)}</td>
      <td class="center">${fmtDateTime(x.r.aracGelisTs)}</td>
+     <td class="center">${toplamaHucresi(x.r)}</td>
      <td class="center">${x.r.loadingEndedAt ? fmtDateTime(x.r.loadingEndedAt) : "-"}</td>
      <td class="center" style="${x.bek >= 2 * 3600000 ? "color:var(--red);font-weight:700" : "color:var(--green)"}">${fmtSure(x.bek)}</td></tr>`).join("");
-  const bekleyenSatirlar = ab.bekleyen.slice().sort((a, b) => b.bek - a.bek).slice(0, 10).map(x =>
-    `<tr><td class="strong">${esc(x.r.musteri)}</td><td class="center">${esc(x.r.blm)}</td>
+  const bekKesit = ab.bekleyen.slice().sort((a, b) => b.bek - a.bek);
+  const bekKalan = bekKesit.length - 15;
+  const bekleyenSatirlar = bekKesit.slice(0, 15).map(x => {
+    const yuklemede = x.r.durum === "Yükleniyor" && x.r.loadingStartedAt;
+    return `<tr><td class="strong">${esc(x.r.musteri)}</td><td class="center">${esc(x.r.blm)}</td>
      <td class="center">${fmtDateTime(x.r.aracGelisTs)}</td>
-     <td class="center">—</td>
-     <td class="center" style="color:var(--amber);font-weight:700">${fmtSure(x.bek)}</td></tr>`).join("");
+     <td class="center">${toplamaHucresi(x.r)}</td>
+     <td class="center">${yuklemede ? `<span style="color:var(--primary);font-weight:600">▶️ sürüyor</span><div class="muted" style="font-size:9.5px">${fmtTime(x.r.loadingStartedAt)}'da başladı</div>` : `<span class="muted">—</span>`}</td>
+     <td class="center" style="color:var(--amber);font-weight:700">${fmtSure(x.bek)}</td></tr>`;
+  }).join("");
   return `<div class="rpt"><h3>🚛 Araç bekleme süresi (geliş → tamamlanma)</h3>
-    <p class="hint">Araç geldiği an damgalanır; yükleme tamamlanınca aradaki süre kayda yazılır. ${ab.n ? "Kırmızılar 2 saati aşan beklemeler. " : ""}Şu an bekleyen araçlar ayrı tabloda canlı takip edilir.</p>
+    <p class="hint">Araç geldiği an damgalanır; yükleme tamamlanınca aradaki süre kayda yazılır. 📦 Toplama kolonu depodaki malzeme hazırlığını (başlangıç → bitiş) gösterir — "toplama bitti, yükleme sürüyor" araçlar alttaki canlı tabloda tüm zincirle izlenir. ${ab.n ? "Kırmızılar 2 saati aşan beklemeler." : ""}</p>
     ${ab.n ? `<div class="kpi-grid" style="margin:10px 0">
       <div class="kpi c-primary"><div class="kpi-head">🚛 Analiz edilen araç</div><div class="kpi-val">${ab.n}</div><div class="kpi-sub">geliş + tamamlanma verisi olan kayıt</div></div>
       <div class="kpi c-green"><div class="kpi-head">⏳ Ortalama bekleme</div><div class="kpi-val">${fmtSure(ab.ort)}</div><div class="kpi-sub">tüm tamamlanan yüklemeler</div></div>
@@ -41,13 +59,13 @@ function aracBeklemeTablo(ab) {
       <div class="kpi c-amber"><div class="kpi-head">👀 Şu an bekleyen</div><div class="kpi-val">${ab.bekleyen.length}</div><div class="kpi-sub">gelmiş ama yüklenmemiş araç</div></div>
     </div>` : ""}
     ${ab.n ? `<div class="table-wrap"><table>
-      <thead><tr><th>Müşteri</th><th>BLM</th><th>Araç gelişi</th><th>Yükleme tamamlandı</th><th>Bekleme</th></tr></thead>
+      <thead><tr><th>Müşteri</th><th>BLM</th><th>Araç gelişi</th><th>📦 Toplama</th><th>Yükleme tamamlandı</th><th>Bekleme</th></tr></thead>
       <tbody>${satirlar}</tbody>
     </table></div>` : ""}
     ${ab.bekleyen.length ? `<div class="table-wrap" style="margin-top:10px"><table>
-      <thead><tr><th>Müşteri</th><th>BLM</th><th>Araç gelişi</th><th>Yükleme</th><th>Şu ana kadar</th></tr></thead>
+      <thead><tr><th>Müşteri</th><th>BLM</th><th>Araç gelişi</th><th>📦 Toplama</th><th>Yükleme</th><th>Şu ana kadar</th></tr></thead>
       <tbody>${bekleyenSatirlar}</tbody>
-    </table></div>` : ""}
+    </table>${bekKalan > 0 ? `<p class="hint" style="margin-top:6px">… ${bekKalan} bekleyen araç daha (en uzun bekleyen 15'i gösterildi).</p>` : ""}</div>` : ""}
   </div>`;
 }
 function buildSure(list) {

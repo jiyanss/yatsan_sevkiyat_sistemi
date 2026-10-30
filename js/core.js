@@ -905,17 +905,33 @@ function diffRows(prev, next) {
 
 function sifirToNull(a, b) { return a; }
 let loadInFlight = false;
+/* 🔁 Atlanan canlı yükleme izi: SSE olayı bir engel yüzünden (yükleme sürüyor,
+   hücre düzenleme, 3 sn yerel işlem penceresi…) düşürüldüyse işaretlenir;
+   engel kalkınca otomatik olarak bir kez daha denenir. Böylece "değişiklik
+   hiç gelmedi" pencereleri kapanır. */
+let canliBekleyen = false;
+let bekleyenTimer = null;
+function canliBekleyenPlanla(ms = 2500) {
+  clearTimeout(bekleyenTimer);
+  bekleyenTimer = setTimeout(() => {
+    bekleyenTimer = null;
+    if (canliBekleyen && !document.hidden) liveReload();
+  }, ms);
+}
 async function load(withSpinner = true, live = false) {
   /* 🛡️ Aynı anda iki yüklem birikmesin: sessiz yüklemeler (SSE/30 sn poll)
-     öncekisi sürerken yeni görev almaz; spinner'lı (zorunlu) yüklemeler her zaman çalışır */
-  if (loadInFlight && !withSpinner) return;
+     öncekisi sürerken yeni görev almaz; spinner'lı (zorunlu) yüklemeler her zaman çalışır.
+     🔁 Atlanan sessiz yükleme düşürülmez — iz bırakılır, sürünün bitmesiyle tekrar denenir. */
+  if (loadInFlight && !withSpinner) { canliBekleyen = true; canliBekleyenPlanla(1200); return; }
   loadInFlight = true;
   const prev = rows;
   loading = withSpinner;
   if (withSpinner) render();
+  let ok = false;
   try {
     rows = await apiList();
-    if (live) console.log("🔔 canlı load:", prev.length, "→", rows.length, "| diff hazırlanıyor");
+    ok = true;
+    if (live) { canliBekleyen = false; console.log("🔔 canlı load:", prev.length, "→", rows.length, "| diff hazırlanıyor"); }
     setSaveError("");
         if (live && prev.length >= 0) {
       const d = diffRows(prev, rows);
@@ -945,11 +961,30 @@ async function load(withSpinner = true, live = false) {
     setSaveError(e.message);
   } finally {
     loadInFlight = false;
+    loading = false;
+    render();
+    if (!document.getElementById("depoOverlay").classList.contains("hidden")) renderDepoContent();
+    if (document.getElementById("opOverlay")) renderOpCard();
+    /* 🔄 Açık işlem kartı canlı tazeleme: yükleme başarılıysa ve kartın kaydı
+       başka kullanıcı tarafından değiştiyse kart yeniden çizilir. Kullanıcı
+       kartın içinde bir alana yazıyorsa bu turda dokunulmaz (yazma kaybolmaz). */
+    if (ok) {
+      try {
+        const isOv = document.getElementById("islemOverlay");
+        if (isOv && !isOv.classList.contains("hidden") && typeof islemId !== "undefined" && islemId != null) {
+          const eski = prev.find(x => x.id === islemId);
+          const yeni = rows.find(x => x.id === islemId);
+          const degisti = !eski || !yeni || JSON.stringify(toDb(eski)) !== JSON.stringify(toDb(yeni));
+          const ae = document.activeElement;
+          const yaziyor = ae && isOv.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+          if (degisti && !yaziyor) renderIslem();
+        }
+      } catch (e2) { console.warn("İşlem kartı tazeleme atlandı:", e2 && e2.message); }
+    }
+    /* 🔁 Bekleyen canlı yükleme: yalnızca BAŞARILI bir yüklemenin ardından
+       tetiklenir — ağ kopuksuz sonsuz deneme döngüsü oluşmaz. */
+    if (ok && canliBekleyen && !document.hidden) canliBekleyenPlanla(600);
   }
-   loading = false;
-  render();
-  if (!document.getElementById("depoOverlay").classList.contains("hidden")) renderDepoContent();
-  if (document.getElementById("opOverlay")) renderOpCard();
 }
 function setSaveError(msg) {
   const el = document.getElementById("saveError");
@@ -964,10 +999,16 @@ function setGuestInfo(msg) {
 
 /* ---------- Canlı senkron (Firebase SSE) ---------- */
 let liveTimer = null;
+/* 🔁 canlı yenileme: artık düşürdüğü olayı unutmuyor — engel geçiciyse (hücre
+   düzenleme, 3 sn yerel işlem penceresi, süren yükleme) kısa bir gecikmeyle
+   otomatik tekrar dener. Böylece depo/operasyon ekranı "bir ara güncellendi"
+   durumuna düşmez. */
 function liveReload() {
-  if (document.hidden || addingInline || editingCell) return;
-  if (Date.now() - lastLocalOp < 3000) return;
-  if (!document.getElementById("importModal").classList.contains("hidden")) return;
+  if (document.hidden) return;   /* sekmeye dönüşte visibilitychange zaten yükler */
+  if (addingInline || editingCell) { canliBekleyen = true; canliBekleyenPlanla(2500); return; }
+  if (Date.now() - lastLocalOp < 3000) { canliBekleyen = true; canliBekleyenPlanla(3500); return; }
+  if (!document.getElementById("importModal").classList.contains("hidden")) { canliBekleyen = true; return; }
+  canliBekleyen = false;
   load(false, true);
 }
 /* 🛡️ SSE düzeltmesi: RTDB frame'leri İSİMLİ olaylarla gelir (event: put / patch /
@@ -1011,17 +1052,19 @@ function startLiveSync() {
     sseYenidenBaglan(15000);
   }
 }
-/* 🛡️ SSE nöbetçisi: 60 sn'de bir kontrol — kapalı ya da 5 dakikadır sessiz
-   bağlantı sessizce tazelenir (keep-alive gelmediği ortamlarda sigorta) */
+/* 🛡️ SSE nöbetçisi: 30 sn'de bir kontrol — kapalı ya da 2 dakikadır sessiz
+   bağlantı sessizce tazelenir. Firebase keep-alive'ları ~30 sn arayla gelir;
+   2 dakikalık sessizlik ölü/yarım-açık bağlantı işaretidir (eski eşik 5 dk —
+   depo tableti gibi cihazlarda çok gecikmeliydi). */
 setInterval(() => {
   if (document.hidden || !window._sse) return;
   const kapali = window._sse.readyState === EventSource.CLOSED;
-  const sessiz = Date.now() - sseSonEtkinlik > 300000;
+  const sessiz = Date.now() - sseSonEtkinlik > 120000;
   if (kapali || sessiz) {
     console.warn("🔔 SSE nöbetçisi: bağlantı tazelendi (" + (kapali ? "kapalıydı" : "sessizdi") + ")");
     sseYenidenBaglan(1000);
   }
-}, 60000);
+}, 30000);
 
 /* ================= Tarih aralığı & filtre ================= */
 function monthBounds(offset) {
@@ -1182,7 +1225,11 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) { sonGizlenme = Date.now(); return; }
   const es = window._sse;
   if (!es || es.readyState === EventSource.CLOSED) sseYenidenBaglan(1000);
-  if (sonGizlenme && Date.now() - sonGizlenme > 30000) liveReload();
+  else if (es.readyState === EventSource.OPEN && Date.now() - sseSonEtkinlik > 120000) sseYenidenBaglan(1000);
+  /* Sekmeye her dönüşte tazele — kısa gizlenmelerde de (30 sn bekleme yok).
+   Uyku/Wi-Fi değişimi sonrası "eski veri ile açılma" kapanır. */
+  liveReload();
+  if (canliBekleyen) canliBekleyenPlanla(300);
 });
 window.addEventListener("online", () => {
   console.info("🌐 Bağlantı geri geldi — veriler tazeleniyor");

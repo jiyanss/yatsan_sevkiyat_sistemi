@@ -3,6 +3,7 @@
    ============================================================ */
 function openDepo() {
   depoTab = "anlik";
+  renderDepoContent._sonSekme = null;   /* her açılışta liste en üstten başlar */
   document.querySelectorAll(".depo-tab").forEach(x => x.classList.toggle("active", x.dataset.dtab === "anlik"));
   document.getElementById("depoOverlay").classList.remove("hidden");
   document.body.classList.add("depo-open");
@@ -78,7 +79,13 @@ function renderDepoContent() {
   document.getElementById("depoDate").textContent =
     `${GUNLER[{ 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[d.getDay()]]} · ${d.getDate()} ${AYLAR[d.getMonth()]} ${d.getFullYear()}`;
   const list = enriched(rows);
+  /* 🖱️ Scroll koruma: veri tazelemesinde liste başına sıçramasın — yalnız sekme
+     değişiminde en üste dönülür. Depo ekranı sürekli yenilenirken kullanıcının
+     yeri bozulmaz ("senkron çalışıyor ama ekran oynuyor" şikayetini keser). */
   const c = document.getElementById("depoContent");
+  const ayniSekme = depoTab === renderDepoContent._sonSekme;
+  const eskiScroll = ayniSekme ? c.scrollTop : 0;
+  renderDepoContent._sonSekme = depoTab;
 
   /* ---- KALAN YÜKLEMELER ---- */
   if (depoTab === "kalan") {
@@ -131,6 +138,7 @@ function renderDepoContent() {
       });
     }
     c.innerHTML = html;
+    c.scrollTop = eskiScroll;
     return;
   }
 
@@ -187,6 +195,7 @@ function renderDepoContent() {
       });
     }
     c.innerHTML = html;
+    c.scrollTop = eskiScroll;
     return;
   }
 
@@ -216,6 +225,7 @@ function renderDepoContent() {
     return depoItem(rr, "d-red", formatDate(dT(r)));
   }).join("") : `<div class="depo-empty">Geciken yükleme yok 🎉</div>`;
   c.innerHTML = html;
+  c.scrollTop = eskiScroll;
 }
 setInterval(() => {
   if (document.getElementById("depoOverlay").classList.contains("hidden")) return;
@@ -227,6 +237,15 @@ setInterval(() => {
   if (depoTab === "yilan") return;   /* oyun açıkken yenileme yok */
   renderDepoContent();
 }, 30000);
+/* 🔁 DEPO HIZLI VERİ TAZELEMESİ (anlık senkron sigortası): depo ekranı açıkken
+   her 10 saniyede sessiz veri çekimi. SSE ölse bile / olay düşse bile ekrandaki
+   verinin en fazla ~10 sn geride kalması garanti edilir. liveReload üzerinden
+   çağrılır — hücre düzenleme/yerel işlem korumaları + bekleyen-yenileme izi aynen işler. */
+setInterval(() => {
+  if (document.getElementById("depoOverlay").classList.contains("hidden") || document.hidden) return;
+  if (depoTab === "yilan") return;
+  if (typeof liveReload === "function") liveReload();
+}, 10000);
 
 /* ================= 💾 Yedekle / Geri Yükle ================= */
 function openBackup() {
