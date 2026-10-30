@@ -130,6 +130,9 @@ document.getElementById("tbody").addEventListener("click", e => {
   if (chip) { gate("musteri-kart", chip.dataset.mchip); return; }
   const causeBtn = e.target.closest("[data-cause]");
   if (causeBtn) { gate("cause", causeBtn.dataset.cause); return; }
+  /* 🚛 Geliş saati düzeltme — hücre editöründen ÖNCE yakalanmalı */
+  const gelisBtn = e.target.closest("[data-gelis]");
+  if (gelisBtn) { gate("gelis-saat", gelisBtn.dataset.gelis); return; }
   if (e.target.closest("input, select, option")) return;
   const tr = e.target.closest("tr[data-rowid]");
   const sureTd = e.target.closest('td[data-col="sure"]');

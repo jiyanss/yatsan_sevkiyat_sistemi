@@ -613,7 +613,7 @@ function renderIslem() {
     <div class="islem-info">
       <div><span>Reel Plan:</span> <b>${formatDate(gecikmeTarihi(r))}</b></div>
       <div><span>Durum:</span> <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></div>
-      <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b>${r.araciGeldi === "GELDİ" && r.aracGelisTs ? `<span style="opacity:.8"> · 🚛 ${aracGelisKisa(r.aracGelisTs)}${aracBeklemeMs(r) != null ? ` · ${r.durum === "Yükleme Tamamlandı" ? "⏳ " + fmtSure(aracBeklemeMs(r)) + " bekleme" : fmtSure(aracBeklemeMs(r)) + " bekliyor"}` : ""}</span>` : ""}</div>
+      <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b>${r.araciGeldi === "GELDİ" && r.aracGelisTs ? `<span style="opacity:.8"> · 🚛 ${aracGelisKisa(r.aracGelisTs)}${aracBeklemeMs(r) != null ? ` · ${r.durum === "Yükleme Tamamlandı" ? "⏳ " + fmtSure(aracBeklemeMs(r)) + " bekleme" : fmtSure(aracBeklemeMs(r)) + " bekliyor"}` : ""}</span>` : ""}${canEdit && r.araciGeldi === "GELDİ" && r.aracGelisTs ? ` <button class="gelis-fix" data-gfix="${r.id}" title="Geliş saatini düzelt">✏️</button>` : ""}</div>
       <div><span>Açıklama:</span> ${r.aciklama ? esc(r.aciklama) : "-"}</div>
     </div>
     ${r.ekip && ekipler[r.ekip] ? `<div style="margin:6px 0">${ekipChipHtml(r.ekip)}</div>` : ""}
@@ -627,6 +627,7 @@ function renderIslem() {
     <button class="btn" id="btnIslemYenile">↻ Yenile</button>
   </div>`;
   c.querySelectorAll("[data-iact]").forEach(btn => btn.addEventListener("click", () => islemAction(btn.dataset.iact)));
+  c.querySelectorAll("[data-gfix]").forEach(btn => btn.addEventListener("click", () => openGelisModal(btn.dataset.gfix)));
   c.querySelector("#btnIslemYenile").addEventListener("click", async () => { await load(false); renderIslem(); });
 }
 async function islemAction(action, idOverride = null) {
@@ -897,7 +898,7 @@ async function renderOpCard(scrollToIt = false) {
       <div class="op-info">
         <div><span>Reel Plan:</span> <b>${formatDate(gecikmeTarihi(r))}</b></div>
         <div><span>Durum:</span> <span class="badge ${durumClass(r.durum)}">${esc(r.durum)}</span></div>
-        <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b>${r.araciGeldi === "GELDİ" && r.aracGelisTs ? `<span style="opacity:.8"> · 🚛 ${aracGelisKisa(r.aracGelisTs)}${aracBeklemeMs(r) != null ? ` · ${r.durum === "Yükleme Tamamlandı" ? "⏳ " + fmtSure(aracBeklemeMs(r)) + " bekleme" : fmtSure(aracBeklemeMs(r)) + " bekliyor"}` : ""}</span>` : ""}</div>
+        <div><span>Araç:</span> <b style="color:${r.araciGeldi === "GELDİ" ? "#34d399" : "#fbbf24"}">${r.araciGeldi === "GELDİ" ? "Geldi" : "Gelmedi"}</b>${r.araciGeldi === "GELDİ" && r.aracGelisTs ? `<span style="opacity:.8"> · 🚛 ${aracGelisKisa(r.aracGelisTs)}${aracBeklemeMs(r) != null ? ` · ${r.durum === "Yükleme Tamamlandı" ? "⏳ " + fmtSure(aracBeklemeMs(r)) + " bekleme" : fmtSure(aracBeklemeMs(r)) + " bekliyor"}` : ""}</span>` : ""}${currentUser && hasPerm("edit") && r.araciGeldi === "GELDİ" && r.aracGelisTs ? ` <button class="gelis-fix" data-gfix="${r.id}" title="Geliş saatini düzelt">✏️</button>` : ""}</div>
         <div><span>Açıklama:</span> ${r.aciklama ? esc(r.aciklama) : "-"}</div>
       </div>
       ${r.ekip && ekipler[r.ekip] ? `<div style="margin:6px 0">${ekipChipHtml(r.ekip)}</div>` : ""}
@@ -923,6 +924,7 @@ async function renderOpCard(scrollToIt = false) {
       if (act === "toplama-basla" || act === "toplama-bitti") toplamaAction(act === "toplama-basla" ? "basla" : "bitti", currentOpId);
       else islemAction(act, currentOpId);
     }));
+  holder.querySelectorAll("[data-gfix]").forEach(btn => btn.addEventListener("click", () => openGelisModal(btn.dataset.gfix)));
   holder.querySelector("#btnOpNot").addEventListener("click", opNotEkle);
   holder.querySelector("#btnOpBack").addEventListener("click", () => {
     currentOpId = null;

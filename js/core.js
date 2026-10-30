@@ -23,7 +23,7 @@ const ADMIN_EMAILS = [
 const PERM_LABELS = { add: "Ekleme", edit: "Düzenleme", duplicate: "Çoğaltma", del: "Silme", imp: "Excel Yükleme" };
 const PERM_MAP = {
   "inline-add": "add", "form-add": "add", "save-inline": "add",
-  "cell-edit": "edit", "sure-edit": "edit", "edit-date": "edit", "comment": "edit", "cause": "edit",
+  "cell-edit": "edit", "sure-edit": "edit", "edit-date": "edit", "comment": "edit", "cause": "edit", "gelis-saat": "edit",
   "duplicate": "duplicate",
   "delete": "del",
   "import": "imp", "do-import": "imp"
@@ -648,6 +648,23 @@ function aracGelisUygula(rec, eskiDeger) {
   }
   return rec;
 }
+/* 🚛 Geliş saati düzeltme: damga elle düzeltilir; tamamlanmış kayıtta bekleme
+   snapshot'ı yeni damgaya göre tazelenir (süren kayıtta zaten canlı hesap) */
+function aracGelisDuzelt(rec, yeniTs) {
+  if (rec.araciGeldi !== "GELDİ" || !yeniTs) return rec;
+  rec.aracGelisTs = yeniTs;
+  if (rec.durum === "Yükleme Tamamlandı") {
+    rec.aracBeklemeMs = (rec.loadingEndedAt && rec.loadingEndedAt > yeniTs)
+      ? rec.loadingEndedAt - yeniTs : null;
+  }
+  return rec;
+}
+/* datetime-local giriş değeri: yerel saat "YYYY-MM-DDTHH:MM" */
+function tsToInputVal(ts) {
+  const d = new Date(Number(ts));
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
 /* Bekleme süresi (ms): tamamlanmışsa kayıtlı snapshot (yoksa hesap),
    sürüyorsa geliş saatinden bu yana canlı hesap */
 function aracBeklemeMs(r) {
@@ -666,16 +683,21 @@ function aracGelisKisa(ts) {
   return (isoFromDate(d) === todayISO()) ? fmtTime(ts)
     : `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)} ${fmtTime(ts)}`;
 }
-/* araciGeldi hücresinin ikinci satırı: geliş saati + bekleme süresi */
+/* araciGeldi hücresinin ikinci satırı: geliş saati + bekleme süresi (+ ✏️ düzeltme) */
 function aracBeklemeHtml(r) {
-  if (r.araciGeldi !== "GELDİ") return "";
+  if (r.araciGeldi !== "GELDİ" || !r.aracGelisTs) return "";
   const bek = aracBeklemeMs(r);
-  if (bek == null) return "";
   const bitti = r.durum === "Yükleme Tamamlandı";
-  return `<div class="arac-bekleme" title="${bitti
-    ? "Araç geliş → yükleme tamamlandı arası bekleme süresi"
-    : "Araç geliş saatinden bu yana geçen süre (canlı)"}">` +
-    `${bitti ? "⏳" : "🚛"} ${aracGelisKisa(r.aracGelisTs)} → ${fmtSure(bek)}${bitti ? " bekleme" : " bekliyor"}</div>`;
+  const zaman = aracGelisKisa(r.aracGelisTs);
+  const metin = bek != null
+    ? `${bitti ? "⏳" : "🚛"} ${zaman} → ${fmtSure(bek)}${bitti ? " bekleme" : " bekliyor"}`
+    : `🚛 ${zaman} (bekleme verisi yok)`;
+  const tip = bek != null
+    ? (bitti ? "Araç geliş → yükleme tamamlandı arası bekleme süresi"
+             : "Araç geliş saatinden bu yana geçen süre (canlı)")
+    : "Araç geliş saati — bekleme verisi yok, ✏️ ile saati düzeltin";
+  return `<div class="arac-bekleme" title="${tip}">${metin}${r._arsiv ? "" :
+    ` <button class="cause-btn gelis-btn" data-gelis="${r.id}" title="Geliş saatini düzelt">✏️</button>`}</div>`;
 }
 
 /* ================= 👷 Kapasite ayarları ================= */

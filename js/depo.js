@@ -517,6 +517,7 @@ function runAction({ type, param }) {
     case "cell-edit":   openCellEditor(param.td, param.id, param.field); break;
     case "duplicate":   duplicateRow(param); break;
     case "comments":    openComments(param); break;    case "cause":       openCauseModal(param); break;
+    case "gelis-saat":  openGelisModal(param); break;
     case "sure-edit":   openSureEdit(param); break;
     case "edit-date":   changeDate(param.id, param.tarih); break;
     case "musteri-kart": openMusteriKart(param); break;
@@ -889,6 +890,63 @@ function openCauseModal(id) {
       modal.remove();
       await apiLog("guncelleme", row.id, row.musteri, "gecikme nedeni kaldırıldı");
       showToast("🗑️ Neden kaldırıldı.");
+    } catch (e) { setSaveError(e.message); }
+  });
+}
+/* ============================================================
+   🚛 GELİŞ SAATİ DÜZELTME
+   "GELDİ" damgası işaretleme anında basılır (Date.now()); geç/erken
+   işaretlemede gerçek saat buradan düzeltilir, bekleme verisi tazelenir.
+   ============================================================ */
+function openGelisModal(id) {
+  const row = rows.find(r => r.id === id);
+  if (!row || row._arsiv) return;
+  if (row.araciGeldi !== "GELDİ") { alert("Bu kayıtta araç 'GELDİ' işaretli değil — damga yalnız GELDİ kayıtlarında düzeltilebilir."); return; }
+  if (!row.aracGelisTs) { alert("Bu kayıtta geliş damgası yok (eski kayıt). Aracı GELDİ işaretleyin, damga o an basılır."); return; }
+  const bitti = row.durum === "Yükleme Tamamlandı";
+  const modal = document.createElement("div");
+  modal.className = "modal-bg";
+  modal.style.zIndex = "75";
+  modal.innerHTML = `<div class="modal">
+    <h2>🚛 Geliş Saatini Düzelt</h2>
+    <p class="hint"><b>${esc(row.musteri)}</b> · ${esc(row.sevkiyatTipi || "-")} · ${esc(row.durum)}</p>
+    <p class="hint">Damgalanan geliş: <b>${fmtDateTime(row.aracGelisTs)}</b>${bitti && row.loadingEndedAt ? `<br />Yükleme tamamlandı: ${fmtDateTime(row.loadingEndedAt)}` : ""}</p>
+    <input type="datetime-local" id="gelisInput" class="cell-input" style="width:100%" value="${tsToInputVal(row.aracGelisTs)}" />
+    <p class="hint" style="margin-top:6px">Gerçek geliş saati buradan düzeltilir; bekleme süresi yeni saate göre yeniden hesaplanır ve değişiklik Geçmiş'e işlenir.</p>
+    <div class="modal-actions">
+      <button class="btn" id="btnGelisNow" title="Damgayı şu ana çek">Şimdi</button>
+      <button class="btn primary" id="btnGelisSave">Kaydet</button>
+    </div>
+  </div>`;
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+  modal.querySelector("#btnGelisNow").addEventListener("click", () => {
+    modal.querySelector("#gelisInput").value = tsToInputVal(Date.now());
+  });
+  modal.querySelector("#btnGelisSave").addEventListener("click", async () => {
+    const v = modal.querySelector("#gelisInput").value;
+    if (!v) { alert("Tarih ve saat seçin."); return; }
+    const yeni = new Date(v).getTime();
+    if (!yeni) { alert("Geçersiz tarih/saat."); return; }
+    if (yeni > Date.now() + 60000) { alert("Geliş saati gelecekte olamaz — araç henüz gelmemişse 'HAYIR' yapın, gelince GELDİ işaretleyin."); return; }
+    if (bitti && row.loadingEndedAt && yeni > row.loadingEndedAt) {
+      alert("Geliş saati, yükleme tamamlandı saatinden ÖNCE olmalı (tamamlanma: " + fmtDateTime(row.loadingEndedAt) + ").");
+      return;
+    }
+    const eski = row.aracGelisTs;
+    if (yeni === eski) { modal.remove(); return; }
+    try {
+      const saved = await apiUpdate(row.id, aracGelisDuzelt({ ...row }, yeni));
+      rows = rows.map(r => r.id === row.id ? saved : r);
+      setSaveError("");
+      render();
+      const isOv = document.getElementById("islemOverlay");
+      if (isOv && !isOv.classList.contains("hidden")) renderIslem();
+      if (document.getElementById("opOverlay")) renderOpCard();
+      modal.remove();
+      const ek = saved.aracBeklemeMs != null ? ` · bekleme: ${fmtSure(saved.aracBeklemeMs)}` : "";
+      await apiLog("guncelleme", row.id, row.musteri, `araç geliş saati düzeltildi: ${fmtDateTime(eski)} → ${fmtDateTime(yeni)}${ek}`);
+      showToast(`✅ Geliş saati düzeltildi: ${aracGelisKisa(yeni)}${saved.aracBeklemeMs != null ? " · bekleme " + fmtSure(saved.aracBeklemeMs) : ""}`);
     } catch (e) { setSaveError(e.message); }
   });
 }

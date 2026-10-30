@@ -487,3 +487,11 @@ main .table-wrap td .arac-bekleme {
   margin-top: 1px;
   white-space: nowrap;
 }
+/* Geliş saati düzeltme düğmesi — bekleme satırının sonu (✏️) */
+main .table-wrap td .arac-bekleme .gelis-btn { margin-left: 4px; font-size: 9px; }
+/* İşlem kartı / operasyon kartındaki ✏️ (Araç satırı) */
+.gelis-fix {
+  background: none; border: none; cursor: pointer; padding: 0 2px;
+  font-size: 11px; color: var(--amber); vertical-align: middle;
+}
+.gelis-fix:hover { color: var(--red); }
