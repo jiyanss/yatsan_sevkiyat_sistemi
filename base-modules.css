@@ -775,8 +775,10 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 /* ═══ Depo — tek satır başlık + yatay mini dashboard ═══ */
 .depo-overlay { padding: 12px 16px 40px; }
 .depo-head { display:flex; align-items:center; gap:12px; flex-wrap:nowrap; margin-bottom:10px; }
-.depo-clock { font-size:28px; font-weight:800; letter-spacing:-0.02em; color:#818cf8; white-space:nowrap; }
-.depo-date { font-size:12px; color:#8aa0b8; margin:0; white-space:nowrap; }
+/* ⏱ Saat+tarih aynı kümede — space-between başlığı ikiye böler ama tarihi saatten ayıramaz */
+.depo-saatkutu { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.depo-clock { font-size:40px; font-weight:800; letter-spacing:-0.02em; color:#818cf8; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.depo-date { font-size:14px; color:#8aa0b8; margin:0; white-space:nowrap; }
 .depo-head .depo-tabs { align-items:center; }
 .depo-head .depo-tabs .btn { padding:10px 16px; font-size:14px; font-weight:700; border-radius:10px; }
 .depo-right { min-width:0; }
@@ -800,8 +802,11 @@ tr.oh-eksik:hover td { background: var(--red-soft); filter: brightness(.96); }
 .di-main { min-width:0; flex:1; }
 .di-top { display:flex; align-items:baseline; gap:10px; overflow:hidden; }
 .di-sub { font-size:12px; color:#8aa0b8; white-space:nowrap; }
-.di-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.di-chips { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:4px; }
 .di-chip { font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; white-space:nowrap; }
+/* 🚛 Geldi etiketi — altında geliş saati olan iki satırlı chip */
+.di-chip.di-geldi { display:inline-flex; flex-direction:column; align-items:center; gap:1px; padding:2px 11px; vertical-align:middle; }
+.di-geldi .dg-saat { font-size:9.5px; font-weight:700; opacity:.85; }
 .di-ok { background:#0d2b22; color:#34d399; border:1px solid #14532d; }
 .di-warn { background:#2d2410; color:#fbbf24; border:1px solid #78350f; }
 .di-bad { background:#31151a; color:#f87171; border:1px solid #7f1d1d; }
@@ -904,8 +909,8 @@ html, body { overflow-x: hidden; }
 /* ═══ Depo — mobil düzen (≤1100px) ═══ */
 @media (max-width: 1100px) {
   .depo-head { flex-wrap: wrap; gap: 10px; }
-  .depo-clock { font-size: 24px; }
-  .depo-date  { font-size: 11px; }
+  .depo-clock { font-size: 30px; }
+  .depo-date  { font-size: 12px; }
   .depo-head .depo-tabs { flex-wrap: wrap; flex: 1 1 100%; }
   .depo-head .depo-tabs .btn { padding: 9px 14px; font-size: 13px; }
   .depo-right { width: 100%; justify-content: flex-start; }

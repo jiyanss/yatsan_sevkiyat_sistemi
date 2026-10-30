@@ -32,6 +32,12 @@ function depoCmtLine(r) {
   const son5 = l.slice(-5);
   return `<div class="d-cmt">💬 ${son5.map(c => esc(c.text)).join(", ")}</div>`;
 }
+/* 🚛 Geldi etiketi — altında araç geliş saati (bugünse saat, önceki günse gün+saat) */
+function geldiChipHtml(r) {
+  if (r.araciGeldi !== "GELDİ") return "";
+  const alt = r.aracGelisTs ? `<span class="dg-saat">⏰ ${aracGelisKisa(r.aracGelisTs)}</span>` : "";
+  return `<span class="di-chip di-ok di-geldi">🚛 Geldi${alt}</span>`;
+}
 function depoItem(r, cls, extra) {
   const b = sureBilgi(r);
   const c = [];
@@ -40,7 +46,7 @@ function depoItem(r, cls, extra) {
     c.push(`<span class="di-chip di-ok">📦 ${fmtTime(r.toplamaBasTs)}→${fmtTime(r.toplamaBittiTs)} · ${fmtSure(r.toplamaBittiTs - r.toplamaBasTs)}</span>`);
   else if (r.toplamaBasTs)
     c.push(`<span class="di-chip di-warn">📦 sürüyor · ${fmtTime(r.toplamaBasTs)}'dan</span>`);
-  c.push(r.araciGeldi === "GELDİ" ? `<span class="di-chip di-ok">🚛 Geldi</span>` : `<span class="di-chip di-warn">🚛 Gelmedi</span>`);
+  c.push(r.araciGeldi === "GELDİ" ? geldiChipHtml(r) : `<span class="di-chip di-warn">🚛 Gelmedi</span>`);
   if (b.durum === "live")
     c.push(`<span class="di-chip ${b.asim ? "di-bad" : "di-warn"}">⏱ ${fmtSure(b.gecenMs)}${b.asim ? ` · ${b.asimDk}dk AŞIM` : ` / ${b.sureDk}dk · %${b.yuzde}`}</span>`);
   else if (b.durum === "done")
@@ -75,7 +81,7 @@ function renderDepoContent() {
   const today = todayISO();
   const d = new Date();
   const dT = r => r.reelPlan || r.planlananTarih || "";
-  document.getElementById("depoClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  document.getElementById("depoClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
   document.getElementById("depoDate").textContent =
     `${GUNLER[{ 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }[d.getDay()]]} · ${d.getDate()} ${AYLAR[d.getMonth()]} ${d.getFullYear()}`;
   const list = enriched(rows);
@@ -120,7 +126,7 @@ function renderDepoContent() {
           const chips = [
             ekipler[r.ekip] ? ekipChipHtml(r.ekip) : "",
             tpTxt, sureTxt,
-            r.araciGeldi === "GELDİ" ? `<span class="di-chip di-ok">🚛 Geldi</span>` : (r.araciGeldi ? `<span class="di-chip di-warn">🚛 Gelmedi</span>` : "")
+            r.araciGeldi === "GELDİ" ? geldiChipHtml(r) : (r.araciGeldi ? `<span class="di-chip di-warn">🚛 Gelmedi</span>` : "")
           ].filter(Boolean).join(" ");
           return `<div class="depo-week-row" style="flex-wrap:wrap">
             <div class="w-m" style="min-width:260px"><b style="font-size:16px">${esc(r.musteri)}</b>
@@ -176,7 +182,7 @@ function renderDepoContent() {
             r.toplamaBasTs && r.toplamaBittiTs
               ? `<span class="di-chip di-ok">📦 ${fmtTime(r.toplamaBasTs)}→${fmtTime(r.toplamaBittiTs)} · ${fmtSure(r.toplamaBittiTs - r.toplamaBasTs)}</span>` : "",
             sureTxt,
-            r.araciGeldi === "GELDİ" ? `<span class="di-chip di-ok">🚛 Geldi</span>`
+            r.araciGeldi === "GELDİ" ? geldiChipHtml(r)
               : (r.araciGeldi ? `<span class="di-chip di-warn">🚛 Gelmedi</span>` : "")
           ].filter(Boolean).join(" ");
           return `<div class="depo-week-row" style="flex-wrap:wrap">
@@ -230,7 +236,7 @@ function renderDepoContent() {
 setInterval(() => {
   if (document.getElementById("depoOverlay").classList.contains("hidden")) return;
   const d = new Date();
-  document.getElementById("depoClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  document.getElementById("depoClock").textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }, 1000);
 setInterval(() => {
   if (document.getElementById("depoOverlay").classList.contains("hidden") || document.hidden) return;
