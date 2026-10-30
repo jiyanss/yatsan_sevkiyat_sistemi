@@ -1209,3 +1209,135 @@ body.fit-table td:last-child {
   padding: 2px 2px !important;
   width: 1%; /* Son kolonu sadece buton kadar daraltır */
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   🚪 GİRİŞ EKRANI — tam ekran giriş kapısı (js/giris-ekrani.js)
+   Oturum yoksa açılışta gösterilir; giriş / misafir ile geçilir.
+   ═══════════════════════════════════════════════════════════════ */
+.ge-ekran {
+  position: fixed; inset: 0; z-index: 96;          /* login modal(95) üstü, toast(97) altı */
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; padding: 24px 16px; overflow-y: auto;
+  background: #070d18;
+}
+.ge-uzay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.ge-uzay::after {                                   /* kenarlarda karartma (vignette) */
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 42%, transparent 0%, rgba(4,8,16,.6) 80%);
+}
+.ge-bulut { position: absolute; border-radius: 50%; filter: blur(95px); opacity: .38; will-change: transform; }
+.ge-b1 { width: 480px; height: 480px; left: -120px; top: -140px; background: #4f46e5; animation: geUcus1 26s ease-in-out infinite alternate; }
+.ge-b2 { width: 420px; height: 420px; right: -110px; top: 8%;   background: #c026d3; animation: geUcus2 32s ease-in-out infinite alternate; }
+.ge-b3 { width: 520px; height: 520px; left: 30%; bottom: -260px; background: #0ea5e9; opacity: .3; animation: geUcus3 38s ease-in-out infinite alternate; }
+@keyframes geUcus1 { to { transform: translate(90px, 70px) scale(1.15); } }
+@keyframes geUcus2 { to { transform: translate(-80px, 90px) scale(1.22); } }
+@keyframes geUcus3 { to { transform: translate(-120px, -60px) scale(1.1); } }
+.ge-yildiz { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #c7d2fe; opacity: .5; animation: gePiril 3.4s ease-in-out infinite; }
+@keyframes gePiril { 0%, 100% { opacity: .12; transform: scale(.7); } 50% { opacity: .9; transform: scale(1.25); } }
+
+.ge-kart {
+  position: relative; width: min(420px, 100%);
+  background: rgba(13,21,38,.78);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(129,140,248,.24);
+  border-radius: 22px; padding: 34px 30px 28px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+  text-align: center;
+  animation: geGiris .6s cubic-bezier(.22,1,.36,1) both;
+}
+.ge-kart > * { animation: geGiris .55s cubic-bezier(.22,1,.36,1) both; }
+.ge-logo { animation-delay: .05s; } .ge-baslik { animation-delay: .11s; }
+.ge-alt { animation-delay: .17s; }  .ge-hata  { animation-delay: .2s; }
+.ge-alan:nth-of-type(1) { animation-delay: .22s; }
+.ge-alan:nth-of-type(2) { animation-delay: .27s; }
+.ge-buton { animation-delay: .32s; }
+.ge-ayrac { animation-delay: .37s; }
+.ge-misafir { animation-delay: .41s; }
+@keyframes geGiris { from { opacity: 0; transform: translateY(18px) scale(.965); } }
+
+.ge-logo {
+  width: 66px; height: 66px; margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; border-radius: 50%; position: relative;
+  background: #0d1626;
+}
+.ge-logo::before {                                  /* dönen gradyan halka (maskeli — merkez saydam) */
+  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  background: conic-gradient(from 0deg, #4f46e5, #c026d3, #0ea5e9, #4f46e5);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+  animation: geDon 5s linear infinite;
+}
+@keyframes geDon { to { transform: rotate(360deg); } }
+
+.ge-baslik { margin: 0 0 6px; font-size: 26px; font-weight: 800; color: #f1f5f9; letter-spacing: -.01em; }
+.ge-baslik span {
+  background: linear-gradient(90deg, #818cf8, #e879f9);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.ge-alt { margin: 0 0 20px; font-size: 13px; color: #8aa0b8; line-height: 1.5; }
+
+.ge-hata {
+  background: rgba(248,113,113,.1); border: 1px solid #7f1d1d; color: #fca5a5;
+  font-size: 13px; border-radius: 10px; padding: 9px 12px; margin-bottom: 14px; text-align: left;
+}
+
+.ge-alan { display: block; text-align: left; margin-bottom: 14px; }
+.ge-alan > span { display: block; font-size: 12px; font-weight: 700; color: #8aa0b8; margin-bottom: 6px; letter-spacing: .02em; }
+.ge-alan input {
+  width: 100%; box-sizing: border-box; background: #0c1526; border: 1px solid #2b3a52;
+  color: #f1f5f9; border-radius: 12px; padding: 12px 14px; font-size: 16px; /* 16px: iOS odak zoom'unu engeller */
+  font-family: inherit; outline: none; transition: border-color .18s, box-shadow .18s;
+}
+.ge-alan input::placeholder { color: #4b5c74; }
+.ge-alan input:focus { border-color: #818cf8; box-shadow: 0 0 0 4px rgba(99,102,241,.18); }
+.ge-sifrekutu { position: relative; display: block; }
+.ge-sifrekutu input { padding-right: 46px; }
+.ge-goz {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  background: transparent; border: none; font-size: 17px; cursor: pointer; padding: 6px; opacity: .7;
+}
+.ge-goz:hover { opacity: 1; }
+
+.ge-buton {
+  width: 100%; min-height: 48px; border: none; border-radius: 12px; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 800; color: #fff; letter-spacing: .02em;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #a21caf 100%);
+  box-shadow: 0 10px 26px rgba(79,70,229,.38), inset 0 1px 0 rgba(255,255,255,.18);
+  display: flex; align-items: center; justify-content: center; position: relative; margin-top: 4px;
+  transition: transform .15s, box-shadow .2s, filter .2s;
+}
+.ge-buton:hover { transform: translateY(-1px); box-shadow: 0 14px 32px rgba(79,70,229,.5), inset 0 1px 0 rgba(255,255,255,.18); filter: brightness(1.06); }
+.ge-buton:active { transform: translateY(0) scale(.985); }
+.ge-buton:disabled { opacity: .65; cursor: default; transform: none; }
+.ge-buton.ge-yukleniyor::after {
+  content: ""; width: 16px; height: 16px; margin-left: 10px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; animation: geDon2 .7s linear infinite;
+}
+@keyframes geDon2 { to { transform: rotate(360deg); } }
+
+.ge-ayrac { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px; color: #5b6b82; font-size: 12px; font-weight: 700; }
+.ge-ayrac::before, .ge-ayrac::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #2b3a52, transparent); }
+.ge-misafir {
+  width: 100%; background: rgba(129,140,248,.06); border: 1px solid #2b3a52; border-radius: 12px;
+  padding: 11px 14px; cursor: pointer; font-family: inherit; color: #c7d2fe;
+  display: flex; flex-direction: column; gap: 3px; align-items: center;
+  transition: border-color .18s, background .18s, transform .15s;
+}
+.ge-misafir:hover { border-color: #818cf8; background: rgba(129,140,248,.12); transform: translateY(-1px); }
+.ge-misafir:active { transform: scale(.985); }
+.ge-misafir-bas { font-size: 14px; font-weight: 700; }
+.ge-misafir-alt { font-size: 11px; color: #8aa0b8; }
+.ge-imza { margin: 2px 0 0; font-size: 11px; color: #5b6b82; letter-spacing: .06em; position: relative; }
+
+@media (max-width: 480px) {
+  .ge-ekran { padding: 18px 14px; }
+  .ge-kart { padding: 26px 20px 22px; border-radius: 18px; }
+  .ge-b1 { width: 300px; height: 300px; }
+  .ge-b2 { width: 260px; height: 260px; }
+  .ge-b3 { width: 320px; height: 320px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ge-bulut, .ge-yildiz, .ge-logo::before { animation: none !important; }
+  .ge-kart, .ge-kart > * { animation-duration: .01s !important; }
+}
