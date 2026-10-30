@@ -412,18 +412,24 @@
     <h1 class="ge-baslik">Sevkiyat <span>Planlama</span></h1>
     <p class="ge-alt">Devam etmek için hesabınla giriş yap —<br>ya da görüntüleyici olarak sistemde kal.</p>
     <div id="ge-error" class="ge-hata hidden" role="alert"></div>
-    <label class="ge-alan">
-      <span>E-posta</span>
-      <input id="ge-user" type="email" autocomplete="email" placeholder="ad@yatsan.com" />
-    </label>
-    <label class="ge-alan">
-      <span>Şifre</span>
-      <span class="ge-sifrekutu">
-        <input id="ge-pass" type="password" autocomplete="current-password" placeholder="••••••••" />
-        <button type="button" id="ge-eye" class="ge-goz" title="Şifreyi göster/gizle" aria-label="Şifre görünürlüğünü değiştir">👁️</button>
-      </span>
-    </label>
-    <button id="ge-btn" class="ge-buton"><span>Giriş yap</span></button>
+    <!-- Gerçek <form> + autocomplete="username": Chrome şifre yöneticisi
+         kullanıcı adını da otomatik doldursun diye (v3).
+         onsubmit="return false": eski/önbellekteki JS ile bile sayfa
+         yenilenmesin — gönderimi JS yönetir (v4). -->
+    <form id="ge-form" class="ge-form" novalidate onsubmit="return false">
+      <label class="ge-alan">
+        <span>E-posta</span>
+        <input id="ge-user" name="username" type="email" autocomplete="username" placeholder="ad@yatsan.com" />
+      </label>
+      <label class="ge-alan">
+        <span>Şifre</span>
+        <span class="ge-sifrekutu">
+          <input id="ge-pass" name="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+          <button type="button" id="ge-eye" class="ge-goz" title="Şifreyi göster/gizle" aria-label="Şifre görünürlüğünü değiştir">👁️</button>
+        </span>
+      </label>
+      <button id="ge-btn" class="ge-buton" type="submit"><span>Giriş yap</span></button>
+    </form>
     <div class="ge-ayrac"><span>veya</span></div>
     <button id="ge-misafir" class="ge-misafir">
       <span class="ge-misafir-bas">👤 Misafir olarak giriş yap</span>

@@ -26,6 +26,12 @@
    Giriş artık submit olayıyla tetiklenir (Enter + buton tek yol),
    çift gönderim koruması eklendi.
 
+   v1.3: ESNEK BAĞLAMA — "tuşlar çalışmıyor" düzeltmesi. v3'te JS yeni
+   ama index.html eski kaldıysa (ya da önbellekten eski JS geldi ise)
+   #ge-form bulunamayınca kod çöküyor, hiçbir dinleyici bağlanmıyordu.
+   Artık: ge-form VARSA submit yolu, YOKSA buton+Enter yolu (v2).
+   Element aramaları da korumalı — eksik eleman kodu durdurmaz.
+
    Yükleme sırası: TÜM scriptlerden SONRA (canli.js'ten sonra)
    — core.js globallerine (getAuthState, currentUser, render…)
    ihtiyaç duyar.
@@ -63,12 +69,14 @@
   /* Oturum yoksa kapı açılır (sayfa arkada normal yüklenmeye devam eder) */
   if (!getAuthState() && !qrDogrudan()) goster();
 
-  /* 👁️ Şifre göster/gizle */
-  document.getElementById("ge-eye").addEventListener("click", () => {
+  /* 👁️ Şifre göster/gizle (korumalı — eleman yoksa kod durmaz) */
+  const geGoz = document.getElementById("ge-eye");
+  if (geGoz) geGoz.addEventListener("click", () => {
     const p = document.getElementById("ge-pass");
+    if (!p) return;
     const acikMi = p.type === "password";
     p.type = acikMi ? "text" : "password";
-    document.getElementById("ge-eye").textContent = acikMi ? "🙈" : "👁️";
+    geGoz.textContent = acikMi ? "🙈" : "👁️";
     p.focus();
   });
 
@@ -83,7 +91,7 @@
     const email = document.getElementById("ge-user").value.trim();
     const pass = document.getElementById("ge-pass").value;
     const btn = document.getElementById("ge-btn");
-    if (btn.disabled) return;                         /* çift gönderim koruması (submit + Enter) */
+    if (!btn || btn.disabled) return;                 /* çift gönderim + koruma */
     if (!email || !pass) { hataGoster("E-posta ve şifre girin."); return; }
     hata.classList.add("hidden");
     btn.disabled = true;
@@ -123,12 +131,25 @@
     showToast("👁️ <b>Görüntüleme modu</b> — değişiklik yapmak için sağ üstten 🔐 Giriş yap.", 4500);
   }
 
-  /* v1.2: Tüm gönderimler form submit üzerinden (buton type=submit, Enter,
-     mobil klavyede "Git") → tek çağrı noktası. Chrome otomatik doldurması
-     form olunca kullanıcı adı + şifreyi birlikte doldurur. */
-  document.getElementById("ge-form").addEventListener("submit", e => {
-    e.preventDefault();
-    girisYap();
-  });
-  document.getElementById("ge-misafir").addEventListener("click", misafirGir);
+  /* v1.3: ESNEK BAĞLAMA — hangi index.html ile çalışırsa çalışsın.
+     • Yeni HTML (ge-form var) → tüm gönderimler submit üzerinden
+       (buton tıkı, Enter, mobil "Git") → tek çağrı noktası.
+     • Eski HTML (ge-form yok) → buton click + Enter yolu (v2 davranışı).
+     Böylece dosyalardan biri eksik/eski kalırsa bile tuşlar çalışır. */
+  const geForm = document.getElementById("ge-form");
+  if (geForm) {
+    geForm.addEventListener("submit", e => {
+      e.preventDefault();
+      girisYap();
+    });
+  } else {
+    const btnEski = document.getElementById("ge-btn");
+    if (btnEski) btnEski.addEventListener("click", girisYap);
+    ["ge-user", "ge-pass"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("keydown", e => { if (e.key === "Enter") girisYap(); });
+    });
+  }
+  const geMisafir = document.getElementById("ge-misafir");
+  if (geMisafir) geMisafir.addEventListener("click", misafirGir);
 })();
