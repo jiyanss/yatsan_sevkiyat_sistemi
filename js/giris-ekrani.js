@@ -15,6 +15,11 @@
    • Üst menüdeki "🔐 Giriş yap" modalı DEĞİŞMEDİ — oturum
      açıldıktan sonra yeniden giriş için aynen duruyor.
 
+   v1.1: Kapı açıkken body.ge-arka-gizli eklenir — arka yüz (header,
+   tablo, toast…) tamamen gizlenir. Neden: Chromium'da native <select>
+   kutuları composited overlay'in ÜSTÜNE çizilebiliyor (dashboard
+   kalıntıları sızıyordu); visibility+display ile kökten çözülür.
+
    Yükleme sırası: TÜM scriptlerden SONRA (canli.js'ten sonra)
    — core.js globallerine (getAuthState, currentUser, render…)
    ihtiyaç duyar.
@@ -29,6 +34,8 @@
   }
 
   function goster() {
+    /* Arka yüzü tamamen gizle — select kalıntısı + veri sızıntısı olmasın */
+    document.body.classList.add("ge-arka-gizli");
     EKRAN.classList.remove("hidden");
     setTimeout(() => {
       const u = document.getElementById("ge-user");
@@ -37,6 +44,7 @@
   }
 
   function gizle() {
+    document.body.classList.remove("ge-arka-gizli");
     EKRAN.classList.add("hidden");
     const p = document.getElementById("ge-pass");
     if (p) { p.value = ""; p.type = "password"; }

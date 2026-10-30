@@ -1330,6 +1330,14 @@ body.fit-table td:last-child {
 .ge-misafir-alt { font-size: 11px; color: #8aa0b8; }
 .ge-imza { margin: 2px 0 0; font-size: 11px; color: #5b6b82; letter-spacing: .06em; position: relative; }
 
+/* Kapı açıkken arka yüzü komple gizle (js/giris-ekrani.js → body.ge-arka-gizli).
+   Chromium native <select> kutularını composited overlay'in üstüne çizebiliyor
+   (dashboard kalıntıları sızıyordu) — z-index ile çözülmez, kökten gizlenir.
+   visibility: layout korunur → render() ölçümleri bozulmaz; kapı kapanınca
+   her şey aynen geri gelir. */
+body.ge-arka-gizli > :not(#girisEkrani) { visibility: hidden !important; }
+body.ge-arka-gizli select { display: none !important; }   /* sızmanın asıl kaynağı */
+
 @media (max-width: 480px) {
   .ge-ekran { padding: 18px 14px; }
   .ge-kart { padding: 26px 20px 22px; border-radius: 18px; }
