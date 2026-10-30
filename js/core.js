@@ -343,17 +343,34 @@ function clearAuthState() {
 }
 
 let refreshPromise = null;
+/* 🛡️ Token yenileme: geçici ağ sorunlarında 3 deneme (1s/2s ara ile).
+   Yalnızca token GERÇEKTEN geçersizse (INVALID_REFRESH_TOKEN vb.) null döner;
+   ağ hatalarında hata fırlatılır → kullanıcı oturumu asla düşürülmez. */
 async function doTokenRefresh() {
   const s = getAuthState();
   if (!s) return null;
-  const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ grant_type: "refresh_token", refresh_token: s.refreshToken })
-  });
-  const j = await res.json();
-  if (!res.ok || !j.id_token) return null;
-  saveAuthState(j.id_token, j.refresh_token, j.expires_in, s.email);
-  return j.id_token;
+  const KALICI_HATA = /INVALID_REFRESH_TOKEN|USER_DISABLED|TOKEN_EXPIRED|INVALID_GRANT_TYPE|OPERATION_NOT_ALLOWED/;
+  let sonHata = null;
+  for (let deneme = 0; deneme < 3; deneme++) {
+    try {
+      if (deneme > 0) await new Promise(r => setTimeout(r, 1000 * deneme));
+      const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grant_type: "refresh_token", refresh_token: s.refreshToken })
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && j.id_token) {
+        saveAuthState(j.id_token, j.refresh_token, j.expires_in, s.email);
+        return j.id_token;
+      }
+      const msg = (j.error && j.error.message) || "";
+      if (KALICI_HATA.test(msg)) return null;      /* oturum gerçekten bitmiş */
+      sonHata = new Error("Token sunucusu geçici hata verdi (HTTP " + res.status + ")");
+    } catch (e) {
+      sonHata = e;                                  /* ağ hatası / zaman aşımı → tekrar dene */
+    }
+  }
+  throw sonHata || new Error("Token yenilenemedi (ağ hatası)");
 }
 async function ensureToken(force = false) {
   const s = getAuthState();
@@ -812,7 +829,12 @@ function diffRows(prev, next) {
 /* yardımcı gereksizse silinebilir — kod berraklığı için boş bırakıldı */
 
 function sifirToNull(a, b) { return a; }
+let loadInFlight = false;
 async function load(withSpinner = true, live = false) {
+  /* 🛡️ Aynı anda iki yüklem birikmesin: sessiz yüklemeler (SSE/30 sn poll)
+     öncekisi sürerken yeni görev almaz; spinner'lı (zorunlu) yüklemeler her zaman çalışır */
+  if (loadInFlight && !withSpinner) return;
+  loadInFlight = true;
   const prev = rows;
   loading = withSpinner;
   if (withSpinner) render();
@@ -845,6 +867,8 @@ async function load(withSpinner = true, live = false) {
     updateBulkBar();
   } catch (e) {
     setSaveError(e.message);
+  } finally {
+    loadInFlight = false;
   }
    loading = false;
   render();
@@ -870,20 +894,58 @@ function liveReload() {
   if (!document.getElementById("importModal").classList.contains("hidden")) return;
   load(false, true);
 }
+/* 🛡️ SSE düzeltmesi: RTDB frame'leri İSİMLİ olaylarla gelir (event: put / patch /
+   keep-alive) — es.onmessage isimli olaylarda HİÇ tetiklenmez, bu yüzden eski
+   canlı senkron fiilen çalışmıyordu. Artık put/patch/keep-alive ayrı ayrı
+   dinleniyor. Ayrıca uyku/Wi-Fi değişiminde "yarım-open" kalan ölü bağlantıları
+   yakalamak için son etkinlik izlenir; bağlantı kapalıysa veya sessiz kalırsa
+   taze bağlantı açılır. */
+let sseSonEtkinlik = 0;
+let sseYenidenBaglaniyor = false;
+function sseYenidenBaglan(bekleme = 5000) {
+  if (sseYenidenBaglaniyor) return;
+  sseYenidenBaglaniyor = true;
+  setTimeout(() => { sseYenidenBaglaniyor = false; startLiveSync(); }, bekleme);
+}
 function startLiveSync() {
   try {
+    if (window._sse) { try { window._sse.close(); } catch (e) {} }
     const es = new EventSource(`${FIREBASE_DB_URL}/${NODE}.json`);
     window._sse = es;
-    es.onopen = () => console.info("🔔 SSE bağlı");
-    es.onmessage = () => {
+    sseSonEtkinlik = Date.now();
+    es.onopen = () => { sseSonEtkinlik = Date.now(); console.info("🔔 SSE bağlı"); };
+    const sseNabiz = () => {
+      sseSonEtkinlik = Date.now();
       clearTimeout(liveTimer);
       liveTimer = setTimeout(liveReload, 800);
     };
+    es.addEventListener("put", sseNabiz);
+    es.addEventListener("patch", sseNabiz);
+    es.addEventListener("keep-alive", () => { sseSonEtkinlik = Date.now(); });
+    es.onmessage = sseNabiz;                      /* isimsiz frame'ler de yakalansın */
     es.onerror = () => {
-      if (es.readyState === EventSource.CLOSED) console.warn("🔔 SSE kapandı");
+      if (es.readyState === EventSource.CLOSED) {
+        console.warn("🔔 SSE kapandı — 5 sn içinde yeniden bağlanacak");
+        sseYenidenBaglan(5000);
+      }
+      /* CONNECTING aşamasındaysa EventSource kendi tekrar dener — dokunmuyoruz */
     };
-  } catch (e) { console.warn("SSE başlatılamadı:", e.message); }
+  } catch (e) {
+    console.warn("SSE başlatılamadı:", e.message);
+    sseYenidenBaglan(15000);
+  }
 }
+/* 🛡️ SSE nöbetçisi: 60 sn'de bir kontrol — kapalı ya da 5 dakikadır sessiz
+   bağlantı sessizce tazelenir (keep-alive gelmediği ortamlarda sigorta) */
+setInterval(() => {
+  if (document.hidden || !window._sse) return;
+  const kapali = window._sse.readyState === EventSource.CLOSED;
+  const sessiz = Date.now() - sseSonEtkinlik > 300000;
+  if (kapali || sessiz) {
+    console.warn("🔔 SSE nöbetçisi: bağlantı tazelendi (" + (kapali ? "kapalıydı" : "sessizdi") + ")");
+    sseYenidenBaglan(1000);
+  }
+}, 60000);
 
 /* ================= Tarih aralığı & filtre ================= */
 function monthBounds(offset) {
@@ -1000,3 +1062,54 @@ function computeSummary(list) {
            bekleyenAd: toplamAd - tamamAd - yukleniyorAd,
            bugunAd, gecikenAd, maxGecikme, toplamM3, toplamM3Tamam, oran, gunAd };
 }
+
+/* ================= 🛡️ BAĞLANTI DAYANIKLILIĞI =================
+   Belirtiler: giriş bazen takılıyor, veriler yenilenmiyor, tarayıcı
+   kapatılmadan düzelmiyor. Kök nedenler: (1) ağ isteklerinde zaman aşımı
+   yoktu — takılan istek sonsuza kadar bekliyordu; (2) SSE frame'leri isimli
+   olaylarla geldiği için canlı senkron tetiklenmiyordu; (3) geçici ağ
+   kesintisi oturumu düşürüyordu. Aşağıdaki katman üçünü de giderir. */
+
+/* 1) Zaman aşımı katmanı — window.fetch sarmalanır, TÜM modülleri kapsar
+   (giriş, token, veri, yedek, oyunlar). GET/HEAD ve Firebase Auth uçları
+   güvenli olduğu için 1 kez otomatik tekrarlanır; veritabanı YAZILARI
+   (POST/PATCH/PUT/DELETE) asla tekrarlanmaz → çift kayıt riski yok. */
+window.fetch = (() => {
+  const orig = window.fetch.bind(window);
+  const ZAMAN_ASIMI = 20000;
+  async function fetchT(url, opts = {}) {
+    const method = String(opts.method || "GET").toUpperCase();
+    const tekrarlanabilir = method === "GET" || method === "HEAD" ||
+      /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com/.test(String(url));
+    for (let deneme = 0; deneme < 2; deneme++) {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), ZAMAN_ASIMI);
+      try {
+        return await orig(url, { ...opts, signal: opts.signal || ctl.signal });
+      } catch (e) {
+        if (deneme === 0 && tekrarlanabilir && !opts.signal) continue;
+        if (e && (e.name === "AbortError" || e.name === "TimeoutError"))
+          throw new Error("Sunucu yanıt vermedi (zaman aşımı) — bağlantınızı kontrol edin.");
+        throw e;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+  }
+  return fetchT;
+})();
+
+/* 2) Sekmeye dönüş / ağın geri gelmesi: veriyi hemen tazele, SSE'yi canlandır.
+   (Uyku, sekme değiştirme, Wi-Fi değişimi sonrası "takılı kalma"yı bitirir) */
+let sonGizlenme = 0;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { sonGizlenme = Date.now(); return; }
+  const es = window._sse;
+  if (!es || es.readyState === EventSource.CLOSED) sseYenidenBaglan(1000);
+  if (sonGizlenme && Date.now() - sonGizlenme > 30000) liveReload();
+});
+window.addEventListener("online", () => {
+  console.info("🌐 Bağlantı geri geldi — veriler tazeleniyor");
+  sseYenidenBaglan(1000);
+  liveReload();
+});

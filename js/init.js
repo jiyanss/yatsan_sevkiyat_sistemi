@@ -984,7 +984,23 @@ updateUserUI();
       currentUser = { email: s.email };
       await loadUserEntries();
       updateUserUI();
-    } catch (e) { /* ensureToken gerekli temizliği yaptı */ }
+    } catch (e) {
+      /* 🛡️ Ağ sorunu: oturum bilgisi korunur, 15 sn sonra sessizce tekrar denenir.
+         (Token gerçekten geçersizse ensureToken zaten temizler) */
+      console.warn("Oturum doğrulanamadı, tekrar denenecek:", e && e.message);
+      setTimeout(async () => {
+        try {
+          await ensureToken();
+          const s2 = getAuthState();
+          if (s2 && !currentUser) {
+            currentUser = { email: s2.email };
+            await loadUserEntries();
+            updateUserUI();
+            render();
+          }
+        } catch (_) {}
+      }, 15000);
+    }
   }
  render();
   await load(true);
