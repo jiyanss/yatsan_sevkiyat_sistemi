@@ -1,5 +1,5 @@
 /* =========================================================
-   YATSAN — canli.js v1.5
+   YATSAN — canli.js v1.6
    ---------------------------------------------------------
    TEK DOSYA (index.html'e 1 menü düğmesi + 1 modal + 1
    script satırı dışında dokunulmaz). 5 GÖREV:
@@ -13,9 +13,12 @@
       - Satır başına 🎁 (konfeti) ve 💬 (özel mesaj)
       - Üstteki yazma kutusundan HERKESE aynı anda duyuru
 
-   2) 🎁 KONFETİ MOTORU — kütüphanesiz canvas; admin
-      gönderince hedef sekme(ler)de patlar. Kutlama.js'ten
-      bağımsızdır (12 sn bekleme kuralı oradan geçmez).
+   2) 🎁 KONFETİ + HAVAİ FİŞEK MOTORU — kütüphanesiz canvas;
+      admin gönderince hedef sekme(ler)de patlar. v1.6: 🎁
+      gönderiminde kutlama.js'in havai fişek gösterisi DE
+      eşlik eder (Kutlama.patlat). Havai fişeklerin TEK giriş
+      noktası artık burası — başka hiçbir yerde otomatik
+      patlamaz (kutlama.js v3 ile birlikte).
 
    3) 📣 DUYURU KARTI — admin mesajı ekran ortasında büyük
       kart olarak çıkar. "Herkese" = mesaj/all, "özel" =
@@ -216,6 +219,10 @@
     window.setTimeout(konDalga, 380);
     window.setTimeout(konDalga, 760);
     if (!konRaf) konDondur();
+    /* 🎆 v1.6: havai fişek eşliği — kutlama.js v3 ile havai fişeklerin
+       TEK giriş noktası bu 🎁 gönderim akışı oldu (otomatik kutlama
+       yok). kutlama.js yüklenmemişse sessizce yalnız konfeti patlar. */
+    try { if (window.Kutlama && typeof Kutlama.patlat === "function") Kutlama.patlat(); } catch (_) {}
   }
 
   /* ================= 3) DUYURU KARTI ================= */

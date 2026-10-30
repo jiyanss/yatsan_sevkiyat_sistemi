@@ -1,51 +1,55 @@
 /* =========================================================
-   YATSAN — kutlama.js v2
+   YATSAN — kutlama.js v3  (HAVAI FİŞEK KAPALI sürüm)
    ---------------------------------------------------------
-   TEK DOSYA, 4 GÖREV (index.html'e dokunulmaz, sadece bu
-   dosyanın içeriği güncellenir):
+   v2 → v3 DEĞİŞİKLİK — kullanıcının isteği:
+   "Depo ekranındaki ve ana sayfadaki havai fişek kutlamaları
+    iptal olsun; kutlama yalnız canlı modülde, ben gönderdiğimde
+    patlasın."
 
-   1) 🎆 KUTLAMA — "Yükleme Tamamlandı" olan her kayıtta
-      ~5 sn havai fişek. TETİK: apiUpdate sarmalayıcı
-      (tablo hücresi, depo tablosu, toplu düzenleme, QR işlem
-      ekranı, operasyon kartı — HEPSİ apiUpdate'ten geçer).
-      Ek yedek: "yükleme tamamlandı" metinli toast'lar.
+   ✂️ KALDIRILDI (otomatik kutlamaların tamamı):
+      1) 🎆 "Yükleme Tamamlandı" otomatik kutlaması (ana sayfa
+         tablosu, depo tablosu, toplu düzenleme, QR ekranı,
+         operasyon kartı — apiUpdate/toast tetikleri)
+      2) 🖥️ Depo ve Operasyon ekranı AÇILIŞ kutlaması
+         (MutationObserver + saniyelik tarama dahil)
+      → fireworks-js artık SAYFA AÇILIŞINDA hiçbir zaman
+        yüklenmez; arka planda sessizlik var.
 
-   2) 🖥️ EKRAN KUTLAMASI — Depo ve Operasyon ekranı HER
-      açılışta ~3.5 sn kutlama (aynı ekran için 30 sn soğuma;
-      hızlı aç-kapa spam'i kutlamaz). Saniyelik tarama +
-      MutationObserver ile çift katman tespit.
+   🎆 HAVAI FİŞEK MOTORU YAŞIYOR — ama artık TEK giriş:
+      Kutlama.patlat()  → ~5 sn'lik gösteri (süreyi kendin seç:
+      Kutlama.patlat(8000)). Bunu YALNIZ canli.js'in 🎁 gönderim
+      akışı çağırır: Canlı Kullanıcılar panelinden kişiye 🎁 ya
+      da "Herkese Gönder"de 🎁 konfeti işaretli → hedef
+      sekme(ler)de konfeti + havai fişek birlikte patlar.
+      Otomatik çağıran hiçbir kod yoktur.
 
-   3) 🛡️ GERÇEKLEŞEN TARİHİ DEĞİŞMEZİ — Durum "Yükleme
-      Tamamlandı" DAN başka bir şeye alınırsa gerçekleşen
-      tarihi ve gecikme günü otomatik TEMİZLENİR (artık
-      eski tarih yapışık kalamaz). Yan etki sarmalayıcı +
-      kayıt-sonrası güvenlik ağı (çift katman).
-
-   4) 🔔 CANLI SENKRON BEKÇİSİ — Sayfa açık kaldıkça veri
-      taze kalır: SSE bağlantısı koparsa/yarım kalırsa
-      (zombi) otomatik yeniden kurulur; SSE aksayan
-      dönemlerde 2 sn'de bir güvenli yükleme; sekme geri
-      geldiğinde (visibilitychange) anında tazeleme;
-      operasyon ekranının arama listesi de canlı yenilenir.
+   ✅ DEĞİŞMEDİ (havai fişekle ilgisi olmayan görevler):
+      3) 🛡️ GERÇEKLEŞEN TARİHİ DEĞİŞMEZİ — Durum "Yükleme
+         Tamamlandı" DAN başka bir şeye alınırsa gerçekleşen
+         tarih ve gecikme günü otomatik TEMİZLENİR (yan etki
+         sarmalayıcı + kayıt-sonrası güvenlik ağı, çift katman).
+      4) 🔔 CANLI SENKRON BEKÇİSİ — SSE koparsa/yarım kalırsa
+         otomatik yeniden kurulur; aksayan dönemlerde 2 sn'de
+         bir güvenli yükleme; sekmeye dönüşte anında tazeleme;
+         operasyon ekranının arama listesi canlı yenilenir.
 
    ---------------------------------------------------------
    AĞIRLIK GARANTİLERİ:
-   - fireworks-js KÜTÜPHANESİ ilk kutlamaya kadar yüklenmez
-     (dinamik import → açılış hızı sıfır etkilenir)
-   - Animasyon SÜRELİDİR (5/3.5 sn) → otomatik durur,
-     requestAnimationFrame döngüsü kapanır
-   - İki kutlama arasında min 12 sn (minAralikMs)
-   - Arka plan sekmesinde / hareketi-azalt tercihinde /
-     çevrimdışında çalışmaz; hata vermez, sessizce atlar
+   - fireworks-js yalnız İLK MANUEL kutlamada yüklenir (dinamik
+     import → açılış hızı sıfır etkilenir)
+   - Gösteri SÜRELİDİR (varsayılan ~5 sn) → otomatik durur
+   - Sürerken ikinci istek gelirse: süre BAŞTAN başlar (üstüne
+     ekleme/çakışma yok), kütüphane tekrar indirilmez
+   - Arka plan sekmesinde / hareketi-azalt tercihinde çalışmaz;
+     hata vermez, sessizce atlar
    ---------------------------------------------------------
    KURULUM: js/kutlama.js içeriğini bununla değiştir —
    index.html'de zaten var olan satır aynen kalır:
    <script src="js/kutlama.js"></script>
-   ---------------------------------------------------------
+
    KONSOL TANILAMA:  Kutlama.durum()
    İNCE AYAR (konsoldan da olur):
-     Kutlama.ayarla({ sureTamamlanmaMs: 6000, minAralikMs: 8000,
-                      ekranAralikMs: 10000 })
+     Kutlama.ayarla({ sureMs: 6000 })   // gösteri süresi
    ========================================================= */
 (function () {
   "use strict";
@@ -53,21 +57,21 @@
 
   /* ---------------- İnce ayar ---------------- */
   const AYAR = {
-    sureTamamlanmaMs: 4800, // tamamlanma kutlaması süresi
-    sureEkranMs: 3600,      // depo/operasyon açılış kutlaması
-    minAralikMs: 12000,     // iki kutlama arası en kısa boşluk
-    ekranAralikMs: 600000,   // aynı ekran için iki kutlama arası soğuma
+    sureMs: 4800, // manuel kutlama gösterisi süresi
+    /* Test sayfaları için değiştirilebilir kaynak; canlı sitede
+       daima varsayılan CDN kullanılır */
+    kaynak: (typeof window.KUTLAMA_FW_KAYNAK === "string" && window.KUTLAMA_FW_KAYNAK) ||
+            "https://esm.run/fireworks-js",
   };
 
   /* ---------------- Durum ---------------- */
   let fw = null, katman = null;
-  let aktif = false, baslaniyor = false;
-  let sonBaslangic = 0, yuklemeHatasi = false;
-  const sonEkran = { depo: 0, op: 0 };
-  /* canlı senkron bekçisi durumları */
-  let sonMesaj = 0, sseSorunZamani = 0, sonSseKurulum = 0, sonYuklemeOk = Date.now();
+  let aktif = false, baslaniyor = false, yuklemeHatasi = false;
+  let durdurTimer = null;
   /* son patlatma teşhisi (Kutlama.durum() raporlar) */
   let patlatSonuc = "-", patlatZaman = 0;
+  /* canlı senkron bekçisi durumları */
+  let sonMesaj = 0, sseSorunZamani = 0, sonSseKurulum = 0, sonYuklemeOk = Date.now();
 
   const FW_OPTIONS = { gravity: 1.4, opacity: 0.4, autoresize: true, acceleration: 1.0 };
 
@@ -82,21 +86,26 @@
     return katman;
   }
 
-  /* ---------------- Kutlama motoru ---------------- */
-  /* Saat geri sıçraması (NTP düzeltmesi vb.) sonrası zaman damgaları
-     gelecekte kalır → kutlamalar süresiz kilitlenmesin: damgaları sıfırla */
-  function saatDuzelt() {
-    const simdi = Date.now();
-    if (sonBaslangic > simdi + 1000) sonBaslangic = 0;
-    if (sonEkran.depo > simdi + 1000) sonEkran.depo = 0;
-    if (sonEkran.op > simdi + 1000) sonEkran.op = 0;
+  /* ---------------- Kutlama motoru (YALNIZ MANUEL) ---------------- */
+  /* Tek çağıran: canli.js'in 🎁 gönderim akışı (window.Kutlama.patlat).
+     v2'deki apiUpdate/toast/ekran açılış tetiklerinin HEPSİ silindi. */
+  function durdur() {
+    if (durdurTimer) { window.clearTimeout(durdurTimer); durdurTimer = null; }
+    try { if (fw) fw.stop(); } catch (_) {}
+    if (katman) katman.style.display = "none"; // son kare ekranda donmasın
+    aktif = false;
   }
 
   async function patlat(sureMs) {
+    const sure = Math.max(1000, Number(sureMs) || AYAR.sureMs);
     function kaydet(sonuc) { patlatSonuc = sonuc; patlatZaman = Date.now(); }
-    saatDuzelt();
-    if (aktif || baslaniyor) { kaydet("engel-surer"); return; }
-    if (Date.now() - sonBaslangic < AYAR.minAralikMs) { kaydet("engel-aralik"); return; }
+    if (aktif) {                    // gösteri sürerken yeni istek → süreyi baştan başlat
+      kaydet("yenilendi");
+      if (durdurTimer) window.clearTimeout(durdurTimer);
+      durdurTimer = window.setTimeout(durdur, sure);
+      return;
+    }
+    if (baslaniyor) { kaydet("engel-baslaniyor"); return; }
     if (document.hidden) { kaydet("engel-gizli"); return; }
     try {
       if (window.matchMedia &&
@@ -104,11 +113,10 @@
     } catch (_) {}
     /* ⚠️ İşaretler await'ten ÖNCE senkron set edilir → çift tetik yarışı yok */
     baslaniyor = true;
-    sonBaslangic = Date.now();
     kaydet("basliyor");
     let Fireworks = null;
     try {
-      const mod = await import("https://esm.run/fireworks-js");
+      const mod = await import(AYAR.kaynak);
       Fireworks = mod.Fireworks;
     } catch (e) {
       baslaniyor = false;
@@ -126,17 +134,10 @@
     aktif = true;
     fw.start();
     kaydet("oynuyor");
-    window.setTimeout(function () {
-      try { fw.stop(); } catch (_) {}
-      kapsayici.style.display = "none"; // son kare ekranda donmasın
-      aktif = false;
-      kaydet("bitti");
-    }, sureMs);
+    durdurTimer = window.setTimeout(durdur, sure);
   }
 
-  /* ============ 1) TETİK A: apiUpdate sarmalayıcı ============
-     Her tamamlama buradan geçer → önceki durum "rows"tan okunur;
-     Tamamlandı'ya YENİ geçişte kutlama. Ayrıca değişmez güvenlik ağı. */
+  /* ============ 3) GERÇEKLEŞEN DEĞİŞMEZİ ============ */
   function gerceklesenDuzelt(id) {
     try {
       if (typeof FIREBASE_DB_URL === "undefined" || typeof NODE === "undefined") return;
@@ -149,23 +150,15 @@
     } catch (_) {}
   }
 
-  function tamamlamaDene() {
+  /* apiUpdate sarmalayıcı — v2'deki kutlama tetiği ÇIKARILDI;
+     yalnız "gerçekleşen tarihi temizle" güvenlik ağı kaldı. */
+  function tamamlamaAgDene() {
     if (typeof window.apiUpdate !== "function") return false;
     if (window.apiUpdate.__kutlama) return true;
     const orijinal = window.apiUpdate;
     const sarili = function (id, rec) {
-      let onceki = null;
-      try {
-        if (typeof rows !== "undefined" && Array.isArray(rows)) {
-          onceki = rows.find(function (x) { return x && x.id === id; }) || null;
-        }
-      } catch (_) {}
       return orijinal.apply(this, arguments).then(function (saved) {
         try {
-          if (rec && rec.durum === "Yükleme Tamamlandı" &&
-              (!onceki || onceki.durum !== "Yükleme Tamamlandı")) {
-            patlat(AYAR.sureTamamlanmaMs);
-          }
           /* 🛡️ Güvenlik ağı: yan etki sarmalayıcı bir nedenden çalışmadıysa
              bile Tamamlandı-dışı kayıtta eski gerçekleşen tarihi temizle */
           if (saved && saved.durum !== "Yükleme Tamamlandı" && saved.gerceklesenTarih) {
@@ -182,28 +175,9 @@
     return true;
   }
 
-  /* ============ TETİK B: toast sarmalayıcı (yedek) ============
-     250ms'de bir yeniden denenir → script sırası ne olursa olsun kurulum
-     garanti edilir (v1'in tek sessiz hata noktası burasıydı). */
-  function toastDene() {
-    if (typeof window.showToast !== "function") return false;
-    if (window.showToast.__kutlama) return true;
-    const orijinal = window.showToast;
-    window.showToast = function (html) {
-      try {
-        if (typeof html === "string" && /yükleme tamamlandı/i.test(html)) {
-          patlat(AYAR.sureTamamlanmaMs);
-        }
-      } catch (_) {}
-      return orijinal.apply(this, arguments);
-    };
-    window.showToast.__kutlama = true;
-    return true;
-  }
-
   /* ============ 3) GERÇEKLEŞEN DEĞİŞMEZİ (kaynak) ============
      applyDurumSideEffects her durum değişiminde çağrılır (tüm modüller).
-     Orijinal "yalnız boşsa doldurur" → v2 eki: Tamamlandı DIŞINA geçişte
+     Orijinal "yalnız boşsa doldurur" → Tamamlandı DIŞINA geçişte
      gerçekleşen + gecikme günü temizlenir. */
   function yanEtkiDene() {
     if (typeof window.applyDurumSideEffects !== "function") return false;
@@ -313,48 +287,17 @@
     return true;
   }
 
-  /* ============ 2) EKRAN TETİKLERİ (her açılışta) ============ */
-  function gorunurMu(el) {
-    return !el.classList.contains("hidden") && el.getBoundingClientRect().width > 0;
-  }
-
-  function ekranTara() {
-    if (document.hidden) return;
-    saatDuzelt();
-    const simdi = Date.now();
-    const depo = document.getElementById("depoOverlay");
-    if (depo && gorunurMu(depo) && simdi - sonEkran.depo >= AYAR.ekranAralikMs) {
-      sonEkran.depo = simdi;
-      patlat(AYAR.sureEkranMs);
-    }
-    const op = document.getElementById("opOverlay");
-    if (op && gorunurMu(op) && simdi - sonEkran.op >= AYAR.ekranAralikMs) {
-      sonEkran.op = simdi;
-      patlat(AYAR.sureEkranMs);
-    }
-  }
-
-  function ekranIzleyiciKur() {
-    try {
-      new MutationObserver(ekranTara).observe(document.documentElement, {
-        childList: true, subtree: true, attributes: true, attributeFilter: ["class"],
-      });
-    } catch (_) {}
-    ekranTara();
-    window.setInterval(ekranTara, 1000); // asıl garanti: saniyelik tarama
-  }
-
-  /* ============ Sarmalayıcı kurulumu: 60 sn yeniden denemeli ============ */
+  /* ============ Sarmalayıcı kurulumu: 60 sn yeniden denemeli ============
+     NOT: v2'deki toast sarmalayıcı KALDIRILDI (tek görevi kutlama
+     tetiklemekti). Geriye kalan sarmalayıcılar: apiUpdate (güvenlik ağı),
+     applyDurumSideEffects (değişmez kaynağı), load (op listesi tazeleme). */
   const GOREVLER = [
-    ["showToast", toastDene],
-    ["apiUpdate", tamamlamaDene],
+    ["apiUpdate", tamamlamaAgDene],
     ["applyDurumSideEffects", yanEtkiDene],
     ["load", loadDene],
   ];
   function gorevDurumu() {
-    /* GOREVLER listesinden bağımsız rapor: kurulan sarmalayıcılar işaretli */
     return {
-      toast: !!(window.showToast && window.showToast.__kutlama),
       apiUpdate: !!(window.apiUpdate && window.apiUpdate.__kutlama),
       yanEtki: !!(window.applyDurumSideEffects && window.applyDurumSideEffects.__kutlama),
       load: !!(window.load && window.load.__kutlama),
@@ -372,8 +315,9 @@
     if (kurucuAdim() || ++denemeSayisi > 240) window.clearInterval(kurucu);
   }, 250);
 
-  /* ============ Başlat ============ */
-  try { ekranIzleyiciKur(); } catch (_) {}
+  /* ============ Başlat (yalnız canlı senkron nöbeti) ============
+     v2'deki ekran izleyici (MutationObserver + saniyelik tarama)
+     KALDIRILDI — otomatik kutlama arayan gözler artık yok. */
   try {
     window.setInterval(denetimTiki, 2000);
     document.addEventListener("visibilitychange", function () {
@@ -385,21 +329,20 @@
 
   /* ============ Dış API ============ */
   window.Kutlama = {
-    /* Manuel tetikleme */
-    tamamlandi: function () { patlat(AYAR.sureTamamlanmaMs); },
-    ekran: function (ad) {
-      if (ad === "depo" || ad === "op") { sonEkran[ad] = 0; patlat(AYAR.sureEkranMs); }
-    },
-    /* İnce ayar: Kutlama.ayarla({ minAralikMs: 8000, ekranAralikMs: 10000 }) */
+    /* 🎆 Manuel havai fişek — canli.js'in 🎁 gönderim akışı çağırır.
+       Konsoldan da denenebilir:  Kutlama.patlat()  /  Kutlama.patlat(8000) */
+    patlat: function (sureMs) { patlat(sureMs); },
+    /* İnce ayar: Kutlama.ayarla({ sureMs: 6000 }) */
     ayarla: function (yeni) { Object.assign(AYAR, yeni || {}); },
     /* Teşhis: konsolda Kutlama.durum() */
     durum: function () {
       return {
-        aktif: aktif,
-        baslaniyor: baslaniyor,
-        sonBaslangic: sonBaslangic,
-        sonPatlatma: patlatSonuc + (patlatZaman ? " @ " + new Date(patlatZaman).toLocaleTimeString("tr-TR") : ""),
-        ayar: Object.assign({}, AYAR),
+        surum: "v3 — otomatik kutlama YOK; havai fişek yalnız canlı modül 🎁 gönderiminde",
+        fw: {
+          aktif: aktif,
+          sonPatlatma: patlatSonuc + (patlatZaman ? " @ " + new Date(patlatZaman).toLocaleTimeString("tr-TR") : ""),
+          ayar: Object.assign({}, AYAR),
+        },
         sarmalayicilar: gorevDurumu(),
         canli: {
           sseDurum: window._sse ? window._sse.readyState : -1,
