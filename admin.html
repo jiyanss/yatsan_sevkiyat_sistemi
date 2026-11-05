@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Yönetim</title>
+<style>
+  :root{
+    --bg:#0b1220; --kart:#111a2e; --kart2:#0e1626; --cizgi:#24304d;
+    --metin:#e2e8f0; --soluk:#94a3b8; --ana:#818cf8; --ana2:#6366f1;
+    --ok:#4ade80; --uyari:#fbbf24; --hata:#f87171;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--metin);
+        font:14px/1.5 -apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
+  .kapsa{ max-width:1060px; margin:0 auto; padding:18px 14px 60px; }
+  .gizli{ display:none !important; }
+  h1{ font-size:20px; margin:0 0 4px; }
+  h2{ font-size:16px; margin:0 0 12px; color:var(--ana); }
+  .kart{ background:var(--kart); border:1px solid var(--cizgi); border-radius:12px;
+         padding:16px; margin:14px 0; }
+  .kimlik{ max-width:420px; margin:60px auto 0; text-align:center; }
+  .kimlik label{ display:block; text-align:left; margin:10px 0 0; color:var(--soluk); font-size:13px; }
+  .kimlik input{ width:100%; margin-top:4px; }
+  .not{ color:var(--soluk); font-size:12.5px; margin:8px 0; }
+  .hata{ color:var(--hata); font-size:13px; margin:8px 0 0; }
+  .okIzi{ color:var(--ok); }
+  input,select,textarea,button{ font:inherit; }
+  input,select,textarea{
+    background:var(--kart2); color:var(--metin); border:1px solid var(--cizgi);
+    border-radius:8px; padding:8px 10px; outline:none;
+  }
+  input:focus,select:focus,textarea:focus{ border-color:var(--ana); }
+  textarea{ width:100%; resize:vertical; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px; }
+  .btn{ background:var(--kart2); color:var(--metin); border:1px solid var(--cizgi);
+        border-radius:8px; padding:8px 14px; cursor:pointer; white-space:nowrap; }
+  .btn:hover{ border-color:var(--ana); }
+  .btn.ana{ background:var(--ana2); border-color:var(--ana2); font-weight:600; }
+  .btn.ana:hover{ background:var(--ana); }
+  .btn.tehlikeli{ border-color:#7f1d1d; color:#fca5a5; }
+  .btn.tehlikeli:hover{ background:#7f1d1d33; }
+  .btn.mini{ padding:4px 10px; font-size:12.5px; border-radius:7px; }
+  .btn:disabled{ opacity:.5; cursor:default; }
+  .satir{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0; }
+  .satir input,#araGiris{ flex:1 1 220px; min-width:160px; }
+  .ust{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:6px 0 2px; }
+  .kimlikbilgi{ display:flex; gap:8px; align-items:center; }
+  .chip{ background:var(--kart2); border:1px solid var(--cizgi); border-radius:99px;
+         padding:4px 12px; font-size:12.5px; color:var(--soluk); }
+  .chip.admin{ color:var(--ok); border-color:#14532d; }
+  .chip.uyari{ color:var(--uyari); border-color:#78350f; }
+  .tabloSar{ overflow-x:auto; }
+  table{ border-collapse:collapse; width:100%; font-size:13px; }
+  th,td{ border-bottom:1px solid var(--cizgi); padding:7px 9px; text-align:left; white-space:nowrap; }
+  th{ color:var(--soluk); font-weight:600; position:sticky; top:0; background:var(--kart); }
+  tbody tr{ cursor:pointer; }
+  tbody tr:hover{ background:#1c2740; }
+  td.anahtar{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; color:var(--ana); }
+  td.etiket{ background:#1b2438; color:var(--soluk); font-size:11px; letter-spacing:.4px; }
+  .formIzgara{ display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px 14px; }
+  .alan label{ display:block; color:var(--soluk); font-size:11.5px; margin-bottom:3px; }
+  .alan input{ width:100%; }
+  .alan .ipucu{ font-size:10.5px; color:#64748b; margin-top:2px; min-height:13px; }
+  .alan .kilitli{ width:100%; padding:8px 10px; border:1px dashed var(--cizgi); border-radius:8px;
+                  color:var(--soluk); font-size:12.5px; background:transparent;
+                  font-family:ui-monospace,Menlo,Consolas,monospace; overflow:hidden;
+                  text-overflow:ellipsis; white-space:nowrap; }
+  .ayrici{ display:flex; align-items:center; gap:10px; color:var(--soluk); font-size:12px; margin:14px 0 4px; }
+  .ayrici::before,.ayrici::after{ content:""; flex:1; height:1px; background:var(--cizgi); }
+  .cipler{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+  .cip{ background:var(--kart2); border:1px solid var(--cizgi); border-radius:99px;
+        padding:4px 12px; font-size:12.5px; cursor:pointer; color:var(--soluk);
+        font-family:ui-monospace,Menlo,Consolas,monospace; }
+  .cip:hover{ border-color:var(--ana); color:var(--metin); }
+  .jsonKutu{ background:var(--kart2); border:1px solid var(--cizgi); border-radius:8px;
+             padding:12px; font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;
+             max-height:380px; overflow:auto; white-space:pre-wrap; word-break:break-word; }
+  details summary{ cursor:pointer; color:var(--soluk); font-size:13px; margin:10px 0; }
+  details summary:hover{ color:var(--metin); }
+  .altNot{ color:#64748b; font-size:12px; text-align:center; margin-top:22px; }
+  #toast{ position:fixed; left:50%; bottom:22px; transform:translateX(-50%);
+          background:#1e293b; border:1px solid var(--cizgi); color:var(--metin);
+          padding:10px 18px; border-radius:10px; font-size:13.5px; z-index:50;
+          box-shadow:0 8px 24px #0008; max-width:90vw; }
+  #toast.ok{ border-color:#14532d; } #toast.hata{ border-color:#7f1d1d; }
+  @media (max-width:560px){ .formIzgara{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="kapsa">
+
+  <!-- 1. Aşama: PIN -->
+  <section id="pinEkrani" class="kart kimlik">
+    <h1>🔒 Gizli Yönetim Sayfası</h1>
+    <p class="not">Bu araç yalnız yetkili kişiler içindir.<br>Devam etmek için PIN girin.</p>
+    <input id="pinGiris" type="password" autocomplete="off" placeholder="PIN">
+    <div class="satir" style="justify-content:center"><button id="pinBtn" class="btn ana">Aç</button></div>
+    <p id="pinHata" class="hata gizli"></p>
+  </section>
+
+  <!-- 2. Aşama: Giriş -->
+  <section id="girisEkrani" class="kart kimlik gizli">
+    <h1>🛠️ YATSAN Yönetim Konsolu</h1>
+    <div id="devralKutu" class="gizli">
+      <p class="not">Mevcut oturum bulundu: <b id="devralEmail"></b></p>
+      <button id="devralBtn" class="btn ana">Bu oturumla devam et</button>
+      <div class="ayrici"><span>ya da yeni giriş</span></div>
+    </div>
+    <label>E-posta <input id="gEmail" type="email" autocomplete="username"></label>
+    <label>Şifre <input id="gSifre" type="password" autocomplete="current-password"></label>
+    <div class="satir" style="justify-content:center"><button id="girisBtn" class="btn ana">Giriş yap</button></div>
+    <p id="girisHata" class="hata gizli"></p>
+  </section>
+
+  <!-- 3. Aşama: Panel -->
+  <main id="panel" class="gizli">
+    <header class="ust">
+      <h1>🛠️ YATSAN Yönetim Konsolu</h1>
+      <div class="kimlikbilgi">
+        <span id="rolChip" class="chip">…</span>
+        <button id="cikisBtn" class="btn mini">Çıkış</button>
+      </div>
+    </header>
+    <p class="not" id="uyariRol" style="display:none">⚠️ Bu hesap admin rolünde görünmüyor — yazma işlemleri veritabanı kuralları tarafından engellenebilir.</p>
+
+    <section class="kart">
+      <h2>🔎 Kayıt Ara &amp; Düzelt <span class="not" style="display:inline">(arşiv dahil, panelden düzenlenemeyen kayıtlar burada açılır)</span></h2>
+      <div class="satir">
+        <select id="dugumFiltre">
+          <option value="hepsi" selected>AKTİF + ARŞİV</option>
+          <option value="sevkiyat">Yalnız AKTİF (sevkiyat)</option>
+          <option value="sevkiyat_arsiv">Yalnız ARŞİV (sevkiyat_arsiv)</option>
+        </select>
+        <input id="araGiris" placeholder="Müşteri, ekip, anahtar, tarih, durum… (boş = tümü)">
+        <button id="araBtn" class="btn ana">Ara</button>
+        <button id="tazeleBtn" class="btn" title="Veritabanından yeniden oku">⟳</button>
+      </div>
+      <p id="araOzet" class="not">Yükleniyor…</p>
+      <div class="tabloSar">
+        <table id="sonucTablo">
+          <thead><tr><th>Düğüm</th><th>Anahtar (key)</th><th>Müşteri</th><th>Planlanan</th><th>Gerçekleşen</th><th>Durum</th><th>Tip</th><th>Ekip</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="kart gizli" id="duzenKart">
+      <h2>✏️ Kayıt Düzenle — <span id="duzenBaslik" style="color:var(--metin)"></span></h2>
+      <p class="not">Yalnız değiştirdiğin alanlar veritabanına yazılır; diğer alanlara dokunulmaz. Boş bıraktığın sayı alanı <b>null</b> olur.</p>
+      <div id="duzenForm" class="formIzgara"></div>
+      <details>
+        <summary>Ham JSON (kopyalamak için)</summary>
+        <pre id="hamJson" class="jsonKutu"></pre>
+        <button id="kopyalaBtn" class="btn mini">JSON'u kopyala</button>
+      </details>
+      <div class="satir">
+        <button id="kaydetBtn" class="btn ana">💾 Değişiklikleri Kaydet</button>
+        <button id="silBtn" class="btn tehlikeli">🗑️ Kaydı Sil</button>
+        <button id="kapatBtn" class="btn">Kapat</button>
+      </div>
+      <p id="duzenNot" class="not"></p>
+    </section>
+
+    <section class="kart">
+      <h2>🧭 Yol Gezgini <span class="not" style="display:inline">(Firebase panelinde bulamadığın her düğüme buradan ulaş)</span></h2>
+      <div class="satir">
+        <input id="yolGiris" placeholder="örn: sevkiyat_suresi &nbsp;·&nbsp; orderHazir/_ozet &nbsp;·&nbsp; boş = kök listesi">
+        <button id="yolBtn" class="btn ana">Oku</button>
+      </div>
+      <div id="kokCipler" class="cipler"></div>
+      <pre id="yolCikti" class="jsonKutu gizli"></pre>
+      <details class="gizli" id="hamDuzenleKutu">
+        <summary>Gelişmiş: bu yola ham JSON yaz (PUT — üzerine yazar!)</summary>
+        <textarea id="hamMetin" rows="8" spellcheck="false"></textarea>
+        <div class="satir"><button id="hamYazBtn" class="btn tehlikeli">⬆️ PUT — üzerine yaz</button></div>
+      </details>
+    </section>
+
+    <section class="kart">
+      <h2>🧾 Bu oturumda yapılan yazma işlemleri</h2>
+      <div class="tabloSar">
+        <table id="logTablo">
+          <thead><tr><th>Saat</th><th>İşlem</th><th>Yol</th><th>Özet</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="satir"><button id="yedekBtn" class="btn">⬇️ Yedek + günlüğü indir (JSON)</button></div>
+      <p class="not">Her değişiklikten önceki değerler otomatik yedeklenir; geri dönüş için bu dosyayı kullanabilirsin.</p>
+    </section>
+
+    <p class="altNot">🔒 Bu sayfa menülerde görünmez ve arama motorlarına kapalıdır.<br>Tüm yazma işlemleri Firebase kimlik doğrulaması ve veritabanı kuralları ile korunur. · v1.0</p>
+  </main>
+</div>
+<div id="toast" class="gizli"></div>
+<script id="admin-app">
+(function () {
+"use strict";
+
+/* ============================================================
+   YATSAN — GİZLİ YÖNETİM KONSOLU  ·  v1.0
+   ------------------------------------------------------------
+   · URL: /admin.html  (menülerde yok, noindex)
+   · PIN'i aşağıdan değiştirebilirsin:
+   ============================================================ */
+const ADMIN_PIN = "YATSAN26";
+
+/* ---- Sabitler (core.js ile aynı değerler) ---- */
+const DB = "https://sevkiyat-app-default-rtdb.europe-west1.firebasedatabase.app";
+const API_KEY = "AIzaSyAagmdq0N2TG4IQ7noDFL6xQh4-ps-QrgI";
+const OTURUM_ANAHTARI = "yatsan_admin_auth";   /* bu sayfanın kendi oturumu */
+const UYGULAMA_OTURUMU = "sevkiyat_auth";      /* ana uygulamanın oturumu — yalnız okunur */
+const PIN_OK = "yatsan_admin_pin_ok";
+const KULLANICI_DUGUMU = "sevkiyat_users";
+const ADMIN_EMAILS = ["admin@yatsan.com"];
+const DUGUMLER = [["sevkiyat", "AKTİF"], ["sevkiyat_arsiv", "ARŞİV"]];
+
+const BILINEN_SIRA = ["musteri","blm","kategori","sevkiyatTipi","ad","planlananTarih","hafta","ay",
+  "reelPlan","gerceklesenTarih","durum","sure","ekip","aciklama","araciGeldi","status","prsM3","m3",
+  "gecikmeNedeni","gecikmeSon","toplamaBasTs","toplamaBittiTs","loadingStartedAt","loadingEndedAt",
+  "aracGelisTs","aracBeklemeMs","createdBy","updatedBy","updatedAt","comments"];
+const SAYISAL = new Set(["ad","prsM3","m3","gecikmeSon","toplamaBasTs","toplamaBittiTs",
+  "loadingStartedAt","loadingEndedAt","aracGelisTs","aracBeklemeMs","updatedAt"]);
+const TS_ALANLARI = new Set(["toplamaBasTs","toplamaBittiTs","loadingStartedAt","loadingEndedAt",
+  "aracGelisTs","aracBeklemeMs","updatedAt"]);
+const KILITLI = new Set(["updatedAt","updatedBy"]);
+const OBJE_ALANLARI = new Set(["comments"]);   /* kayıtta yoksa bile metin kutusu ÇİZİLMEZ */
+const LISTELI = { musteri:"musteri", ekip:"ekip", durum:"durum", blm:"blm",
+  sevkiyatTipi:"sevkiyatTipi", kategori:"kategori", gecikmeNedeni:"gecikmeNedeni" };
+const ETIKETLER = {
+  musteri:"Müşteri", blm:"BLM", kategori:"Kategori", sevkiyatTipi:"Sevkiyat Tipi", ad:"AD",
+  planlananTarih:"Planlanan Tarih", hafta:"Hafta", ay:"Ay", reelPlan:"Reel Plan",
+  gerceklesenTarih:"Gerçekleşen", durum:"Durum", sure:"Süre", ekip:"Ekip", aciklama:"Açıklama",
+  araciGeldi:"Aracı Geldi", status:"Status", prsM3:"PRS M3", m3:"M3",
+  gecikmeNedeni:"Gecikme Nedeni", gecikmeSon:"Gecikme (gün)",
+  toplamaBasTs:"Toplama Başlangıç (ts)", toplamaBittiTs:"Toplama Bitiş (ts)",
+  loadingStartedAt:"Yükleme Başlangıç (ts)", loadingEndedAt:"Yükleme Bitiş (ts)",
+  aracGelisTs:"Araç Geliş (ts)", aracBeklemeMs:"Araç Bekleme (ms)",
+  createdBy:"Ekleyen", updatedBy:"Güncelleyen (otomatik)", updatedAt:"Güncellenme (otomatik)",
+  comments:"Yorumlar"
+};
+
+/* ---- Durum ---- */
+const S = {
+  email: null, rol: "bilinmiyor", kayitlar: [], sonuc: [],
+  secili: null,            /* {dugum, key, orijinal} */
+  sonYol: null, sonYolVeri: null,
+  yedekler: [], yazmalar: []
+};
+
+/* ---- Yardımcılar ---- */
+const el = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+/* Türkçe I/ı ve İ/i duyarsız normalleştirme: "KOURTIS", "kourtıs", "Kourtis"
+   ve "kourtis" aramalarının hepsi aynı anahtara düşer. */
+const norm = (s) => String(s == null ? "" : s)
+  .toLocaleLowerCase("tr").replace(/ı/g, "i").replace(/İ/g, "i")
+  .replace(/\s+/g, " ").trim();
+const kopya = (x) => JSON.parse(JSON.stringify(x));
+const userKey = (email) => String(email || "").replace(/\./g, ",");
+const saat = (ts) => new Date(ts).toLocaleTimeString("tr-TR");
+const tsMetni = (v) => {
+  if (v == null || isNaN(Number(v)) || Number(v) < 1e9) return "";
+  const d = new Date(Number(v));
+  return d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+};
+
+let toastZaman = null;
+function toast(msg, tur) {
+  const t = el("toast");
+  t.textContent = msg;
+  t.className = tur === "ok" ? "ok" : tur === "hata" ? "hata" : "";
+  t.classList.remove("gizli");
+  clearTimeout(toastZaman);
+  toastZaman = setTimeout(() => t.classList.add("gizli"), 3400);
+}
+
+/* ---- Oturum ---- */
+function oturumOku(anahtar) {
+  try { return JSON.parse(localStorage.getItem(anahtar)); } catch (e) { return null; }
+}
+function oturumKaydet(idToken, refreshToken, expiresIn, email) {
+  localStorage.setItem(OTURUM_ANAHTARI, JSON.stringify({
+    idToken, refreshToken, email, exp: Date.now() + Number(expiresIn) * 1000
+  }));
+}
+async function tokenTazele(refreshToken) {
+  const res = await fetch("https://securetoken.googleapis.com/v1/token?key=" + API_KEY, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ grant_type: "refresh_token", refresh_token: refreshToken })
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.id_token) throw new Error("Oturum yenilenemedi — tekrar giriş yap.");
+  return j;
+}
+/* Kendi oturumumuz yoksa ana uygulamadaki oturumu devralır (salt okur). */
+async function tokenAl(zorla) {
+  const s = oturumOku(OTURUM_ANAHTARI) || oturumOku(UYGULAMA_OTURUMU);
+  if (!s) throw new Error("Oturum yok — giriş yap.");
+  if (!zorla && s.exp - Date.now() > 60000) { S.email = S.email || s.email; return s.idToken; }
+  const j = await tokenTazele(s.refreshToken);
+  oturumKaydet(j.id_token, j.refresh_token, j.expires_in, s.email);
+  S.email = S.email || s.email;
+  return j.id_token;
+}
+
+function fbHata(msg) {
+  if (/EMAIL_NOT_FOUND|INVALID_PASSWORD|INVALID_LOGIN_CREDENTIALS/.test(msg)) return "E-posta veya şifre hatalı.";
+  if (/TOO_MANY_ATTEMPTS/.test(msg)) return "Çok fazla başarısız deneme — birkaç dakika bekle.";
+  if (/OPERATION_NOT_ALLOWED|PASSWORD_LOGIN_DISABLED/.test(msg)) return "Firebase Authentication'da E-posta/Şifre girişi kapalı.";
+  return "Giriş başarısız: " + msg;
+}
+async function girisYap(email, sifre) {
+  const res = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + API_KEY, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: String(email || "").trim(), password: String(sifre || ""), returnSecureToken: true })
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.idToken) throw new Error(fbHata((j.error && j.error.message) || "HTTP " + res.status));
+  oturumKaydet(j.idToken, j.refreshToken, j.expiresIn, j.email);
+  S.email = j.email;
+  return j.email;
+}
+
+/* ---- Veritabanı REST ---- */
+async function dbFetch(yol, opts, ekSorgu, tekrar) {
+  opts = opts || {};
+  const token = await tokenAl();
+  if (!token) throw new Error("Oturum yok — giriş yap.");
+  const temiz = String(yol || "").replace(/^\/+|\/+$/g, "");
+  let url = DB + (temiz ? "/" + temiz : "") + ".json";
+  if (ekSorgu) url += "?" + ekSorgu;
+  url += (url.includes("?") ? "&" : "?") + "auth=" + encodeURIComponent(token);
+  const headers = Object.assign({}, opts.headers || {}, { Authorization: "Bearer " + token });
+  const res = await fetch(url, Object.assign({}, opts, { headers: headers }));
+  if (res.status === 401 && tekrar !== false) {
+    await tokenAl(true);
+    return dbFetch(yol, opts, ekSorgu, false);
+  }
+  if (res.status === 403) throw new Error("Veritabanı kuralları bu işlemi engelledi (403).");
+  if (res.status === 401) throw new Error("Veritabanı erişimi reddedildi (401). Kuralları kontrol et.");
+  return res;
+}
+
+async function rolDogrula(email) {
+  if (ADMIN_EMAILS.includes(String(email).toLowerCase())) return "admin";
+  try {
+    const res = await dbFetch(KULLANICI_DUGUMU);
+    const data = await res.json();
+    const e = data && data[userKey(email)];
+    if (e && e.role) return e.role;
+  } catch (e) { /* okunamadıysa bilinmiyor */ }
+  return "bilinmiyor";
+}
+
+/* ---- Ekran akışı ---- */
+function ekranGoster(id) {
+  ["pinEkrani", "girisEkrani", "panel"].forEach((x) => el(x).classList.toggle("gizli", x !== id));
+}
+function pinDogrula(girilen) {
+  const hata = el("pinHata");
+  if (String(girilen || "") === ADMIN_PIN) {
+    try { sessionStorage.setItem(PIN_OK, "1"); } catch (e) {}
+    hata.classList.add("gizli");
+    oturumEkrani();
+    return true;
+  }
+  hata.textContent = "PIN hatalı.";
+  hata.classList.remove("gizli");
+  return false;
+}
+function oturumEkrani() {
+  const s = oturumOku(OTURUM_ANAHTARI) || oturumOku(UYGULAMA_OTURUMU);
+  if (s && s.email && s.exp - Date.now() > 60000) {
+    el("devralEmail").textContent = s.email;
+    el("devralKutu").classList.remove("gizli");
+  } else {
+    el("devralKutu").classList.add("gizli");
+  }
+  ekranGoster("girisEkrani");
+}
+async function panelAc() {
+  await tokenAl();
+  ekranGoster("panel");
+  const chip = el("rolChip");
+  chip.textContent = "…";
+  S.rol = await rolDogrula(S.email || (oturumOku(OTURUM_ANAHTARI) || oturumOku(UYGULAMA_OTURUMU) || {}).email || "");
+  chip.textContent = "👤 " + (S.email || "?") + " · 🔑 " + S.rol;
+  chip.className = "chip" + (S.rol === "admin" ? " admin" : " uyari");
+  el("uyariRol").style.display = S.rol === "admin" ? "none" : "";
+  kokCipleriYukle();
+  await kayitlariYukle();
+  ara(el("araGiris").value);
+}
+
+/* ---- Kök düğüm çipleri ---- */
+async function kokCipleriYukle() {
+  const kutu = el("kokCipler");
+  kutu.innerHTML = "<span class='not'>Düğümler okunuyor…</span>";
+  try {
+    const res = await dbFetch("", {}, "shallow=true");
+    const data = await res.json();
+    const adlar = Object.keys(data || {}).sort();
+    kutu.innerHTML = adlar.length
+      ? adlar.map((a) => "<button class='cip' data-yol=\"" + esc(a) + "\">" + esc(a) + "</button>").join("")
+      : "<span class='not'>Kök boş görünüyor.</span>";
+  } catch (e) {
+    kutu.innerHTML = "<span class='not'>Kök listesi okunamadı: " + esc(e.message) + "</span>";
+  }
+}
+
+/* ---- Kayıt okuma & arama ---- */
+async function kayitlariYukle() {
+  const havuz = [];
+  for (const [dugum, etiket] of DUGUMLER) {
+    try {
+      const res = await dbFetch(dugum);
+      const data = await res.json();
+      Object.keys(data || {}).forEach((k) => {
+        const r = data[k];
+        if (r && typeof r === "object" && !Array.isArray(r)) havuz.push({ dugum, etiket, key: k, r });
+      });
+    } catch (e) {
+      toast("⚠️ " + etiket + " düğümü okunamadı: " + e.message, "hata");
+    }
+  }
+  S.kayitlar = havuz;
+  datalistleriKur();
+}
+function datalistleriKur() {
+  Object.keys(LISTELI).forEach((alan) => {
+    let dl = el("dl-" + alan);
+    if (!dl) {
+      dl = document.createElement("datalist");
+      dl.id = "dl-" + alan;
+      document.body.appendChild(dl);
+    }
+    const kume = new Set();
+    S.kayitlar.forEach((x) => { const v = x.r[alan]; if (v != null && typeof v !== "object") kume.add(String(v)); });
+    dl.innerHTML = Array.from(kume).sort().slice(0, 300).map((v) => "<option value=\"" + esc(v) + "\">").join("");
+  });
+}
+function kayitFiltrele(q, dugumFiltre) {
+  const hedef = norm(q);
+  return S.kayitlar.filter((x) => {
+    if (dugumFiltre && dugumFiltre !== "hepsi" && x.dugum !== dugumFiltre) return false;
+    if (!hedef) return true;
+    const tarama = [x.key, x.r.musteri, x.r.ekip, x.r.durum, x.r.aciklama, x.r.sevkiyatTipi,
+      x.r.kategori, x.r.blm, x.r.planlananTarih, x.r.gerceklesenTarih, x.r.reelPlan, x.r.createdBy];
+    return tarama.some((v) => norm(v).indexOf(hedef) >= 0);
+  });
+}
+function ara(q) {
+  const filtre = el("dugumFiltre").value;
+  S.sonuc = kayitFiltrele(q, filtre);
+  const aktif = S.kayitlar.filter((x) => x.dugum === "sevkiyat").length;
+  const arsiv = S.kayitlar.filter((x) => x.dugum === "sevkiyat_arsiv").length;
+  el("araOzet").innerHTML = "🟢 AKTİF: <b>" + aktif + "</b> kayıt · 🗄️ ARŞİV: <b>" + arsiv +
+    "</b> kayıt · Eşleşen: <b>" + S.sonuc.length + "</b>" + (norm(q) ? " (\"" + esc(q) + "\")" : "");
+  const tb = el("sonucTablo").querySelector("tbody");
+  const sirali = S.sonuc.slice().sort((a, b) => {
+    const d = (a.dugum === "sevkiyat" ? 0 : 1) - (b.dugum === "sevkiyat" ? 0 : 1);
+    if (d) return d;
+    const m = String(a.r.musteri || "").localeCompare(String(b.r.musteri || ""), "tr");
+    if (m) return m;
+    return String(a.r.planlananTarih || "").localeCompare(String(b.r.planlananTarih || ""));
+  });
+  tb.innerHTML = sirali.length ? sirali.map((x) => "<tr data-dugum=\"" + esc(x.dugum) + "\" data-key=\"" + esc(x.key) +
+    "\" title=\"Düzenlemek için tıkla\">" +
+    "<td>" + (x.dugum === "sevkiyat_arsiv" ? "🗄️ ARŞİV" : "🟢 AKTİF") + "</td>" +
+    "<td class='anahtar'>" + esc(x.key) + "</td>" +
+    "<td><b>" + esc(x.r.musteri || "(boş)") + "</b></td>" +
+    "<td>" + esc(x.r.planlananTarih || "") + "</td>" +
+    "<td>" + esc(x.r.gerceklesenTarih || "") + "</td>" +
+    "<td>" + esc(x.r.durum || "") + "</td>" +
+    "<td>" + esc(x.r.sevkiyatTipi || "") + "</td>" +
+    "<td>" + esc(x.r.ekip || "") + "</td></tr>").join("")
+    : "<tr><td colspan='8' style='color:var(--soluk)'>Kayıt bulunamadı.</td></tr>";
+}
+
+/* ---- Kayıt düzenleyici ---- */
+function alanSirasi(rec) {
+  /* Bilinen alanlar HER ZAMAN listelenir — kayıtta yoksa boş görünür ve
+     oradan EKLENEBİLİR (ör. arşiv kayda gecikmeSon ekleme). */
+  const keys = BILINEN_SIRA.slice();
+  Object.keys(rec).sort().forEach((k) => { if (!keys.includes(k)) keys.push(k); });
+  return keys;
+}
+function sec(dugum, key) {
+  const bul = S.kayitlar.find((x) => x.dugum === dugum && x.key === key);
+  if (!bul) { toast("Kayıt havuzda yok — ⟳ ile yenile.", "hata"); return; }
+  S.secili = { dugum, key, orijinal: kopya(bul.r) };
+  renderEditor();
+  el("duzenKart").classList.remove("gizli");
+  el("duzenKart").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function renderEditor() {
+  const sec = S.secili;
+  if (!sec) return;
+  const r = sec.orijinal;
+  el("duzenBaslik").innerHTML = (sec.dugum === "sevkiyat_arsiv" ? "🗄️ ARŞİV · " : "🟢 AKTİF · ") +
+    "<b>" + esc(r.musteri || "(isimsiz)") + "</b> <span class='anahtar' style='font-size:11px;color:var(--ana)'>(" + esc(sec.key) + ")</span>";
+  const form = el("duzenForm");
+  let html = "";
+  alanSirasi(r).forEach((alan) => {
+    const etiket = ETIKETLER[alan] || alan;
+    const deger = r[alan];
+    const kayittaYok = !(alan in r);
+    if (KILITLI.has(alan)) {
+      html += "<div class='alan'><label>" + esc(etiket) + "</label><div class='kilitli'>" +
+        esc(alan === "updatedAt" ? (tsMetni(deger) || "-") : (kayittaYok ? "-" : (deger == null ? "-" : deger))) + "</div></div>";
+      return;
+    }
+    if (deger !== null && deger !== undefined && typeof deger === "object") {
+      html += "<div class='alan' style='grid-column:1/-1'><label>" + esc(etiket) +
+        " (düzenlenemez — yol gezgininden)</label><div class='kilitli'>" +
+        esc(JSON.stringify(deger).slice(0, 160)) + "</div></div>";
+      return;
+    }
+    if (kayittaYok && OBJE_ALANLARI.has(alan)) {
+      html += "<div class='alan'><label>" + esc(etiket) + "</label><div class='kilitli'>(yok)</div></div>";
+      return;
+    }
+    const sayi = SAYISAL.has(alan);
+    const liste = LISTELI[alan] ? " list=\"dl-" + LISTELI[alan] + "\"" : "";
+    const ipucu = TS_ALANLARI.has(alan) && deger != null && Number(deger) > 1e9 ? tsMetni(deger) : "";
+    html += "<div class='alan'><label>" + esc(etiket) + (sayi ? " (sayı)" : "") + "</label>" +
+      "<input data-alan=\"" + esc(alan) + "\" data-tip=\"" + (sayi ? "sayi" : "metin") + "\"" + liste +
+      " value=\"" + esc(deger == null ? "" : deger) + "\">" +
+      "<div class='ipucu'>" + esc(ipucu) + "</div></div>";
+  });
+  form.innerHTML = html;
+  el("hamJson").textContent = JSON.stringify(r, null, 2);
+  el("duzenNot").textContent = "";
+}
+function farkHesapla() {
+  const sec = S.secili;
+  if (!sec) return [];
+  const deg = [];
+  el("duzenForm").querySelectorAll("input[data-alan]").forEach((inp) => {
+    const alan = inp.getAttribute("data-alan");
+    const eski = sec.orijinal[alan];
+    let yeni;
+    if (inp.getAttribute("data-tip") === "sayi") {
+      const v = inp.value.trim();
+      if (v === "") yeni = null;
+      else { yeni = Number(v); if (isNaN(yeni)) throw new Error("\"" + (ETIKETLER[alan] || alan) + "\" sayısal olmalı: " + v); }
+    } else {
+      yeni = inp.value.trim();
+    }
+    const eskiNorm = (eski == null || eski === "") ? null : eski;
+    const yeniNorm = (yeni == null || yeni === "") ? null : yeni;
+    const ayni = (eskiNorm === null && yeniNorm === null) ||
+      (eskiNorm !== null && yeniNorm !== null && String(eskiNorm) === String(yeniNorm) &&
+        typeof eskiNorm === typeof yeniNorm);
+    if (!ayni) deg.push({ alan, eski: eski == null ? null : eski, yeni });
+  });
+  return deg;
+}
+async function kaydet() {
+  const sec = S.secili;
+  if (!sec) return;
+  let deg;
+  try { deg = farkHesapla(); }
+  catch (e) { toast("⚠️ " + e.message, "hata"); return; }
+  if (!deg.length) { toast("Değişiklik yok — kaydedilecek alan boş."); return; }
+  const ozet = deg.slice(0, 15).map((d) =>
+    (ETIKETLER[d.alan] || d.alan) + ": " + JSON.stringify(d.eski == null ? null : d.eski) + " → " +
+    JSON.stringify(d.yeni == null ? null : d.yeni)).join("\n");
+  if (!confirm(deg.length + " alan değişecek:\n\n" + ozet + (deg.length > 15 ? "\n…" : "") +
+    "\n\nKayıt: " + sec.dugum + "/" + sec.key + "\n\nDevam edilsin mi?")) {
+    toast("İptal edildi — hiçbir şey yazılmadı.");
+    return;
+  }
+  const govde = {};
+  deg.forEach((d) => { govde[d.alan] = d.yeni; });
+  govde.updatedBy = S.email || "admin-sayfasi";
+  govde.updatedAt = Date.now();
+  el("kaydetBtn").disabled = true;
+  try {
+    S.yedekler.push({ ts: Date.now(), yol: sec.dugum + "/" + sec.key, onceki: kopya(sec.orijinal) });
+    await dbFetch(sec.dugum + "/" + sec.key, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(govde)
+    });
+    S.yazmalar.push({ ts: Date.now(), islem: "PATCH", yol: sec.dugum + "/" + sec.key,
+      ozet: deg.map((d) => d.alan).join(", ") });
+    logTabloyuBas();
+    /* yerel kopyayı yeni hâle getir (null = alan silinir, RTDB ile aynı) */
+    const bul = S.kayitlar.find((x) => x.dugum === sec.dugum && x.key === sec.key);
+    Object.keys(govde).forEach((k) => {
+      if (govde[k] === null) delete bul.r[k]; else bul.r[k] = govde[k];
+    });
+    sec.orijinal = kopya(bul.r);
+    renderEditor();
+    ara(el("araGiris").value);
+    el("duzenNot").innerHTML = "<span class='okIzi'>✅ " + deg.length + " alan güncellendi (" +
+      deg.map((d) => esc(ETIKETLER[d.alan] || d.alan)).join(", ") + ").</span>";
+    toast("✅ Kayıt güncellendi — diğer açık sekmeler birkaç sn içinde canlı tazelenir.", "ok");
+  } catch (e) {
+    S.yedekler.pop();
+    el("duzenNot").textContent = "❌ " + e.message;
+    toast("❌ " + e.message, "hata");
+  }
+  el("kaydetBtn").disabled = false;
+}
+async function sil() {
+  const sec = S.secili;
+  if (!sec) return;
+  if (!confirm("⚠️ " + sec.dugum + "/" + sec.key + " (\"" + (sec.orijinal.musteri || "") + "\") kaydı KALICI olarak silinecek.\n\nEmin misin?")) return;
+  const onay = prompt("Silme onayı: kayıt anahtarını buraya yapıştır:\n" + sec.key);
+  if (onay === null) return;
+  if (onay.trim() !== sec.key) { toast("Anahtar eşleşmedi — silme iptal.", "hata"); return; }
+  el("silBtn").disabled = true;
+  try {
+    S.yedekler.push({ ts: Date.now(), yol: sec.dugum + "/" + sec.key, onceki: kopya(sec.orijinal) });
+    await dbFetch(sec.dugum + "/" + sec.key, { method: "DELETE" });
+    S.yazmalar.push({ ts: Date.now(), islem: "DELETE", yol: sec.dugum + "/" + sec.key, ozet: "kayıt silindi" });
+    logTabloyuBas();
+    S.kayitlar = S.kayitlar.filter((x) => !(x.dugum === sec.dugum && x.key === sec.key));
+    el("duzenKart").classList.add("gizli");
+    S.secili = null;
+    ara(el("araGiris").value);
+    toast("🗑️ Kayıt silindi. Önceki hâli yedeklerde duruyor.", "ok");
+  } catch (e) {
+    S.yedekler.pop();
+    toast("❌ " + e.message, "hata");
+  }
+  el("silBtn").disabled = false;
+}
+
+/* ---- Yol gezgini ---- */
+function yolTemizle(v) {
+  return String(v || "").trim().replace(/^\/+|\/+$/g, "").replace(/\.json$/, "");
+}
+async function yolAc() {
+  const yol = yolTemizle(el("yolGiris").value);
+  const cikti = el("yolCikti");
+  cikti.classList.remove("gizli");
+  cikti.textContent = "Okunuyor…";
+  try {
+    const res = await dbFetch(yol, {}, yol ? "" : "shallow=true");
+    const data = await res.json();
+    S.sonYol = yol;
+    S.sonYolVeri = data == null ? null : kopya(data);
+    cikti.textContent = JSON.stringify(data, null, 2);
+    if (yol) {
+      el("hamDuzenleKutu").classList.remove("gizli");
+      el("hamMetin").value = JSON.stringify(data, null, 2);
+    } else {
+      el("hamDuzenleKutu").classList.add("gizli");
+      const adlar = Object.keys(data || {}).sort();
+      el("kokCipler").innerHTML = adlar.map((a) =>
+        "<button class='cip' data-yol=\"" + esc(a) + "\">" + esc(a) + "</button>").join("");
+    }
+  } catch (e) {
+    cikti.textContent = "❌ " + e.message;
+    el("hamDuzenleKutu").classList.add("gizli");
+  }
+}
+async function hamYaz() {
+  const yol = yolTemizle(el("yolGiris").value);
+  if (!yol) { toast("Kök üzerine yazılamaz — bir yol gir.", "hata"); return; }
+  let yeni;
+  try { yeni = JSON.parse(el("hamMetin").value); }
+  catch (e) { toast("❌ JSON hatası: " + e.message, "hata"); return; }
+  if (!confirm("⚠️ \"" + yol + "\" yolu üzerindeki HER ŞEY silinip gönderdiğin JSON ile değiştirilecek.\n\nDevam edilsin mi?")) {
+    toast("İptal edildi."); return;
+  }
+  try {
+    S.yedekler.push({ ts: Date.now(), yol: yol, onceki: S.sonYolVeri == null ? null : kopya(S.sonYolVeri) });
+    await dbFetch(yol, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(yeni)
+    });
+    S.yazmalar.push({ ts: Date.now(), islem: "PUT", yol: yol, ozet: "ham JSON yazıldı" });
+    logTabloyuBas();
+    toast("✅ Yazıldı: " + yol, "ok");
+    yolAc();
+  } catch (e) {
+    S.yedekler.pop();
+    toast("❌ " + e.message, "hata");
+  }
+}
+
+/* ---- Günlük & yedek ---- */
+function logTabloyuBas() {
+  const tb = el("logTablo").querySelector("tbody");
+  tb.innerHTML = S.yazmalar.length ? S.yazmalar.slice().reverse().map((y) =>
+    "<tr><td>" + saat(y.ts) + "</td><td>" + esc(y.islem) + "</td><td class='anahtar'>" + esc(y.yol) +
+    "</td><td>" + esc(y.ozet) + "</td></tr>").join("")
+    : "<tr><td colspan='4' style='color:var(--soluk)'>Bu oturumda henüz yazma yapılmadı.</td></tr>";
+}
+function yedekIndir() {
+  const d = { uygulama: "YATSAN gizli yönetim konsolu", cikis: new Date().toISOString(),
+    kullanici: S.email, yedekler: S.yedekler, yazmalar: S.yazmalar };
+  const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "admin_yedek_" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast("💾 Yedek indirildi.", "ok");
+}
+
+/* ---- Olay bağlama & başlatma ---- */
+function baslat() {
+  el("pinBtn").addEventListener("click", () => pinDogrula(el("pinGiris").value));
+  el("pinGiris").addEventListener("keydown", (e) => { if (e.key === "Enter") pinDogrula(el("pinGiris").value); });
+  el("devralBtn").addEventListener("click", async () => {
+    try { await panelAc(); }
+    catch (e) { el("girisHata").textContent = e.message; el("girisHata").classList.remove("gizli"); }
+  });
+  el("girisBtn").addEventListener("click", async () => {
+    const hata = el("girisHata");
+    hata.classList.add("gizli");
+    el("girisBtn").disabled = true;
+    try {
+      await girisYap(el("gEmail").value, el("gSifre").value);
+      await panelAc();
+    } catch (e) {
+      hata.textContent = e.message;
+      hata.classList.remove("gizli");
+    }
+    el("girisBtn").disabled = false;
+  });
+  el("gSifre").addEventListener("keydown", (e) => { if (e.key === "Enter") el("girisBtn").click(); });
+  el("cikisBtn").addEventListener("click", () => {
+    localStorage.removeItem(OTURUM_ANAHTARI);
+    S.email = null; S.rol = "bilinmiyor";
+    oturumEkrani();
+  });
+  el("araBtn").addEventListener("click", () => ara(el("araGiris").value));
+  el("araGiris").addEventListener("keydown", (e) => { if (e.key === "Enter") ara(el("araGiris").value); });
+  el("dugumFiltre").addEventListener("change", () => ara(el("araGiris").value));
+  el("tazeleBtn").addEventListener("click", async () => {
+    el("tazeleBtn").disabled = true;
+    try { await kayitlariYukle(); ara(el("araGiris").value); toast("⟳ Veritabanından yeniden okundu.", "ok"); }
+    catch (e) { toast("❌ " + e.message, "hata"); }
+    el("tazeleBtn").disabled = false;
+  });
+  el("sonucTablo").querySelector("tbody").addEventListener("click", (e) => {
+    const tr = e.target.closest("tr");
+    if (tr && tr.getAttribute("data-key")) sec(tr.getAttribute("data-dugum"), tr.getAttribute("data-key"));
+  });
+  el("kaydetBtn").addEventListener("click", kaydet);
+  el("silBtn").addEventListener("click", sil);
+  el("kapatBtn").addEventListener("click", () => el("duzenKart").classList.add("gizli"));
+  el("kopyalaBtn").addEventListener("click", () => {
+    const metin = el("hamJson").textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(metin).then(() => toast("📋 JSON kopyalandı.", "ok"));
+    else toast("Kopyalama desteklenmiyor.", "hata");
+  });
+  el("yolBtn").addEventListener("click", yolAc);
+  el("yolGiris").addEventListener("keydown", (e) => { if (e.key === "Enter") yolAc(); });
+  el("kokCipler").addEventListener("click", (e) => {
+    const cip = e.target.closest(".cip");
+    if (cip) { el("yolGiris").value = cip.getAttribute("data-yol"); yolAc(); }
+  });
+  el("hamYazBtn").addEventListener("click", hamYaz);
+  el("yedekBtn").addEventListener("click", yedekIndir);
+  logTabloyuBas();
+  if (sessionStorage.getItem(PIN_OK) === "1") oturumEkrani();
+  else ekranGoster("pinEkrani");
+}
+
+/* ---- Test/otomasyon kancaları ---- */
+window.Admin = {
+  S, ADMIN_PIN, oturumOku, oturumKaydet, tokenAl, girisYap, dbFetch, rolDogrula,
+  pinDogrula, oturumEkrani, panelAc, kokCipleriYukle, kayitlariYukle, ara, kayitFiltrele,
+  sec, renderEditor, farkHesapla, kaydet, sil, yolAc, hamYaz, logTabloyuBas, yedekIndir, ekranGoster
+};
+
+baslat();
+})();
+</script>
+</body>
+</html>
