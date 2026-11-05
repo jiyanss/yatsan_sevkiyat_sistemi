@@ -101,7 +101,10 @@ function render() {
   renderDatalist();
   renderDateFilter();
   const list = filtered();
-  renderSummary(list);
+  /* 📊 Özet çubuğu artık bağlı olduğu haftanın TAM verisini verir:
+     durum süzgeci ve arama kutusu özeti etkilemez (tablo aynen süzülür).
+     Yalnızca hafta/tarih seçimi özeti değiştirir. */
+  renderSummary(filtered(true));
   renderTable(list);
   applyFit();
 }

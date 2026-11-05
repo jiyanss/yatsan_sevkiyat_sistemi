@@ -1106,9 +1106,14 @@ function searchHay(r) {
           formatDate(r.planlananTarih), formatDate(r.reelPlan), formatDate(r.gerceklesenTarih)]
     .map(x => String(x ?? "").toLowerCase()).join(" ");
 }
-function filtered() {
-  const q = document.getElementById("search").value.trim().toLowerCase();
-  const scope = document.getElementById("searchScope").value;
+function filtered(ozetModu) {
+  /* 📊 ÖZET MODU (ozetModu=true): üst özet çubuğu (Toplam/Tamamlanan/Kalan/
+     Bugün/Geciken/M3/gün dağılımı) yalnızca bağlı olduğu HAFTA/TARİH
+     aralığına göre hesaplanır — durum süzgeci ve arama kutusu etkilemez.
+     Böylece yukarıdaki durum filtresi değişse de özet, haftanın tam
+     verisini göstermeye devam eder (tablo aynen süzülür). */
+  const q = ozetModu ? "" : document.getElementById("search").value.trim().toLowerCase();
+  const scope = ozetModu ? "" : document.getElementById("searchScope").value;
   const words = q ? q.split(/\s+/).filter(Boolean) : null;
   const thisWeek = getISOWeek(new Date());
   const today = todayISO();
@@ -1133,24 +1138,28 @@ function filtered() {
       if (!d) return false;
       if (d < bounds.from || d > bounds.to) return false;
     }
-    if (statusFilter === "kalan" && r.durum === "Yükleme Tamamlandı") return false;
-    else if (statusFilter === "bekliyor" && r.durum !== "Yükleme Bekliyor") return false;
-    else if (statusFilter === "yukleniyor" && r.durum !== "Yükleniyor") return false;
-    else if (statusFilter === "tamamlandi" && r.durum !== "Yükleme Tamamlandı") return false;
-    if (words) {
-      if (scope === "wide") {
-        const hay = searchHay(r);
-        if (!words.every(w => hay.includes(w))) return false;
-      } else if (scope === "reelplan" || scope === "planlanan" || scope === "gerceklesen") {
-        /* 📅 Tarih kapsamları: ISO (2026-10-27) ve TR (27.10.2026) biçimlerinde ara —
-           ayraç (nokta/tire/boşluk) fark etmez, kısmi giriş de yakalanır (örn. "27.10") */
-        const alan = scope === "reelplan" ? r.reelPlan
-                   : scope === "planlanan" ? r.planlananTarih
-                   : r.gerceklesenTarih;
-        const iq = q.replace(/[\s.\-/]/g, "");
-        const hay = (String(alan || "") + (alan ? formatDate(alan) : "")).replace(/[\s.\-/]/g, "");
-        if (!hay.includes(iq)) return false;
-      } else if (!(r.musteri || "").toLowerCase().includes(q)) return false;
+    /* Durum + arama süzgeçleri: özet modunda atlanır — özet çubuğu
+       haftanın TAM havuzunun sayısını verir (tablo normal süzülmeye devam eder) */
+    if (!ozetModu) {
+      if (statusFilter === "kalan" && r.durum === "Yükleme Tamamlandı") return false;
+      else if (statusFilter === "bekliyor" && r.durum !== "Yükleme Bekliyor") return false;
+      else if (statusFilter === "yukleniyor" && r.durum !== "Yükleniyor") return false;
+      else if (statusFilter === "tamamlandi" && r.durum !== "Yükleme Tamamlandı") return false;
+      if (words) {
+        if (scope === "wide") {
+          const hay = searchHay(r);
+          if (!words.every(w => hay.includes(w))) return false;
+        } else if (scope === "reelplan" || scope === "planlanan" || scope === "gerceklesen") {
+          /* 📅 Tarih kapsamları: ISO (2026-10-27) ve TR (27.10.2026) biçimlerinde ara —
+             ayraç (nokta/tire/boşluk) fark etmez, kısmi giriş de yakalanır (örn. "27.10") */
+          const alan = scope === "reelplan" ? r.reelPlan
+                     : scope === "planlanan" ? r.planlananTarih
+                     : r.gerceklesenTarih;
+          const iq = q.replace(/[\s.\-/]/g, "");
+          const hay = (String(alan || "") + (alan ? formatDate(alan) : "")).replace(/[\s.\-/]/g, "");
+          if (!hay.includes(iq)) return false;
+        } else if (!(r.musteri || "").toLowerCase().includes(q)) return false;
+      }
     }
     return true;
   });
