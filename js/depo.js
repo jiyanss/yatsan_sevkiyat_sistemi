@@ -105,6 +105,7 @@ function render() {
      durum süzgeci ve arama kutusu özeti etkilemez (tablo aynen süzülür).
      Yalnızca hafta/tarih seçimi özeti değiştirir. */
   renderSummary(filtered(true));
+  renderAltOzet(list); /* 📊 alt ince çubuk: tabloda görünen (süzülen) kayıtların özeti */
   renderTable(list);
   applyFit();
 }
@@ -173,6 +174,64 @@ if (gecikenEl) {
       `<div class="day ${i === todayDow ? "today" : ""}"><span>${g}</span><b>${s.gunAd[i]}</b></div>`
     ).join("") +
     `<div class="day total"><span>Toplam</span><b>${fmtN(s.toplamAd)}</b></div>`;
+}
+
+/* ================= 📊 ALT İNCE ÖZET ÇUBUĞU — süzülen kayıtlar =================
+   Üst özet çubuğu haftanın TAM verisini verir (durum/arama süzgeçlerinden
+   bağımsız). Bu tek satırlık ince çubuk ise TABLODA GÖRÜNEN (süzülen)
+   kayıtların özetini verir: durum süzgeci, arama kutusu ve tarih seçimiyle
+   birlikte değişir — yani tabloda ne görüyorsan özeti o.
+   Tek ekran düzeninde main kaydırılmadığı için çubuk sayfanın altında
+   HER ZAMAN görünür kalır; tablo ortada yukarı/aşağı kaydırılırken
+   alt özet asla kaybolmaz. */
+function altOzetKur() {
+  const mevcut = document.getElementById("altOzet");
+  if (mevcut) return mevcut;
+  const mainEl = document.querySelector("main");
+  if (!mainEl) return null;
+  const st = document.createElement("style");
+  st.textContent = `
+#altOzet{flex:0 0 auto;display:flex;align-items:center;gap:12px;margin:4px 0 6px;
+  padding:4px 12px;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;box-shadow:0 1px 2px rgba(15,23,42,.05),0 6px 16px -10px rgba(15,23,42,.25);
+  font-size:10.5px;line-height:1.1;overflow-x:auto;white-space:nowrap;scrollbar-width:none;}
+#altOzet::-webkit-scrollbar{display:none;}
+#altOzet .oa-baslik{flex:0 0 auto;color:var(--muted);font-weight:700;font-size:9px;
+  text-transform:uppercase;letter-spacing:.5px;}
+#altOzet .oa-chip{flex:0 0 auto;display:inline-flex;align-items:baseline;gap:4px;
+  padding:1px 7px;border-radius:999px;background:color-mix(in srgb, var(--muted) 8%, transparent);}
+#altOzet .oa-chip b{font-size:12px;font-variant-numeric:tabular-nums;}
+#altOzet .oa-chip span{font-size:8.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);}
+#altOzet .oa-primary b{color:var(--primary);}
+#altOzet .oa-green b{color:var(--green);}
+#altOzet .oa-amber b{color:var(--amber);}
+#altOzet .oa-red b{color:var(--red);}
+#altOzet .oa-text b{color:var(--text);}
+#altOzet .oa-alert{background:color-mix(in srgb, var(--red) 14%, transparent);}
+#altOzet .oa-alert b{font-weight:800;}
+@media print{ #altOzet{display:none !important;} }
+`;
+  document.head.appendChild(st);
+  const bar = document.createElement("div");
+  bar.id = "altOzet";
+  bar.title = "Alt ince özet: tabloda GÖRÜNEN (süzülen) kayıtlar — durum süzgeci, arama ve tarih seçimiyle değişir. Üst çubuk haftanın tüm verisini sabit verir.";
+  mainEl.appendChild(bar);
+  return bar;
+}
+function renderAltOzet(list) {
+  const bar = altOzetKur();
+  if (!bar) return;
+  const s = computeSummary(list);
+  const chip = (cls, label, val) => `<span class="oa-chip ${cls}"><b>${val}</b><span>${label}</span></span>`;
+  bar.innerHTML =
+    `<span class="oa-baslik">🔎 Filtrelenen</span>` +
+    chip("oa-primary", "Toplam", fmtN(s.toplamAd)) +
+    chip("oa-green", "Tamamlanan", fmtN(s.tamamAd)) +
+    chip("oa-amber", "Kalan", fmtN(s.kalanAd)) +
+    chip("oa-primary", "Bugün", fmtN(s.bugunAd)) +
+    chip("oa-red" + (s.gecikenAd > 0 ? " oa-alert" : ""), "Geciken", fmtN(s.gecikenAd)) +
+    chip("oa-text", "M³", fmtN(s.toplamM3)) +
+    chip("oa-green", "Tamamlanma", "%" + s.oran.toFixed(1));
 }
 function fInput(data, scope, field, type, cls, datalist, extra) {
   return `<input type="${type}" class="cell-input ${cls || ""}" data-scope="${scope}" data-field="${field}"
