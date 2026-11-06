@@ -174,6 +174,8 @@ if (gecikenEl) {
       `<div class="day ${i === todayDow ? "today" : ""}"><span>${g}</span><b>${s.gunAd[i]}</b></div>`
     ).join("") +
     `<div class="day total"><span>Toplam</span><b>${fmtN(s.toplamAd)}</b></div>`;
+  /* 🚛 Sevkiyat tipi şeridi — üst özetle AYNI havuzu (hafta-bağlı) kullanır */
+  renderSumTips(list);
 }
 
 /* ================= 📊 ALT İNCE ÖZET ÇUBUĞU — süzülen kayıtlar =================
@@ -231,7 +233,84 @@ function renderAltOzet(list) {
     chip("oa-primary", "Bugün", fmtN(s.bugunAd)) +
     chip("oa-red" + (s.gecikenAd > 0 ? " oa-alert" : ""), "Geciken", fmtN(s.gecikenAd)) +
     chip("oa-text", "M³", fmtN(s.toplamM3)) +
-    chip("oa-green", "Tamamlanma", "%" + s.oran.toFixed(1));
+    chip("oa-green", "Tamamlanma", "%" + s.oran.toFixed(1)) +
+    tipSeritHtml(list); /* 🚛 süzülen kayıtların tip dağılımı */
+}
+/* ================= 🚛 SEVKİYAT TİPİ ŞERİDİ =================
+   "KOMPLE TIR: 3 adet (270m³) · 40 HC: 4 adet (280m³) · …"
+   İki yerde gösterilir:
+   - ÜST özet kartının altında ince bir satır (#sumTipSeridi):
+     bağlı olunan haftanın TAM verisi (renderSummary'nin havuzu —
+     durum süzgeci ve aramadan bağımsız).
+   - ALT FİLTRELENEN çubuğunda fişler: tabloda GÖRÜNEN (süzülen)
+     kayıtlar.
+   Her iki şerit de tek satırdır; sığmayan fişler yatay kaydırılır. */
+function tipOzet(list) {
+  const m = new Map();
+  for (const r of list) {
+    const t = String(r.sevkiyatTipi || "").trim() || "—";
+    const o = m.get(t) || { adet: 0, m3: 0 };
+    o.adet += adet(r);
+    o.m3 += Number(r.m3) || 0;
+    m.set(t, o);
+  }
+  /* Sabit tipler önce (TIPLER sırası), tanım dışı tipler alfabetik arkadan */
+  const diger = [...m.keys()].filter(t => !TIPLER.includes(t))
+    .sort((a, b) => a.localeCompare(b, "tr"));
+  return TIPLER.filter(t => m.has(t)).concat(diger)
+    .map(t => ({ tip: t, adet: m.get(t).adet, m3: m.get(t).m3 }));
+}
+function tipChipHtml(x) {
+  const m3 = x.m3 ? ` (${fmtN(x.m3)}m³)` : "";
+  return `<span class="oa-chip oa-text"><span class="oa-tip">${esc(x.tip)}:</span>` +
+    `<b>${fmtN(x.adet)}</b><span class="oa-kucuk">adet${m3}</span></span>`;
+}
+function tipSeritHtml(list) {
+  const tipler = tipOzet(list);
+  return tipler.length
+    ? `<span class="oa-baslik">🚛 Tipler</span>` + tipler.map(tipChipHtml).join("")
+    : "";
+}
+function tipStilKur() {
+  if (document.getElementById("tipSeritStil")) return;
+  const st = document.createElement("style");
+  st.id = "tipSeritStil";
+  st.textContent = `
+#sumTipSeridi{flex:1 1 100%;display:flex;align-items:center;gap:6px;margin:-8px 0 0;
+  padding:3px 0 4px;border-top:1px dashed var(--border);font-size:9.5px;line-height:1.3;
+  overflow-x:auto;white-space:nowrap;scrollbar-width:none;color:var(--muted);}
+#sumTipSeridi::-webkit-scrollbar{display:none;}
+#sumTipSeridi .st-baslik{flex:0 0 auto;font-weight:700;font-size:8.5px;
+  text-transform:uppercase;letter-spacing:.4px;}
+#sumTipSeridi .oa-chip{flex:0 0 auto;display:inline-flex;align-items:baseline;gap:4px;
+  padding:1px 7px;border-radius:999px;background:color-mix(in srgb, var(--muted) 8%, transparent);}
+#sumTipSeridi .oa-chip b{font-size:11px;color:var(--primary);font-variant-numeric:tabular-nums;}
+#sumTipSeridi .oa-kucuk{color:var(--muted);}
+#altOzet .oa-tip{font-size:8.5px;font-weight:700;letter-spacing:.2px;color:var(--text);}
+#altOzet .oa-chip .oa-kucuk{text-transform:none;letter-spacing:0;}
+@media print{ #sumTipSeridi{display:none !important;} }
+`;
+  document.head.appendChild(st);
+}
+function sumTipKur() {
+  const mevcut = document.getElementById("sumTipSeridi");
+  if (mevcut) return mevcut;
+  const sec = document.getElementById("summary");
+  if (!sec || typeof sec.appendChild !== "function") return null;
+  tipStilKur();
+  const el = document.createElement("div");
+  el.id = "sumTipSeridi";
+  el.title = "Sevkiyat tipi dağılımı — bağlı olunan haftanın TAM verisi (durum süzgeci ve aramadan bağımsız). Alt FİLTRELENEN çubuğundaki 🚛 Tipler fişleri yalnız süzülen kayıtları sayar.";
+  sec.appendChild(el);
+  return el;
+}
+function renderSumTips(list) {
+  const el = sumTipKur();
+  if (!el) return;
+  const tipler = tipOzet(list);
+  el.innerHTML = tipler.length
+    ? `<span class="st-baslik">🚛 Tipler</span>` + tipler.map(tipChipHtml).join("")
+    : "";
 }
 function fInput(data, scope, field, type, cls, datalist, extra) {
   return `<input type="${type}" class="cell-input ${cls || ""}" data-scope="${scope}" data-field="${field}"
